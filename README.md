@@ -16,6 +16,7 @@ cd syntra-firms
 pip install -r requirements.txt
 python scripts/fetch_firms.py
 python -m syntra.clean          # Step 3: clean the data (see syntra/clean.py)
+python -m syntra.harmonize      # Steps 4-5: one MODIS+VIIRS series, 2000 to today, with validation
 ```
 
 The last command downloads the FIRMS yearly files (Sudan, 2000 to 2025; change `DEFAULT_COUNTRY` in `syntra/data.py` for another country) into `data/raw/`. Data is not stored in git, so everyone runs it once.
