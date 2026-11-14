@@ -1,8 +1,10 @@
 # Data is downloaded with scripts/fetch_firms.py, never committed
 data/raw/
 data/processed/
-# App data pack (python -m syntra.datapack). Committing it for deploy is a team decision.
-data/app/
+# App data packs (python -m syntra.datapack). Sudan's is committed so the deployed app
+# (Streamlit Community Cloud) starts in seconds; other countries stay local.
+data/app/*
+!data/app/Sudan/
 
 # Python
 __pycache__/

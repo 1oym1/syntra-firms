@@ -1,0 +1,14 @@
+# Streamlit Community Cloud installs this file (it sits next to app.py).
+# Runtime only; the repo-root requirements.txt adds jupyter and pytest for development.
+# Upper bounds keep the cloud on the major versions the app was tested with.
+streamlit>=1.50,<2
+streamlit-folium>=0.25,<1
+folium>=0.20,<1
+plotly>=6,<8
+pandas>=2.2,<3
+numpy>=2.0,<3
+pyarrow>=17
+requests>=2.31
+geopandas>=1.0,<2
+shapely>=2.0,<3
+matplotlib>=3.8
