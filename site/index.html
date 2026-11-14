@@ -465,11 +465,15 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   var idx = {}; months.forEach(function (m, i) { idx[m] = i; });
   function val(arr, y, m) { var i = idx[y + "-" + (m < 10 ? "0" : "") + m]; return i === undefined ? null : arr[i]; }
 
-  // ticker + readout
-  (function () {
-    var s = D.live_by_sensor || {};
+  // ticker + readout. LIVE = null: the 7-day snapshot built into data.js; otherwise the /api/live answer (last 24 h).
+  var LIVE = null;
+  function hhmm(iso) { return iso ? iso.slice(11, 16) + " UTC " + iso.slice(8, 10) + " " + MON[+iso.slice(5, 7) - 1] : ""; }
+  function renderStats() {
+    var s = LIVE ? LIVE.by_sensor || {} : D.live_by_sensor || {};
+    var total = LIVE ? LIVE.total : D.live_total || 0;
+    var span = LIVE ? "in the last 24 h · newest pass " + hhmm(LIVE.newest_pass_utc) : (D.live_from || "") + " to " + (D.live_to || "");
     var items = [
-      "<b>LIVE</b> " + fmt(D.live_total || 0) + " hotspots over Sudan, " + (D.live_from || "") + " to " + (D.live_to || ""),
+      "<b>LIVE</b> " + fmt(total) + " hotspots over Sudan" + (LIVE ? " " : ", ") + span,
       "NOAA-20 <b>" + fmt(s.VIIRS_NOAA20 || 0) + "</b> · NOAA-21 <b>" + fmt(s.VIIRS_NOAA21 || 0) + "</b> · MODIS <b>" + fmt(s.MODIS || 0) + "</b>",
       "October 2026 <b>+56%</b> vs a typical October · 2nd of 26",
       "Held-out R² <b>" + (D.heldout_r2 || 0.993) + "</b> · raw MODIS " + (D.raw_r2 || 0.36),
@@ -479,11 +483,15 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     ];
     var html = items.map(function (t) { return "<span>" + t + "</span>"; }).join("");
     document.getElementById("ticker").innerHTML = html + html;
-    document.getElementById("live-chip").textContent = "Live · " + fmt(D.live_total || 0) + " in 7 days";
-    document.getElementById("readout").innerHTML = "SUDAN · 8.6–22.3° N · 21.7–38.7° E<br>FIRMS data through <b>" + (D.data_to || "") + "</b><br>live window <b>" +
-      (D.live_from || "") + " to " + (D.live_to || "") + "</b><br>grid 0.1° · VIIRS S-NPP units";
-    document.getElementById("foot").textContent = "Data: NASA FIRMS through " + (D.data_to || "") + " · colors: Okabe-Ito, colorblind-safe";
-  })();
+    document.getElementById("live-chip").textContent = "Live · " + fmt(total) + (LIVE ? " in 24 h" : " in 7 days");
+    document.getElementById("readout").innerHTML = "SUDAN · 8.6–22.3° N · 21.7–38.7° E<br>FIRMS record through <b>" + (D.data_to || "") + "</b><br>" +
+      (LIVE ? "live feed <b>last 24 h</b> · newest pass <b>" + hhmm(LIVE.newest_pass_utc) + "</b>"
+            : "live window <b>" + (D.live_from || "") + " to " + (D.live_to || "") + "</b>") + "<br>grid 0.1° · VIIRS S-NPP units";
+    document.getElementById("foot").textContent = "Data: NASA FIRMS through " + (D.data_to || "") + (LIVE ? " · live feed fetched " + hhmm(LIVE.fetched_utc) : "") +
+      " · colors: Okabe-Ito, colorblind-safe";
+  }
+  renderStats();
+  var globeLive = null;   // set by the globe: rebuilds its live layers from a list of [lon, lat, sensor, ...]
 
   var hasGL = !!window.THREE && (function () { try { var c = document.createElement("canvas"); return !!(c.getContext("webgl") || c.getContext("experimental-webgl")); } catch (e) { return false; } })();
   var scenes = [];
@@ -611,10 +619,17 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       var t = Math.pow(c[2] / maxc, .5), col = t < .5 ? ramp[0].clone().lerp(ramp[1], t * 2) : ramp[1].clone().lerp(ramp[2], (t - .5) * 2);
       return { lon: c[0], lat: c[1], color: "#" + col.getHexString(), size: 1.1 + 3.2 * t };
     }), { r: R * 1.006, add: true, alpha: .6 });
-    ["MODIS", "VIIRS_NOAA20", "VIIRS_NOAA21"].forEach(function (k) {
-      layers[k] = points((D.live || []).filter(function (p) { return p[2] === k; }).map(function (p) { return { lon: p[0], lat: p[1], color: COL[k], size: 3.6 }; }),
-        { r: R * 1.009, add: true, pulse: true });
-    });
+    function buildLive(list) {
+      ["MODIS", "VIIRS_NOAA20", "VIIRS_NOAA21"].forEach(function (k) {
+        var was = layers[k], vis = was ? was.visible : true;
+        if (was) { world.remove(was); was.geometry.dispose(); was.material.dispose(); }
+        layers[k] = points(list.filter(function (p) { return p[2] === k; }).map(function (p) { return { lon: p[0], lat: p[1], color: COL[k], size: 3.6 }; }),
+          { r: R * 1.009, add: true, pulse: true });
+        layers[k].visible = vis;
+      });
+    }
+    buildLive(D.live || []);
+    globeLive = buildLive;
 
     // satellites on near-polar orbits with fading trails
     function sat(color, inc, raan, period, rad) {
@@ -781,6 +796,18 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     landAPI = { set: function (k) { target = k; }, drift: function (p) { azT = az0 + (p - .5) * .7; } };
   })();
   if (!hasGL) { document.getElementById("nogl").style.display = "block"; document.getElementById("gctl").hidden = true; }
+
+  // live feed: /api/live (Netlify Function relaying NASA FIRMS public 24 h files). Elsewhere, or if it fails,
+  // the page keeps the 7-day snapshot from data.js.
+  function pullLive() {
+    if (!/^https?:$/.test(location.protocol) || !window.fetch) return;
+    fetch("/api/live", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (L) {
+      if (!L || !Array.isArray(L.points)) return;
+      LIVE = L; renderStats();
+      if (globeLive) globeLive(L.points);
+    }).catch(function () {});
+  }
+  pullLive(); setInterval(pullLive, 30 * 60 * 1000);
 
   // scroll story
   (function () {
