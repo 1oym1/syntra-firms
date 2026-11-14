@@ -9,3 +9,4 @@ geopandas
 shapely
 jupyter
 pyarrow
+pytest
