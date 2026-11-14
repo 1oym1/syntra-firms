@@ -1,7 +1,8 @@
 """Step 3 of the team checklist: how MODIS and VIIRS differ (resolution and sensitivity), on clean data.
 
 Input: clean vegetation fires from syntra.pipeline.load_country (static sources removed, inside the border).
-Compares MODIS (Terra + Aqua) with ONE VIIRS satellite (Suomi NPP) over full years both flew.
+Compares MODIS (BOTH satellites, Terra + Aqua) with ONE VIIRS satellite (Suomi NPP) over full years both flew.
+Read the ratios that way: against Aqua alone, S-NPP has about 7x the hotspots in Sudan, against Terra alone ~11x.
 
     from syntra.pipeline import load_country
     from syntra import compare
@@ -15,7 +16,8 @@ Questions it answers
 1. Resolution: VIIRS pixels are ~7x smaller, so one fire gives several VIIRS hotspots. Counting burned
    0.1 deg cells instead of points removes much of that (hotspot ratio vs cell ratio).
 2. Sensitivity: does VIIRS see the fires MODIS sees, plus extra small ones? Aqua and Suomi NPP both pass at
-   about 13:30 local time, so on the same day and the same 0.1 deg cell they look at the same fire.
+   about 13:30 local time, so on the same day near the same 0.1 deg cell they look at the same fire
+   (same_pass corrects for swath gaps and pixel size; see its docstring).
 """
 import numpy as np
 import pandas as pd
@@ -67,41 +69,55 @@ def monthly_correlation(veg, years=YEARS):
             "n_months": len(cs)}
 
 
-def same_pass(veg, years=YEARS):
-    """Aqua vs Suomi NPP, daytime, same date and same 0.1 deg cell (both pass at about 13:30).
+def _cell_days(rows):
+    """One row per (day, 0.1 deg cell, 1 deg box) with the strongest FRP that day."""
+    r = rows.assign(cy=np.floor(rows.latitude * 10).astype(int), cx=np.floor(rows.longitude * 10).astype(int),
+                    by=np.floor(rows.latitude).astype(int), bx=np.floor(rows.longitude).astype(int))
+    return r.groupby(["acq_date", "cy", "cx"], as_index=False).agg(by=("by", "first"), bx=("bx", "first"),
+                                                                    month=("month", "first"), frp=("frp", "max"))
 
-    Returns the shares of each sensor's cell-days the other one also saw, the median FRP of
-    cell-days seen by both vs by VIIRS only, and the same shares per calendar month.
+
+def _seen_by(src, other, neighbours=True):
+    """True where `other` has fire on the same day in the same 0.1 deg cell (or a neighbouring one)."""
+    keys = other[["acq_date", "cy", "cx"]].drop_duplicates()
+    hit = np.zeros(len(src), bool)
+    offs = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1)] if neighbours else [(0, 0)]
+    base = src[["acq_date", "cy", "cx"]].reset_index(drop=True)
+    for i, j in offs:
+        k = keys.assign(cy=keys.cy - i, cx=keys.cx - j, _hit=True)
+        hit |= base.merge(k, on=["acq_date", "cy", "cx"], how="left")["_hit"].notna().to_numpy()
+    return hit
+
+
+def same_pass(veg, years=(2012, 2021), coverage=True, neighbours=True):
+    """Aqua (MODIS) vs Suomi NPP (VIIRS), daytime, same date: who sees whose fires.
+
+    Both pass at about 13:30 local time (Sudan: median 11:36 vs 11:25 UTC), so they look at the same fires.
+    Two corrections make it a fair test:
+    - coverage=True: only 1 deg boxes where BOTH satellites detected some fire that day. Aqua's swath is
+      narrower (2,330 vs 3,060 km) and leaves gaps near the equator; a fire Aqua never flew over is not a miss.
+    - neighbours=True: a fire in the next 0.1 deg cell counts as seen. MODIS pixels grow to ~2 x 4.8 km at the
+      swath edge, so the same fire can land in the cell next door.
+    years: 2012-2021 by default, before Aqua's orbit began to drift (same overlap as syntra.harmonize).
     """
-    v0 = veg[(veg.year >= years[0]) & (veg.year <= years[1]) & (veg.daynight == "D")]
-
-    def cell_days(rows):
-        g = rows.groupby(["acq_date", "cell_id"]).agg(frp=("frp", "max"), month=("month", "first"))
-        return g
-
-    a = cell_days(v0[v0.satellite == "Aqua"])
-    n = cell_days(v0[v0.satellite == SNPP])
-    both = n.index.intersection(a.index)
-    n_only = n.index.difference(a.index)
-    a_only = a.index.difference(n.index)
+    x = veg[(veg.year >= years[0]) & (veg.year <= years[1]) & (veg.daynight == "D")]
+    a, n = _cell_days(x[x.satellite == "Aqua"]), _cell_days(x[x.satellite == SNPP])
+    if coverage:
+        boxes = a[["acq_date", "by", "bx"]].drop_duplicates().merge(n[["acq_date", "by", "bx"]].drop_duplicates())
+        a, n = a.merge(boxes), n.merge(boxes)
+    a["seen"], n["seen"] = _seen_by(a, n, neighbours), _seen_by(n, a, neighbours)
     out = {
-        "aqua_cell_days": len(a), "snpp_cell_days": len(n), "both": len(both),
-        "share_of_aqua_seen_by_snpp": len(both) / len(a) if len(a) else np.nan,
-        "share_of_snpp_seen_by_aqua": len(both) / len(n) if len(n) else np.nan,
-        "snpp_frp_median_both": float(n.loc[both, "frp"].median()),
-        "snpp_frp_median_snpp_only": float(n.loc[n_only, "frp"].median()),
-        "aqua_frp_median_both": float(a.loc[both, "frp"].median()),
-        "aqua_frp_median_aqua_only": float(a.loc[a_only, "frp"].median()),
+        "years": years, "coverage": coverage, "neighbours": neighbours,
+        "aqua_cell_days": len(a), "snpp_cell_days": len(n),
+        "share_of_aqua_seen_by_snpp": float(a.seen.mean()), "share_of_snpp_seen_by_aqua": float(n.seen.mean()),
+        "snpp_frp_median_both": float(n.loc[n.seen, "frp"].median()),
+        "snpp_frp_median_snpp_only": float(n.loc[~n.seen, "frp"].median()),
     }
-    mon = pd.DataFrame({
-        "snpp_cell_days": n.groupby("month").size(),
-        "aqua_cell_days": a.groupby("month").size(),
-        "both": n.loc[both].groupby("month").size(),
-    }).reindex(range(1, 13)).fillna(0).astype(int)
-    mon["share_of_aqua_seen_by_snpp"] = (mon.both / mon.aqua_cell_days.replace(0, np.nan)).round(3)
-    mon["share_of_snpp_seen_by_aqua"] = (mon.both / mon.snpp_cell_days.replace(0, np.nan)).round(3)
-    out["by_month"] = mon
-    out["frp"] = {"VIIRS seen by both": n.loc[both, "frp"].values, "VIIRS only": n.loc[n_only, "frp"].values}
+    mon = pd.DataFrame({"aqua_cell_days": a.groupby("month").size(), "snpp_cell_days": n.groupby("month").size(),
+                        "share_of_aqua_seen_by_snpp": a.groupby("month").seen.mean(),
+                        "share_of_snpp_seen_by_aqua": n.groupby("month").seen.mean()}).reindex(range(1, 13))
+    out["by_month"] = mon.round(3)
+    out["frp"] = {"VIIRS seen by both": n.loc[n.seen, "frp"].values, "VIIRS only": n.loc[~n.seen, "frp"].values}
     return out
 
 

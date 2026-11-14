@@ -195,7 +195,7 @@ def gap_by_year(yearly, country, path=None):
     ax.set_xlim(yearly.index[0] - 0.5, yearly.index[-1] + 2.6)
     ax.set_xticks(range(int(yearly.index[0]), int(yearly.index[-1]) + 1, 2))
     ax.set_ylabel("VIIRS ÷ MODIS")
-    ax.set_title(f"{country.replace('_', ' ')}: VIIRS S-NPP vs MODIS, {yearly.index[0]}–{yearly.index[-1]}")
+    ax.set_title(f"{country.replace('_', ' ')}: VIIRS (S-NPP) vs MODIS (Terra + Aqua), {yearly.index[0]}–{yearly.index[-1]}")
     ax.legend(loc="lower left", ncol=2)
     return _save(fig, path)
 
@@ -226,15 +226,17 @@ def same_pass(sp, country, path=None):
         ax.barh(i, 1, color="#E6E6E6", height=0.55)
         ax.barh(i, share, color=VIIRS if i == 1 else MODIS, height=0.55, hatch=None if i == 1 else "//",
                 edgecolor="white")
-        ax.text(share + 0.01, i, f"{share:.0%}", va="center", fontsize=13, fontweight="bold", color=INK)
-        ax.text(0.99, i, f"of {n:,} cell-days", va="center", ha="right", fontsize=10, color="#555555")
-    ax.set_yticks([0, 1], [r[0] for r in rows[::-1]])
+        ax.text(share - 0.015, i, f"{share:.0%}", va="center", ha="right", fontsize=13, fontweight="bold",
+                color=INK, bbox=dict(facecolor="white", edgecolor="none", pad=2))
+    ax.set_yticks([0, 1], [f"{r[0]}\n({r[2]:,} cell-days)" for r in rows[::-1]])
     ax.set_xlim(0, 1)
     ax.set_xticks([])
     ax.grid(False)
     for s in ("bottom", "left"):
         ax.spines[s].set_visible(False)
-    ax.set_title(f"{country.replace('_', ' ')}: same afternoon pass, same day, same 0.1° cell")
+    ax.set_title(f"{country.replace('_', ' ')}: Aqua vs Suomi NPP, same ~13:30 pass, {sp['years'][0]}–{sp['years'][1]}")
+    ax.set_xlabel("Same day, same or neighbouring 0.1° cell, only where both satellites detected fire nearby",
+                  fontsize=10, color="#555555")
     return _save(fig, path)
 
 

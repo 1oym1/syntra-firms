@@ -17,8 +17,11 @@ Where the project stands. Newest first. Update it when something lands.
 
 Riyadh's checklist: 1 download ✅ → 2 clean ✅ → **3 handle the difference ✅** → 4 aggregate monthly ✅ → 5 app ✅ (deploy still to do).
 `notebooks/02_modis_vs_viirs.ipynb` + `syntra/compare.py`, figures 08–11, tables `outputs/tables/sensor_*_Sudan.csv`.
-Sudan 2012–2025: hotspots ×4.1 vs burned cells ×1.9 (resolution); same pass, VIIRS sees 71 % of MODIS's fire cells,
-MODIS 22 % of VIIRS's, extra VIIRS fires are small (sensitivity); the gap is ×1.4 in Nov, ×6.8 in Jul (per-month factor).
+Sudan 2012–2025: hotspots ×4.1 vs burned cells ×1.9 (resolution; one VIIRS satellite vs both MODIS satellites);
+same pass, VIIRS sees 93 % of MODIS's fire cells, MODIS 67 % of VIIRS's, extra VIIRS fires are small (sensitivity);
+the gap is ×1.4 in Nov, ×6.8 in Jul (per-month factor).
+**Checked (Hisham, 15:30):** counts recomputed independently from the clean files: identical. The first same-pass
+figure (71 % / 22 %) was **[OUTDATED]**: it counted Aqua swath gaps and next-cell fires as misses. Corrected test above.
 ## 2026-11-14, about 14:00 (Hisham): app on PR #3's method, Sudan fully cleaned, figures
 
 - **The app now uses `syntra/harmonize.py` (PR #3)**: burned 0.1° cells per month. See `docs/DECISIONS.md`.

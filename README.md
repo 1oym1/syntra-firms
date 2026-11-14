@@ -27,9 +27,11 @@ Then open `notebooks/00_load_data.ipynb` and run all cells. The app runs with `s
 ## MODIS vs VIIRS on clean data (checklist step 3)
 
 `notebooks/02_modis_vs_viirs.ipynb` (code `syntra/compare.py`), Sudan, MODIS vs VIIRS S-NPP, 2012–2025:
-- **Resolution:** VIIRS has ×4.1 MODIS's hotspots but only ×1.9 its burned 0.1° cells, steady every year. Gridding halves the gap.
-- **Sensitivity:** on the same ~13:30 pass (Aqua vs S-NPP, same day, same 0.1° cell) VIIRS sees 71 % of MODIS's fire
-  cells, MODIS sees 22 % of VIIRS's. The extra VIIRS fires are small: 49 % of VIIRS hotspots are below 5 MW, 0.6 % of MODIS's.
+- **Resolution:** one VIIRS satellite has ×4.1 the hotspots of both MODIS satellites together (×6.8 vs Aqua alone), but
+  only ×1.9 the burned 0.1° cells, steady every year. Gridding halves the gap.
+- **Sensitivity:** on the same ~13:30 pass (Aqua vs S-NPP, 2012–2021, same day, same or neighbouring 0.1° cell, only
+  where both satellites saw fire nearby) VIIRS sees 93 % of MODIS's fire cells, MODIS 67 % of VIIRS's. The extra VIIRS
+  fires are small: 49 % of VIIRS hotspots are below 5 MW, 0.6 % of MODIS's.
 - **Season:** the cell gap is ×1.4 in November but ×6.8 in July (few, small wet-season fires), so the factor must be per month.
 
 ## Harmonization (phases 4 and 5)
