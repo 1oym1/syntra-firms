@@ -2,7 +2,26 @@
 
 Where the project stands. Newest first. Update it when something lands.
 
-## 2026-11-14, about 13:00 (Hisham): 2026 data + one cleaning step for everything (PR #1)
+
+## 2026-11-14, about 14:00 (Hisham): app on PR #3's method, Sudan fully cleaned, figures
+
+- **The app now uses `syntra/harmonize.py` (PR #3)**: burned 0.1° cells per month. See `docs/DECISIONS.md`.
+  Fixed a bug in `harmonize_area` (drawn boxes lost years). 2026 + NOAA-20 + "this month so far" are in
+  `syntra/series.py`.
+- **Sudan fully cleaned** (`python -m syntra.pipeline --country Sudan`): 4,462,802 clean hotspots 2000 → 13 Nov 2026,
+  4,417,341 vegetation fires; static 33,694 by type + 11,767 by the mask (700 cells); 543,545 API hotspots outside
+  the border removed. Small result tables in `outputs/tables/` (`harmonized_Sudan.csv`, `run_info_Sudan.json`, ...).
+- **Validation** (`scripts/validate_harmonization.py`, 2012–2021): R² Sudan 0.97, Ethiopia 0.98, Iraq 0.83,
+  Saudi Arabia −0.75 (raw MODIS 0.39 / 0.55 / 0.34 / −20.7).
+- **`notebooks/01_harmonization.ipynb`** + 7 slide figures in `outputs/figures/`.
+- **Sudan results under this unit (provisional):** October 2026 is **normal** (1,545 vs median 1,540, #13 of 26).
+  The "record October" in the 13:00 entry below came from the old unit and is **[OUTDATED]**.
+  November 1–13: 1,412 vs median 1,592 (−11 %, #14 of 15).
+
+**Still to do:** review + merge PR #1; Streamlit Cloud deploy (`FIRMS_MAP_KEY` in Secrets); 7 slides + 30 s video +
+project page.
+
+## [OUTDATED numbers: old unit] 2026-11-14, about 13:00 (Hisham): 2026 data + one cleaning step for everything (PR #1)
 
 **2026 is in the app.** Data now runs to yesterday (13 Nov 2026), not Dec 2025.
 

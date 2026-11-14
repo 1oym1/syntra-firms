@@ -3,8 +3,9 @@
 Run from the repo root:
     streamlit run app/app.py
 
-Data: syntra.pipeline (FIRMS yearly files 2000-2025 + 2026 from the FIRMS API, cleaned by syntra.clean),
-harmonization from syntra.harmonize, the calendar from syntra.fire_calendar.
+Data: syntra.pipeline (FIRMS yearly files 2000-2025 + 2026 from the FIRMS API, cleaned by syntra.clean).
+Harmonization: syntra.harmonize (burned 0.1 degree cells per month, MODIS -> VIIRS monthly factors),
+extended to 2026 by syntra.series. Calendar: syntra.fire_calendar.
 2026 needs FIRMS_MAP_KEY in .env (local) or in Streamlit secrets (deployed).
 """
 import os
@@ -23,12 +24,16 @@ from streamlit_folium import st_folium
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from syntra import fire_calendar as fc  # noqa: E402
 from syntra import harmonize as hz  # noqa: E402
+from syntra import series  # noqa: E402
 from syntra.data import DEFAULT_COUNTRY  # noqa: E402
 from syntra.pipeline import load_country  # noqa: E402
 
 COUNTRIES = ["Sudan", "Ethiopia", "Iraq", "Saudi_Arabia", "Australia", "Zambia", "South_Sudan", "Mexico"]
 COLORS = {"MODIS": "#E69F00", "VIIRS_SNPP": "#56B4E9", "VIIRS_NOAA20": "#CC79A7", "harmonized": "#009E73",
           "Static source": "#D55E00"}  # Okabe-Ito, colorblind-safe
+SENSOR = {"Terra": "MODIS", "Aqua": "MODIS", "N": "VIIRS_SNPP", "N20": "VIIRS_NOAA20"}
+UNIT = "burned cells"
+MAP_COLS = ["latitude", "longitude", "acq_date", "acq_time", "satellite", "frp", "daynight", "type"]
 
 st.set_page_config(page_title="SYNTRA fire calendar", page_icon="🔥", layout="wide")
 
@@ -41,31 +46,48 @@ except Exception:  # noqa: BLE001  (no secrets file)
     pass
 
 
-@st.cache_data(show_spinner=False, ttl=6 * 3600)
+@st.cache_resource(show_spinner=False, ttl=6 * 3600)
 def get_country(country):
+    """Clean fires (shared, read-only: cache_resource does not copy millions of rows on every rerun)."""
     return load_country(country)
 
 
 @st.cache_data(show_spinner=False, ttl=6 * 3600)
-def side_checks(country):
+def get_series(country):
     d = get_country(country)
-    return hz.validate_noaa20(d["cells"], d["info"]["snpp_end"]), hz.validate_terra(d["cells"])
+    return series.country_series(d["veg"], d["info"])
+
+
+@st.cache_data(show_spinner=False, ttl=6 * 3600)
+def get_n20_check(country):
+    d = get_country(country)
+    return series.validate_n20(d["veg"], d["info"]["snpp_end"])
+
+
+def in_box(df, bbox):
+    if bbox is None:
+        return df
+    return df[df.longitude.between(bbox[0], bbox[2]) & df.latitude.between(bbox[1], bbox[3])]
 
 
 @st.cache_data(show_spinner=False, ttl=6 * 3600)
 def analyse(country, bbox):
+    """(monthly table, this-month-so-far) for the whole country or a box inside it."""
     d = get_country(country)
-    info = d["info"]
-    cells = hz.in_bbox(d["cells"], bbox)
-    day = info["complete_day"]
-    last_full = (day + pd.Timedelta(days=1)).to_period("M") - 1
-    mon = hz.monthly(cells, last_full, info["snpp_end"], info["k_noaa20"], info["terra_k"])
-    coef = hz.fit_model(mon)
-    mtd = None
-    if day.to_period("M") > last_full:
-        daily = hz.daily_reference(cells, coef, info["snpp_end"], info["k_noaa20"], info["terra_k"])
-        mtd = fc.month_to_date(daily, day)
-    return cells, hz.harmonize(mon, coef), hz.validate(mon), coef, mtd
+    cs = get_series(country)
+    if bbox is None:
+        return cs["tab"], series.month_to_date(d["veg"], d["info"])
+    area = in_box(d["veg"], bbox)
+    return series.area_series(area, d["info"], cs), series.month_to_date(area, d["info"])
+
+
+def column(tab, col):
+    """Monthly Series (PeriodIndex); months a sensor did not fly are NaN, not 0."""
+    s = series.as_series(tab, col)
+    flying = {"modis_cells": "modis_flying", "viirs_cells": "viirs_flying"}.get(col)
+    if flying:
+        s[~tab[flying].values] = np.nan
+    return s
 
 
 def bbox_from_drawing(drawing):
@@ -88,11 +110,12 @@ with st.sidebar:
 with st.spinner(f"Loading {country.replace('_', ' ')} from NASA FIRMS (first time takes a few minutes)…"):
     try:
         data = get_country(country)
-        all_cells, info = data["cells"], data["info"]
+        veg, info = data["veg"], data["info"]
+        cs = get_series(country) if len(veg) else None
     except Exception as e:  # noqa: BLE001
         st.error(f"Could not load '{country}': {e}")
         st.stop()
-if all_cells.empty:
+if cs is None:
     st.error(f"No FIRMS data for '{country}'. Check the spelling (FIRMS uses underscores).")
     st.stop()
 
@@ -102,16 +125,15 @@ with st.sidebar:
     bbox = None
     if mode == "Type lat/lon":
         c1, c2 = st.columns(2)
-        w = c1.number_input("West", value=float(round(all_cells.longitude.min(), 2)), step=0.5)
-        e = c2.number_input("East", value=float(round(all_cells.longitude.max(), 2)), step=0.5)
-        s = c1.number_input("South", value=float(round(all_cells.latitude.min(), 2)), step=0.5)
-        n = c2.number_input("North", value=float(round(all_cells.latitude.max(), 2)), step=0.5)
+        w = c1.number_input("West", value=float(round(veg.longitude.min(), 2)), step=0.5)
+        e = c2.number_input("East", value=float(round(veg.longitude.max(), 2)), step=0.5)
+        s = c1.number_input("South", value=float(round(veg.latitude.min(), 2)), step=0.5)
+        n = c2.number_input("North", value=float(round(veg.latitude.max(), 2)), step=0.5)
         bbox = (w, s, e, n)
 
 if mode == "Draw on map":
     st.markdown("**Draw a rectangle** with the ■ tool on the left of the map, then the page updates.")
-    m = folium.Map(location=[all_cells.latitude.median(), all_cells.longitude.median()], zoom_start=5,
-                   tiles="OpenStreetMap")
+    m = folium.Map(location=[veg.latitude.median(), veg.longitude.median()], zoom_start=5, tiles="OpenStreetMap")
     Draw(draw_options={"rectangle": True, "polygon": False, "polyline": False, "circle": False,
                        "marker": False, "circlemarker": False}, edit_options={"edit": False}).add_to(m)
     drawn = st_folium(m, height=380, use_container_width=True, returned_objects=["last_active_drawing"])
@@ -119,28 +141,31 @@ if mode == "Draw on map":
     if bbox is None:
         st.info("No rectangle yet: showing the whole country.")
 
-cells, h, val, coef, mtd = analyse(country, bbox)
-if h["harmonized"].sum() == 0:
+h, mtd = analyse(country, bbox)
+if h is None or np.nansum(h["harmonized_cells"]) == 0:
     st.warning("No vegetation fires in this area. Draw a bigger box.")
     st.stop()
+harm = column(h, "harmonized_cells")
 
 with st.sidebar:
-    months = [m for m in h.index[::-1] if not np.isnan(h.loc[m, "harmonized"])]
+    months = list(harm.dropna().index[::-1])
     sel = st.selectbox("Month to compare", months, format_func=lambda p: p.strftime("%B %Y"))
     view = st.radio("Calendar shows", ["Harmonized", "Raw MODIS", "Raw VIIRS"])
     ramp = st.selectbox("Color ramp (colorblind-safe)", ["Inferno", "Cividis", "Viridis"])
-    st.caption(f"Data through **{info['complete_day']:%d %b %Y}**. "
+    st.caption(f"Data through **{info['complete_day']:%d %b %Y}**; the calendar runs to the last complete month. "
                + ("2026 from the FIRMS API (near-real-time, provisional)." if info.get("key")
                   else "No FIRMS_MAP_KEY set: archive only (to Dec 2025)."))
 
-series = {"Harmonized": h["harmonized"], "Raw MODIS": h["modis"], "Raw VIIRS": h["viirs"]}[view]
-cmp = fc.month_vs_median(h["harmonized"], sel)
+shown = column(h, {"Harmonized": "harmonized_cells", "Raw MODIS": "modis_cells", "Raw VIIRS": "viirs_cells"}[view])
+cmp = fc.month_vs_median(harm, sel)
+ho = cs["heldout"]
 
 # ---------- header + KPIs ----------
 place = country.replace("_", " ") + ("" if bbox is None else f" · box W{bbox[0]} S{bbox[1]} E{bbox[2]} N{bbox[3]}")
 st.header(f"Burning activity: {place}")
-st.caption("Unit: **fire-cells**, i.e. unique ~1 km grid cells with a vegetation-fire detection per day, "
-           "summed per month, in VIIRS-equivalent units. Source: NASA FIRMS.")
+st.caption("Unit: **burned cells**, the number of 0.1° grid cells (about 11 km) with at least one vegetation-fire "
+           "detection in the month, in VIIRS S-NPP units. Measures how widespread burning is, not how often the "
+           "same place burns. Source: NASA FIRMS.")
 
 k1, k2, k3, k4 = st.columns(4)
 k1.metric(sel.strftime("%b %Y"), f"{cmp['value']:,.0f}",
@@ -149,8 +174,8 @@ k1.metric(sel.strftime("%b %Y"), f"{cmp['value']:,.0f}",
 k2.metric(f"Historical median ({sel.strftime('%B')})", f"{cmp['median']:,.0f}", f"{cmp['n_years']} years",
           delta_color="off")
 k3.metric("Rank among same months", f"#{cmp['rank']} of {cmp['n_years'] + 1}" if cmp["rank"] else "n/a")
-k4.metric("Harmonization skill (R², held-out years)", f"{val['harmonized']['r2']:.2f}",
-          f"raw MODIS: {val['raw_modis']['r2']:.2f}", delta_color="off")
+k4.metric("Harmonization skill (R², held-out years)", f"{ho['r2']:.2f}", f"raw MODIS: {ho['r2_raw_modis']:.2f}",
+          delta_color="off")
 
 if np.isfinite(cmp["p90"]) and cmp["value"] > cmp["p90"]:
     st.warning(f"⚠️ {sel.strftime('%B %Y')} is above the 90th percentile of all previous "
@@ -164,11 +189,11 @@ if mtd is not None and np.isfinite(mtd["value"]):
               f"{mtd['anomaly_pct']:+.0f}% vs median" if np.isfinite(mtd["anomaly_pct"]) else None,
               delta_color="inverse")
     m2.metric(f"Median of the same days ({mtd['n_years']} years)", f"{mtd['median']:,.0f}")
-    m3.metric("Rank among the same days", f"#{mtd['rank']} of {mtd['n_years'] + 1}" if mtd["rank"] else "n/a")
-    note = ("Same days of the month in every year, so a part month is compared fairly. ")
+    m3.metric("Rank among the same days", f"#{mtd['rank']} of {mtd['n_years'] + 1}")
+    note = f"Same days of the month in every VIIRS year (2012 on), so a part month is compared fairly. "
     if info.get("snpp_end") is not None and day > info["snpp_end"]:
-        note += (f"Suomi NPP stopped on {info['snpp_end']:%d %b %Y}; days after that use VIIRS NOAA-20 × "
-                 f"{info['k_noaa20']:.3f} (S-NPP-equivalent). ")
+        note += (f"Suomi NPP data ends {info['snpp_end']:%d %b %Y}; this month uses VIIRS NOAA-20 × "
+                 f"{info['k_n20']:.3f} (S-NPP-equivalent). ")
     st.caption(note + "Near-real-time data: provisional.")
 
 tab_cal, tab_h, tab_map, tab_data, tab_m = st.tabs(
@@ -176,9 +201,9 @@ tab_cal, tab_h, tab_map, tab_data, tab_m = st.tabs(
 
 # ---------- calendar ----------
 with tab_cal:
-    cal = fc.calendar(series)
+    cal = fc.calendar(shown)
     fig = px.imshow(cal, color_continuous_scale=ramp, aspect="auto", text_auto=".0f",
-                    labels=dict(x="Month", y="Year", color="fire-cells"))
+                    labels=dict(x="Month", y="Year", color=UNIT))
     fig.update_traces(textfont_size=9)
     fig.update_yaxes(dtick=1, autorange="reversed")
     if view == "Harmonized":
@@ -189,129 +214,147 @@ with tab_cal:
         fig.add_shape(type="rect", x0=sel.month - 1.5, x1=sel.month - 0.5,
                       y0=sel.year - 0.5, y1=sel.year + 0.5, line=dict(color="cyan", width=3))
     fig.update_layout(height=40 + 26 * len(cal), margin=dict(l=0, r=0, t=30, b=0))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig)
 
     c1, c2 = st.columns(2)
     with c1:
-        same = h["harmonized"][h.index.month == sel.month].dropna()
+        same = harm[harm.index.month == sel.month].dropna()
         bar = go.Figure(go.Bar(x=same.index.year, y=same.values,
                                marker_color=[COLORS["harmonized"] if p == sel else "#999" for p in same.index]))
         bar.add_hline(y=cmp["median"], line_dash="dash", annotation_text="historical median")
         bar.update_layout(title=f"Every {sel.strftime('%B')} since 2000", height=320,
-                          margin=dict(l=0, r=0, t=40, b=0), yaxis_title="fire-cells")
-        st.plotly_chart(bar, use_container_width=True)
+                          margin=dict(l=0, r=0, t=40, b=0), yaxis_title=UNIT)
+        st.plotly_chart(bar)
     with c2:
-        hist = h["harmonized"][h.index.year < sel.year]
+        hist = harm[harm.index.year < sel.year]
         st.markdown("**Fire season at a glance**")
-        st.markdown(f"- Peak months (median): **{', '.join(fc.peak_months(fc.calendar(hist)))}**")
-        top = fc.busiest_years(h["harmonized"])
+        if len(hist.dropna()):
+            st.markdown(f"- Peak months (median): **{', '.join(fc.peak_months(fc.calendar(hist)))}**")
+        top = fc.busiest_years(harm)
         st.markdown("- Busiest full years: " + ", ".join(f"**{y}** ({v:,.0f})" for y, v in top.items()))
-        st.markdown(f"- {sel.strftime('%B %Y')}: **{cmp['value']:,.0f}** fire-cells vs median "
+        st.markdown(f"- {sel.strftime('%B %Y')}: **{cmp['value']:,.0f}** {UNIT} vs median "
                     f"**{cmp['median']:,.0f}** ({cmp['anomaly_pct']:+.0f}%)")
+        src = h.loc[(h.year == sel.year) & (h.month == sel.month), "source"]
+        if len(src):
+            st.markdown(f"- Source of {sel.strftime('%b %Y')}: {src.iloc[0]}")
 
 # ---------- harmonization ----------
 with tab_h:
     st.markdown("**Why harmonize?** VIIRS (375 m) sees many more and smaller fires than MODIS (1 km). "
                 "Plotted raw, the record seems to jump in 2012 when VIIRS starts. "
                 "After harmonization the sensor of origin no longer matters.")
-    t = h.index.to_timestamp()
+    if bbox is not None:
+        st.caption("The factors and the validation below are fitted on the whole country; the box reuses them "
+                   "(a small area has too few fires to fit its own).")
+    t = harm.index.to_timestamp()
     ts = go.Figure()
-    ts.add_scatter(x=t, y=h["modis"], name="Raw MODIS", line_color=COLORS["MODIS"])
-    ts.add_scatter(x=t, y=h["viirs"], name="Raw VIIRS (S-NPP)", line_color=COLORS["VIIRS_SNPP"])
-    ts.add_scatter(x=t, y=h["modis_scaled"], name="MODIS converted to VIIRS-equivalent",
+    ts.add_scatter(x=t, y=column(h, "modis_cells"), name="Raw MODIS", line_color=COLORS["MODIS"])
+    ts.add_scatter(x=t, y=column(h, "viirs_cells"), name="Raw VIIRS (S-NPP)", line_color=COLORS["VIIRS_SNPP"])
+    ts.add_scatter(x=t, y=series.as_series(h, "modis_as_viirs"), name="MODIS converted to VIIRS-equivalent",
                    line=dict(color=COLORS["harmonized"], dash="dot"))
-    ts.update_layout(height=380, margin=dict(l=0, r=0, t=30, b=0), yaxis_title="fire-cells / month",
+    ts.update_layout(height=380, margin=dict(l=0, r=0, t=30, b=0), yaxis_title=f"{UNIT} / month",
                      legend=dict(orientation="h"))
-    st.plotly_chart(ts, use_container_width=True)
+    st.plotly_chart(ts)
 
+    val = cs["validation"]
     c1, c2 = st.columns(2)
     with c1:
-        p = val["predictions"]
+        p = ho["predictions"]
         sc = go.Figure()
-        sc.add_scatter(x=p["viirs"], y=p["modis"], mode="markers", name="Raw MODIS",
+        sc.add_scatter(x=p["viirs_cells"], y=p["modis_consistent"], mode="markers", name="Raw MODIS",
                        marker_color=COLORS["MODIS"], opacity=0.6)
-        sc.add_scatter(x=p["viirs"], y=p["pred"], mode="markers", name="Harmonized (held-out year)",
+        sc.add_scatter(x=p["viirs_cells"], y=p["pred"], mode="markers", name="Harmonized (held-out year)",
                        marker_color=COLORS["harmonized"], opacity=0.7)
-        mx = float(p["viirs"].max())
+        mx = float(p["viirs_cells"].max())
         sc.add_scatter(x=[0, mx], y=[0, mx], mode="lines", name="perfect agreement",
                        line=dict(color="gray", dash="dash"))
         sc.update_layout(title="Predicted vs observed VIIRS, leave-one-year-out", height=420,
                          xaxis_title="observed VIIRS", yaxis_title="estimate",
-                         margin=dict(l=0, r=0, t=70, b=0), legend=dict(orientation="h", y=1.0, yanchor="bottom"))
-        st.plotly_chart(sc, use_container_width=True)
+                         margin=dict(l=0, r=0, t=40, b=0), legend=dict(orientation="h", y=-0.18, yanchor="top"))
+        st.plotly_chart(sc)
     with c2:
-        tbl = pd.DataFrame({k: val[k] for k in ("raw_modis", "ratio", "harmonized")}).T
-        tbl.index = ["Raw MODIS (no correction)", "Seasonal ratio (baseline)", "Seasonal linear model (ours)"]
-        tbl.columns = ["R²", "Mean abs. error", "Bias %", "Correlation r"]
-        st.markdown(f"**Validation**: {val['n_months']} months, {val['years'][0]}–{val['years'][-1]}, "
-                    "each year predicted by a model that never saw it.")
-        st.dataframe(tbl.style.format("{:.2f}"), use_container_width=True)
-        st.markdown(f"Model: `VIIRS = a(month) + {coef[0]:.2f} × MODIS`")
-        vn, vt = side_checks(country)
-        if vt:
-            st.markdown(f"**MODIS Terra-only months (Nov 2000–Jun 2002)** scaled to Terra + Aqua with a factor per "
-                        f"month (median {vt['k'].median():.2f}); held-out years {vt['years'][0]}–{vt['years'][-1]}: "
-                        f"R² {vt['metrics']['r2']:.3f}.")
+        st.markdown(f"**Validation**: {ho['n_months']} months, {hz.OVERLAP[0]}–{hz.OVERLAP[1]}, each year "
+                    f"predicted from MODIS by factors fitted on the other years. Monthly R² **{ho['r2']:.3f}** "
+                    f"(raw MODIS {ho['r2_raw_modis']:.3f}).")
+        if len(val):
+            st.markdown(f"Median annual error **{val['annual_error_%'].abs().median():.1f}%** · median monthly "
+                        f"error (MAPE) **{val['monthly_MAPE_%'].median():.1f}%** · median monthly r "
+                        f"**{val['monthly_r'].median():.3f}**")
+            st.dataframe(val.set_index("year"), height=250)
+        vn = get_n20_check(country)
         if vn:
-            st.markdown(f"**NOAA-20 → S-NPP (for days after S-NPP stopped):** k = {vn['k']:.3f}; "
-                        f"{vn['n_months']} months both flew, held-out R² {vn['converted']['r2']:.3f}, "
-                        f"bias {vn['converted']['bias_pct']:+.1f} %.")
-        ab = go.Figure(go.Bar(x=fc.MONTHS, y=coef[1:], marker_color=COLORS["VIIRS_SNPP"]))
-        ab.update_layout(title="a(month): small fires only VIIRS detects", height=220,
-                         margin=dict(l=0, r=0, t=40, b=0))
-        st.plotly_chart(ab, use_container_width=True)
+            st.markdown(f"**NOAA-20 → S-NPP (after S-NPP data ends):** k = {vn['k']:.3f}; {vn['n_months']} months "
+                        f"both flew, held-out R² {vn['r2']:.3f}, bias {vn['bias_pct']:+.1f} %.")
+    fac = pd.DataFrame({"month": fc.MONTHS, "Terra → Terra+Aqua (2000–02)": cs["k_terra"].values,
+                        "MODIS → VIIRS": cs["k_viirs"].values})
+    fb = px.bar(fac.melt("month", var_name="factor", value_name="×"), x="month", y="×", color="factor",
+                barmode="group", color_discrete_sequence=[COLORS["MODIS"], COLORS["VIIRS_SNPP"]])
+    fb.update_layout(title=f"Monthly factors (annual: Terra {cs['k_terra_all']:.2f}, MODIS→VIIRS "
+                           f"{cs['k_viirs_all']:.2f})", height=280, margin=dict(l=0, r=0, t=40, b=0),
+                     legend=dict(orientation="h", title=None))
+    st.plotly_chart(fb)
 
 # ---------- hotspot map ----------
 with tab_map:
+    pts_all = in_box(veg, bbox)
     d0 = sel.to_timestamp().date()
-    d1 = (sel + 1).to_timestamp().date() - pd.Timedelta(days=1)
-    rng = st.date_input("Date range", (d0, d1), min_value=cells.date.min().date(), max_value=cells.date.max().date())
-    pts = cells.iloc[0:0]
+    d1 = min((sel + 1).to_timestamp().date() - pd.Timedelta(days=1), info["complete_day"].date())
+    rng = st.date_input("Date range", (d0, d1), min_value=veg.acq_date.min().date(),
+                        max_value=info["complete_day"].date())
+    pts = pts_all.iloc[0:0]
     if isinstance(rng, (tuple, list)) and len(rng) == 2:
-        pts = cells[cells.date.between(pd.Timestamp(rng[0]), pd.Timestamp(rng[1]))]
+        pts = pts_all[pts_all.acq_date.between(pd.Timestamp(rng[0]), pd.Timestamp(rng[1]))]
+        pts = pts.assign(sensor=pts.satellite.map(SENSOR))
         show_static = st.toggle("Show static sources (gas flares, refineries)", value=False)
-        st.caption(f"{len(pts):,} fire-cells ({(pts.sensor == 'VIIRS_SNPP').sum():,} VIIRS S-NPP, "
+        st.caption(f"{len(pts):,} hotspots ({(pts.sensor == 'VIIRS_SNPP').sum():,} VIIRS S-NPP, "
                    f"{(pts.sensor == 'VIIRS_NOAA20').sum():,} VIIRS NOAA-20, {(pts.sensor == 'MODIS').sum():,} MODIS). "
-                   "Calendar and anomalies always use vegetation fires only.")
+                   "Calendar and anomalies use vegetation fires only.")
         show = pts.sample(30000, random_state=0) if len(pts) > 30000 else pts
+        show = show[["sensor", "acq_date", "latitude", "longitude", "frp"]]
         if show_static:
-            stc = data["static"]
+            stc = in_box(data["static"], bbox)
             stc = stc[stc.acq_date.between(pd.Timestamp(rng[0]), pd.Timestamp(rng[1]))]
-            if bbox is not None:
-                stc = stc[stc.longitude.between(bbox[0], bbox[2]) & stc.latitude.between(bbox[1], bbox[3])]
-            show = pd.concat([show, stc.assign(sensor="Static source", date=stc.acq_date)[
-                ["sensor", "date", "latitude", "longitude", "frp"]]], ignore_index=True)
-        mp = px.scatter_map(show, lat="latitude", lon="longitude", color="sensor", hover_data=["date", "frp"],
-                            color_discrete_map=COLORS, height=560, map_style="carto-darkmatter",
-                            center=dict(lat=float(cells.latitude.median()), lon=float(cells.longitude.median())),
-                            zoom=4.3)
-        mp.update_traces(marker_size=5)
-        mp.update_layout(margin=dict(l=0, r=0, t=0, b=0))
-        st.plotly_chart(mp, use_container_width=True)
+            show = pd.concat([show, stc.assign(sensor="Static source")[show.columns]], ignore_index=True)
+        if len(show):
+            mp = px.scatter_map(show, lat="latitude", lon="longitude", color="sensor", hover_data=["acq_date", "frp"],
+                                color_discrete_map=COLORS, height=560, map_style="carto-darkmatter",
+                                center=dict(lat=float(pts_all.latitude.median()), lon=float(pts_all.longitude.median())),
+                                zoom=4.3)
+            mp.update_traces(marker_size=5)
+            mp.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+            st.plotly_chart(mp)
+        else:
+            st.info("No hotspots in this date range.")
 
 # ---------- downloads ----------
 with tab_data:
-    out = h.copy()
-    out.index = out.index.astype(str)
-    out = out.rename(columns={"modis": "modis_raw", "viirs": "viirs_raw", "modis_scaled": "modis_as_viirs"})
-    st.download_button("⬇️ Monthly harmonized series (CSV)", out.to_csv().encode(),
+    out = h.drop(columns=["ym"]).copy()
+    st.download_button("⬇️ Monthly harmonized series (CSV)", out.to_csv(index=False).encode(),
                        f"{country}_monthly_harmonized.csv", "text/csv")
     st.download_button("⬇️ Burning calendar, year × month (CSV)",
-                       fc.calendar(h["harmonized"]).to_csv().encode(), f"{country}_calendar.csv", "text/csv")
+                       fc.calendar(harm).to_csv().encode(), f"{country}_calendar.csv", "text/csv")
     if len(pts):
         st.download_button(f"⬇️ Hotspots {rng[0]} → {rng[1]} (CSV)",
-                           pts.drop(columns=["cell_y", "cell_x", "seen_by_terra"]).to_csv(index=False).encode(),
+                           pts[MAP_COLS + ["sensor"]].to_csv(index=False).encode(),
                            f"{country}_hotspots_{rng[0]}_{rng[1]}.csv", "text/csv")
-    st.dataframe(out.tail(36), use_container_width=True)
+    st.dataframe(out.tail(36))
 
 # ---------- method ----------
 with tab_m:
-    st.markdown(hz.__doc__.split("    from syntra")[0])
-    st.markdown("**Cleaning (Step 3, `syntra/clean.py`):** confidence MODIS ≥ 30 ≙ VIIRS n/h; rows with no "
-                "location or date and exact duplicates dropped; static sources (type 1 volcano, 2 gas flares and "
-                "other static land sources, 3 offshore) flagged; plus one static-source mask (~1 km cells that were "
-                "static in the archive or burned on more than half the days of a year) applied to every year, "
-                "so 2026 near-real-time data (no `type`) is cleaned exactly like the archive.")
+    doc = hz.__doc__
+    st.markdown("**Harmonization (Steps 4–5, `syntra/harmonize.py`)**\n\n"
+                + doc[doc.index("1. Gridding"):doc.index("Outputs in")])
+    st.markdown("**2026 (`syntra/series.py`):** months run to the last complete month. Suomi NPP data ends "
+                f"{info['snpp_end']:%d %b %Y}" if info.get("snpp_end") is not None else "**2026:** archive only.")
+    if info.get("snpp_end") is not None:
+        st.markdown(f"From that month on VIIRS = NOAA-20 cells × {info['k_n20']:.3f}, the ratio of S-NPP to NOAA-20 "
+                    "cells over every full month both flew (2018 on). \"This month so far\" compares days 1–D of "
+                    "the current month with the same days of every VIIRS year.")
+    st.markdown("**Cleaning (Step 3, `syntra/clean.py`):** hotspots outside the country border (Natural Earth "
+                "1:10m) removed; confidence MODIS ≥ 30 ≙ VIIRS n/h; rows with no location or date and exact "
+                "duplicates dropped; static sources (type 1 volcano, 2 gas flares and other static land sources, "
+                "3 offshore) flagged; plus one static-source mask (~1 km cells that were static in the archive) "
+                "applied to every year, so 2026 near-real-time data (no `type`) is cleaned exactly like the archive.")
     st.markdown(f"This run: {info['rows_clean']:,} clean hotspots; {info['static_by_type']:,} static by type and "
                 f"{info['static_by_mask']:,} more by the mask ({info['mask_cells']:,} cells); "
                 f"{info.get('dropped_outside', 0):,} 2026 API hotspots outside the country removed.")

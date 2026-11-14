@@ -209,22 +209,41 @@ def apply_static_mask(df, mask):
     return df
 
 
+# First month each sensor family has data (Terra MODIS: Nov 2000; Suomi NPP VIIRS: Jan 2012)
+SENSOR_START = {"MODIS": (2000, 11), "VIIRS": (2012, 1)}
+
+
+def month_span(veg, family):
+    """All months a sensor covers in `veg`: from Jan of its first year (never before the
+    sensor existed) to Dec of its last year (never past the current month).
+
+    Using the first/last month WITH fire would miss quiet months at either end.
+    """
+    years = veg.loc[veg.family == family, "year"].astype(int)
+    if years.empty:
+        return pd.PeriodIndex([], freq="M")
+    sy, sm = SENSOR_START.get(family, (int(years.min()), 1))
+    first = max(pd.Period(year=int(years.min()), month=1, freq="M"), pd.Period(year=sy, month=sm, freq="M"))
+    last = min(pd.Period(year=int(years.max()), month=12, freq="M"), pd.Timestamp.today().to_period("M"))
+    return pd.period_range(first, last, freq="M")
+
+
 def monthly_table(veg):
     """Per sensor and month: hotspots, burned 0.1 degree cells, FRP sum.
 
-    A month with no fires gets a row of zeros (between the sensor's first and last
-    month). Without it, quiet months such as Sudan's rainy season or most months in
-    Saudi Arabia would simply be missing, and a monthly median would skip them.
+    A month with no fires gets a row of zeros, for every month the sensor covers
+    (see month_span). Without it, quiet months such as Sudan's rainy season or most
+    months in Saudi Arabia would simply be missing, and a monthly median would skip them.
     """
     tab = (veg.groupby(["family", "year", "month"], observed=True)
               .agg(hotspots=("frp", "size"), burned_cells=("cell_id", "nunique"),
                    frp_sum=("frp", "sum"))
               .reset_index())
+    tab["year"] = tab["year"].astype(int)
+    tab["month"] = tab["month"].astype(int)
     full = []
     for fam, g in tab.groupby("family"):
-        first, last = (pd.Period(year=int(y), month=int(m), freq="M")
-                       for y, m in (g.iloc[0][["year", "month"]], g.iloc[-1][["year", "month"]]))
-        months = pd.period_range(first, last, freq="M")
+        months = month_span(veg, fam)
         idx = pd.MultiIndex.from_arrays([[fam] * len(months), months.year, months.month],
                                         names=["family", "year", "month"])
         full.append(g.set_index(["family", "year", "month"]).reindex(idx, fill_value=0))

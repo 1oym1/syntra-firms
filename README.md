@@ -16,6 +16,7 @@ cd syntra-firms
 pip install -r requirements.txt
 python scripts/fetch_firms.py
 python -m syntra.clean          # Step 3: clean the data (see syntra/clean.py)
+python -m syntra.harmonize      # Steps 4-5: one MODIS+VIIRS series, 2000 to today, with validation
 ```
 
 The last command downloads the FIRMS yearly files (Sudan, 2000 to 2025; change `DEFAULT_COUNTRY` in `syntra/data.py` for another country) into `data/raw/`. Data is not stored in git, so everyone runs it once.
@@ -24,23 +25,34 @@ Then open `notebooks/00_load_data.ipynb` and run all cells. The app runs with `s
 
 ## Harmonization (phases 4 and 5)
 
-Code: `syntra/harmonize.py`. Hotspots are snapped to a ~1 km grid and counted as unique fire-cells per day.
-On the 2012–2025 overlap we fit `VIIRS = a(month) + b × MODIS`, then convert MODIS 2000–2011 into
-VIIRS-equivalent units. Validation is leave-one-year-out: each year is predicted by a model that never saw it.
+Code: `syntra/harmonize.py` (method in its docstring and `docs/MODIS_vs_VIIRS.md`).
+1. Count **burned 0.1° cells per month** (about 11 km) instead of raw hotspots, per sensor.
+2. MODIS Terra-only months (Nov 2000–Jun 2002) are scaled to Terra + Aqua (monthly factor, fitted 2003–2021).
+3. A monthly factor VIIRS / MODIS, fitted on the 2012–2021 overlap, converts MODIS into VIIRS units. The series
+   uses observed VIIRS from 2012 and MODIS × factor before that.
+4. Validation is leave-one-year-out: each overlap year is predicted from MODIS by factors that never saw it.
+
+`syntra/series.py` extends this to 2026 for the app: months run to the last complete month, and after Suomi NPP's
+data ends (2 Nov 2026) VIIRS = NOAA-20 cells × k (S-NPP / NOAA-20, fitted on every month both flew, 2018 on).
 
 ```bash
 python scripts/validate_harmonization.py --countries Sudan Ethiopia Iraq Saudi_Arabia
 ```
 
-| Country | R² raw MODIS | R² seasonal ratio | **R² our model** | Bias (model) |
-| --- | --- | --- | --- | --- |
-| Sudan | 0.31 | 0.99 | **0.99** | −0.1 % |
-| Ethiopia | 0.21 | 0.97 | **0.97** | 0.0 % |
-| Iraq | −0.27 | 0.71 | **0.88** | +0.2 % |
-| Saudi Arabia | −11.0 | −0.71 | **0.28** | +0.1 % |
+Monthly R², leave-one-year-out 2012–2021 (120 months per country), archive data:
 
-Saudi Arabia has few, scattered vegetation fires, so its monthly signal is noisy. It shows where the method
-reaches its limits. Full table: `outputs/tables/harmonization_validation.csv`.
+| Country | R² raw MODIS | **R² harmonized** | Median annual error | Median monthly r |
+| --- | --- | --- | --- | --- |
+| Sudan | 0.39 | **0.97** | 3.0 % | 0.99 |
+| Ethiopia | 0.55 | **0.98** | 4.3 % | 0.99 |
+| Iraq | 0.34 | **0.83** | 9.6 % | 0.97 |
+| Saudi Arabia | −20.7 | **−0.75** | 7.0 % | 0.44 |
+
+Saudi Arabia has few, scattered vegetation fires (about 1,700 burned cells a year), so its monthly signal is noisy:
+the yearly totals are close (7 % error) but single months are not. It shows where the method reaches its limits.
+Tables: `outputs/tables/harmonization_validation.csv` and `harmonization_validation_by_year.csv`.
+
+Slide figures: `notebooks/01_harmonization.ipynb` writes them to `outputs/figures/` (code in `syntra/figures.py`).
 
 ## App
 
@@ -51,12 +63,23 @@ validation, a hotspot map and CSV downloads. Data is downloaded from FIRMS on fi
 **2026 data** comes from the FIRMS API and needs a free MAP_KEY: copy `.env.example` to `.env` and fill in
 `FIRMS_MAP_KEY` (never commit `.env`). On Streamlit Cloud put the same line in the app's Secrets. Without a key the
 app still works on the archive (to Dec 2025). The whole chain (fetch → `syntra/clean.py` → 2026 → static mask →
-fire-cells) is `syntra/pipeline.py`:
+harmonization) is `syntra/pipeline.py`:
 
 ```python
 from syntra.pipeline import load_country
-d = load_country("Sudan")   # d["cells"], d["static"], d["info"]
+from syntra import series
+d = load_country("Sudan")                       # d["veg"], d["static"], d["info"]
+s = series.country_series(d["veg"], d["info"])  # s["tab"] = monthly harmonized table, s["validation"], ...
 ```
+
+To save the cleaned and harmonized data for one country (2000 to yesterday) into `data/processed/`:
+
+```bash
+python -m syntra.pipeline --country Sudan
+```
+
+Small copies of the Sudan results are in `outputs/tables/` (`harmonized_Sudan.csv`, `factors_Sudan.csv`,
+`validation_Sudan.csv`, `run_info_Sudan.json`).
 
 ## Folders
 

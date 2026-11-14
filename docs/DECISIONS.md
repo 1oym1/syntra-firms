@@ -2,6 +2,28 @@
 
 Short record of decisions the team has agreed on. Newest first.
 
+
+## 2026-11-14: The app uses PR #3's harmonization (burned 0.1° cells per month)
+
+**Decision (Hisham).** One harmonization method everywhere: Riyadh's `syntra/harmonize.py` from PR #3. The app,
+the notebook, the validation script and the slides all use it. The earlier method in PR #1 (~1 km fire-cells per
+day, `VIIRS = a(month) + b × MODIS`) is removed.
+
+**Why.** The team owns one method and can explain it; the app and the slides show the same numbers. Held-out R²
+(2012–2021) is about the same: Sudan 0.97 (old 0.99), Ethiopia 0.98 (old 0.97). Saudi Arabia is weaker
+(−0.75 vs 0.15), and it was already the limits case.
+
+**What changes for the results.** The unit now measures how widespread burning is, not how often the same place
+burns. Sudan's October 2026 was a record under the old unit (+72 %) but is normal under this one (1,545 burned
+cells vs median 1,540, #13 of 26): the extra detections fell in cells that were already burning.
+
+**Added on top of PR #3** (`syntra/series.py`, `harmonize.py`):
+- Bug fix: `harmonize_area` took its month span from the drawn box's own fires, so a box lost the years before
+  its first fire and after its last one. It now takes the country's spans (`spans=` argument).
+- Months run to the last complete month; after Suomi NPP's data ends (2 Nov 2026) VIIRS = NOAA-20 × 0.992
+  (102 months both flew, held-out R² 0.997, bias 0.0 %).
+- "This month so far": days 1–D of the current month vs the same days of every VIIRS year.
+
 ## 2026-11-14: Keep only hotspots inside Sudan's border
 
 **Decision.** Cleaning keeps only points that fall inside the country's border (Natural Earth 1:10m, `syntra/clean.py` → `country_shape()`).

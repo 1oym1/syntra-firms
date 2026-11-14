@@ -1,282 +1,208 @@
-"""MODIS -> VIIRS harmonization (phase 4) and its validation (phase 5).
+"""Step 4 (harmonization) and Step 5 (validation): one consistent fire series, 2000 to today.
 
-Works on the table from syntra.data.load_fires (type 0 already kept).
+Input: the clean vegetation fires from syntra.clean (static sources already removed).
 
-Method (one slide):
-  1. Clean    keep confidence nominal/high for both sensors (MODIS >= 30 == VIIRS n/h).
-  2. Grid     snap each hotspot to a 0.01 deg (~1 km) cell and count UNIQUE fire-cells per day.
-              One fire lights several 375 m VIIRS pixels but only one ~1 km cell, which removes
-              most of the resolution gap before any statistics.
-  3. Fit      on the overlap 2012-2025 (MODIS and VIIRS S-NPP both flying), least squares:
-                  VIIRS = a(month) + b * MODIS
-              one shared slope, one intercept per calendar month (small fires only VIIRS sees).
-  4. Merge    before 2012 use model(MODIS) = "VIIRS-equivalent", from 2012 use observed VIIRS.
-  5. Validate leave-one-year-out: refit without year Y, predict Y from MODIS, compare with real
-              VIIRS. Reported next to raw MODIS and a simple seasonal ratio (the baselines).
-  6. 2026     Suomi NPP stopped on 2 Nov 2026. After its last day we use VIIRS NOAA-20 (same instrument,
-              other satellite) times one ratio k = S-NPP / NOAA-20 fitted on every month both flew
-              (2018-2026), also checked leave-one-year-out.
+    from syntra.clean import run as clean
+    from syntra.harmonize import run as harmonize
+    fires, veg, monthly, mask = clean("Sudan")
+    series, factors, validation = harmonize(veg)
 
-    from syntra.data import load_fires
-    from syntra import harmonize as hz
-    cells = hz.fire_cells(load_fires("Iraq"))
-    mon   = hz.monthly(cells)
-    h     = hz.harmonize(mon)          # columns modis, viirs, modis_scaled, harmonized, source
-    v     = hz.validate(mon)           # v["harmonized"]["r2"], ...
+or from the repo root (after `python -m syntra.clean`):
+
+    python -m syntra.harmonize
+
+Method (details and reasons in docs/MODIS_vs_VIIRS.md):
+1. Gridding. Count burned 0.1 degree cells per month instead of raw hotspots. This
+   removes much of the 1 km vs 375 m resolution gap on its own.
+2. MODIS consistency. Nov 2000 to Jun 2002 only Terra flew; Aqua joined in Jul 2002.
+   A per-month factor Terra -> Terra+Aqua, fitted on 2003-2021, scales the Terra-only
+   months so MODIS has no jump in 2002. (2022 on is left out of the fit because
+   Terra's orbit drifted.)
+3. VIIRS-equivalent. A per-month factor VIIRS / MODIS, fitted on the overlap years,
+   converts MODIS into VIIRS units. The final series uses observed VIIRS where it
+   exists (2012 on) and MODIS x factor before that.
+4. Validation. Leave-one-year-out: hide one overlap year, fit the factors on the
+   others, predict that year's VIIRS from MODIS alone, and score the error.
+
+Every factor is a ratio of sums ("pooled ratio"): sum of the target over all
+calibration years divided by sum of the source. Months with too few fires fall
+back to the annual factor, so a quiet month cannot produce a wild factor.
+
+Outputs in data/processed/:
+    harmonized_<country>.csv        year, month, every input, the harmonized value, its source
+    factors_<country>.csv           the monthly factors (Terra->Terra+Aqua, MODIS->VIIRS)
+    validation_<country>.csv        leave-one-year-out errors per year
 """
+import argparse
+
 import numpy as np
 import pandas as pd
 
-GRID = 0.01                       # degrees, about 1.1 km
-REFERENCE = "VIIRS_SNPP"          # longest VIIRS record (2012-2026); the unit we harmonize to
-NOAA20 = "VIIRS_NOAA20"           # stands in for S-NPP after S-NPP's last day (2 Nov 2026)
-VIIRS_START = pd.Period("2012-01", "M")
-SHRINK = 50.0                     # ratio baseline: pseudo-count toward the global ratio
+from syntra.clean import month_span
+from syntra.data import DEFAULT_COUNTRY, PROCESSED_DIR
+
+TERRA_CAL = (2003, 2021)       # both MODIS satellites, before Terra's orbit drift
+OVERLAP = (2012, 2021)         # MODIS and VIIRS both flying, before Terra's orbit drift
+AQUA_START = 200207            # first month with Aqua data (yyyymm)
+TERRA_OUTAGE = 200106          # 15 Jun - 3 Jul 2001: Terra data gap, shown as missing data
+MIN_CELLS = 50                 # fewer source cells than this in a month -> annual factor
 
 
-# ---------- 1-2. clean + grid ----------
-SATELLITE_SENSOR = {"Terra": "MODIS", "Aqua": "MODIS", "T": "MODIS", "A": "MODIS",
-                    "N": REFERENCE, "N20": NOAA20, "1": NOAA20}
+# ---------------------------------------------------------------- 1. gridded monthly table
+def monthly_cells(veg, spans=None):
+    """One row per month: burned 0.1 degree cells per sensor and satellite, plus hotspots and FRP.
 
-
-def fire_cells(fires, sensors=("MODIS", REFERENCE)):
-    """One row per (sensor, day, ~1 km cell).
-
-    Takes syntra.clean output (confidence already filtered; rows with is_static are dropped)
-    or syntra.data.load_fires output (nominal/high confidence kept here).
+    `veg` = clean vegetation fires (columns family, satellite, year, month, cell_id, frp).
+    Months with no fire inside the data's time span get zeros, not a missing row.
+    spans: optional {"MODIS": PeriodIndex, "VIIRS": PeriodIndex} of the months each sensor covers.
+    Pass the COUNTRY's spans for a small drawn area: its own fires would give a span that starts at
+    the area's first fire and ends at its last one, so earlier and later years would go missing.
     """
-    f = fires
-    if "sensor" not in f:
-        f = f.assign(sensor=f["satellite"].astype(str).map(SATELLITE_SENSOR))
-    if "is_static" in f:
-        f = f[~f["is_static"]]
-    if "confidence_class" in f:
-        f = f[f["confidence_class"].isin(["nominal", "high"])]
-    f = f[f["sensor"].isin(sensors)].copy()
-    f["cell_y"] = np.floor(f["latitude"] / GRID).astype("int32")
-    f["cell_x"] = np.floor(f["longitude"] / GRID).astype("int32")
-    f["date"] = pd.to_datetime(f["acq_date"]).dt.normalize()
-    if "satellite" not in f:
-        f["satellite"] = ""
-    f["satellite"] = f["satellite"].astype(str)
-    # A cell seen by Terra and Aqua the same day counts once; remember if Terra saw it (Terra-only fix below).
-    terra = f[f["satellite"].isin(["Terra", "T"])][["sensor", "date", "cell_y", "cell_x"]].drop_duplicates()
-    f = f.drop_duplicates(["sensor", "date", "cell_y", "cell_x"])
-    f = f.merge(terra.assign(seen_by_terra=True), on=["sensor", "date", "cell_y", "cell_x"], how="left")
-    f["seen_by_terra"] = f["seen_by_terra"].fillna(False).astype(bool)
-    return f[["sensor", "satellite", "date", "latitude", "longitude", "frp", "daynight",
-              "cell_y", "cell_x", "seen_by_terra"]].reset_index(drop=True)
-
-
-# ---------- MODIS Terra-only months (Nov 2000 - Jun 2002), from Riyadh's notebook Part 4 ----------
-AQUA_START = pd.Period("2002-07", "M")
-TERRA_CAL_YEARS = range(2003, 2022)   # both satellites flying, before Terra's orbit drift
-MIN_TERRA = 50                         # fewer Terra cells than this in a calendar month -> annual factor
-
-
-def _terra_table(cells):
-    m = cells[cells["sensor"] == "MODIS"].assign(month=lambda d: d["date"].dt.to_period("M"))
-    return m.groupby("month").agg(both=("seen_by_terra", "size"), terra=("seen_by_terra", "sum"))
-
-
-def terra_factors(cells, years=TERRA_CAL_YEARS):
-    """k(month) = (Terra + Aqua) / Terra fire-cells, fitted on years when both flew."""
-    t = _terra_table(cells)
-    t = t[t.index.year.isin(list(years))]
-    s = t.groupby(t.index.month)[["both", "terra"]].sum().reindex(range(1, 13), fill_value=0)
-    k_all = s["both"].sum() / s["terra"].sum() if s["terra"].sum() > 0 else 1.0
-    k = (s["both"] / s["terra"].replace(0, np.nan)).where(s["terra"] >= MIN_TERRA, k_all).fillna(k_all)
-    return k
-
-
-def validate_terra(cells, years=TERRA_CAL_YEARS):
-    """Leave-one-year-out: predict Terra+Aqua from Terra alone."""
-    t = _terra_table(cells)
-    t = t[t.index.year.isin(list(years))]
-    ys = sorted(set(t.index.year))
-    if len(ys) < 2:
-        return None
-    pred = pd.concat([t.loc[t.index.year == y, "terra"] * t.index[t.index.year == y].month.map(
-        terra_factors(cells, [v for v in ys if v != y])).values for y in ys])
-    return {"years": ys, "metrics": _metrics(t.loc[pred.index, "both"].values, pred.values),
-            "k": terra_factors(cells, years)}
-
-
-def in_bbox(cells, bbox):
-    """bbox = (west, south, east, north) or None for everything."""
-    if bbox is None:
-        return cells
-    w, s, e, n = bbox
-    return cells[cells["longitude"].between(w, e) & cells["latitude"].between(s, n)]
-
-
-def monthly(cells, last_month=None, snpp_end=None, k_noaa20=None, terra_k=None):
-    """Monthly fire-cell counts: columns `modis`, `viirs` (NaN before VIIRS existed), `viirs_from_noaa20`.
-
-    With snpp_end and k_noaa20 set, days after snpp_end get k_noaa20 x NOAA-20 in the `viirs` column
-    (S-NPP-equivalent); `viirs_from_noaa20` holds that part so those months can be kept out of the fit.
-    With terra_k (from terra_factors) the Terra-only months before Aqua (to Jun 2002) are scaled to
-    Terra + Aqua, so the MODIS record has the same meaning from start to end.
-    """
-    m = cells.assign(month=cells["date"].dt.to_period("M"))
-    snpp = m[m["sensor"] != NOAA20] if snpp_end is None else m[(m["sensor"] != NOAA20) & (m["date"] <= snpp_end)
-                                                                 | (m["sensor"] == "MODIS")]
-    tab = snpp.groupby(["month", "sensor"]).size().unstack("sensor")
-    tab = tab.rename(columns={"MODIS": "modis", REFERENCE: "viirs"})
-    for c in ("modis", "viirs"):
-        if c not in tab:
-            tab[c] = np.nan
-    last = last_month or (m["month"].max() if len(m) else VIIRS_START)
-    idx = pd.period_range("2000-11", last, freq="M")  # MODIS archive starts Nov 2000
-    tab = tab.reindex(idx).fillna(0.0)
-    if terra_k is not None:
-        early = tab.index < AQUA_START
-        tab.loc[early, "modis"] = tab.loc[early, "modis"] * tab.index[early].month.map(terra_k).values
-    tab["viirs_from_noaa20"] = 0.0
-    if snpp_end is not None and k_noaa20 is not None:
-        n20 = m[(m["sensor"] == NOAA20) & (m["date"] > snpp_end)].groupby("month").size() * k_noaa20
-        n20 = n20.reindex(idx).fillna(0.0)
-        tab["viirs"] += n20
-        tab["viirs_from_noaa20"] = n20
-    tab.loc[tab.index < VIIRS_START, "viirs"] = np.nan
-    tab.index.name = "month"
-    return tab[["modis", "viirs", "viirs_from_noaa20"]]
-
-
-# ---------- 3. fit ----------
-def _overlap(mon, years=None):
-    ov = mon.dropna(subset=["viirs"])
-    if "viirs_from_noaa20" in ov:
-        ov = ov[ov["viirs_from_noaa20"] == 0]  # fit MODIS -> VIIRS on observed S-NPP only
-    return ov if years is None else ov[ov.index.year.isin(years)]
-
-
-def _design(idx, modis):
-    return np.c_[modis, np.eye(12)[idx.month - 1]]  # [MODIS, 12 month intercepts]
-
-
-def fit_model(mon, years=None):
-    """Coefficients [b, a_jan, ..., a_dec] for VIIRS = a(month) + b * MODIS."""
-    ov = _overlap(mon, years)
-    coef, *_ = np.linalg.lstsq(_design(ov.index, ov["modis"].values), ov["viirs"].values, rcond=None)
-    return coef
-
-
-def predict(coef, idx, modis):
-    return np.clip(_design(idx, modis) @ coef, 0, None)
-
-
-def fit_ratio(mon, years=None):
-    """Baseline: k(month) = VIIRS / MODIS, shrunk toward the global ratio."""
-    ov = _overlap(mon, years)
-    k_all = ov["viirs"].sum() / ov["modis"].sum() if ov["modis"].sum() > 0 else 1.0
-    g = ov.groupby(ov.index.month)[["modis", "viirs"]].sum().reindex(range(1, 13), fill_value=0)
-    return (g["viirs"] + SHRINK * k_all) / (g["modis"] + SHRINK)
-
-
-# ---------- 4. merge ----------
-def harmonize(mon, coef=None):
-    coef = fit_model(mon) if coef is None else coef
-    out = mon.copy()
-    out["modis_scaled"] = predict(coef, out.index, out["modis"].values)
-    out["harmonized"] = np.where(out["viirs"].isna(), out["modis_scaled"], out["viirs"])
-    out["source"] = np.where(out["viirs"].isna(), "MODIS -> VIIRS-equivalent", "VIIRS S-NPP observed")
-    if "viirs_from_noaa20" in out:
-        out.loc[out["viirs_from_noaa20"] > 0, "source"] = "VIIRS NOAA-20 -> S-NPP-equivalent"
-    return out
-
-
-# ---------- 6. NOAA-20 -> S-NPP (2026) ----------
-def _pair_months(cells, snpp_end=None):
-    """Monthly fire-cells for S-NPP and NOAA-20, only full months where both flew."""
-    v = cells[cells["sensor"].isin([REFERENCE, NOAA20])]
-    if snpp_end is not None:
-        v = v[v["date"] < (pd.Timestamp(snpp_end).to_period("M")).to_timestamp()]  # drop S-NPP's last partial month
-    t = v.assign(month=v["date"].dt.to_period("M")).groupby(["month", "sensor"]).size().unstack("sensor")
-    if REFERENCE not in t or NOAA20 not in t:
-        return pd.DataFrame(columns=["snpp", "n20"])
-    t = t.rename(columns={REFERENCE: "snpp", NOAA20: "n20"})[["snpp", "n20"]].dropna()
-    return t[t.index >= pd.Period("2018-05", "M")]  # NOAA-20 archive starts April 2018 (partial month)
-
-
-def fit_noaa20(cells, snpp_end=None, years=None):
-    """k = S-NPP / NOAA-20 over the months both flew. NaN when there is no overlap."""
-    t = _pair_months(cells, snpp_end)
-    if years is not None:
-        t = t[t.index.year.isin(years)]
-    return float(t["snpp"].sum() / t["n20"].sum()) if len(t) and t["n20"].sum() > 0 else float("nan")
-
-
-def validate_noaa20(cells, snpp_end=None):
-    """Leave-one-year-out check of k: predict each year's S-NPP from NOAA-20."""
-    t = _pair_months(cells, snpp_end)
-    years = sorted(set(t.index.year))
-    if len(years) < 2:
-        return None
-    pred = pd.concat([t.loc[t.index.year == y, "n20"] * fit_noaa20(cells, snpp_end, [v for v in years if v != y])
-                      for y in years])
-    obs = t.loc[pred.index, "snpp"]
-    return {"years": years, "n_months": len(t), "k": fit_noaa20(cells, snpp_end),
-            "raw_noaa20": _metrics(obs.values, t.loc[pred.index, "n20"].values),
-            "converted": _metrics(obs.values, pred.values)}
-
-
-# ---------- month to date ----------
-def daily_reference(cells, coef, snpp_end=None, k_noaa20=None, terra_k=None):
-    """Daily VIIRS-equivalent fire-cells over the whole record (for 'this month so far').
-
-    Before 2012: model(MODIS) spread over the days of the month; 2012 to snpp_end: S-NPP observed;
-    after snpp_end: k x NOAA-20.
-    """
-    d = cells.groupby(["date", "sensor"]).size().unstack("sensor")
-    last = cells["date"].max()
-    idx = pd.date_range("2000-11-01", last, freq="D")
-    d = d.reindex(idx).fillna(0.0)
-    get = lambda s: d[s] if s in d else pd.Series(0.0, index=idx)  # noqa: E731
-    month_idx = idx.month - 1
-    modis = get("MODIS")
-    if terra_k is not None:
-        modis = modis * np.where(idx < AQUA_START.to_timestamp(), terra_k.reindex(idx.month).values, 1.0)
-    modis_eq = coef[0] * modis + coef[1:][month_idx] / idx.days_in_month
-    ref = get(REFERENCE).copy()
-    out = pd.Series(np.where(idx < VIIRS_START.to_timestamp(), np.clip(modis_eq, 0, None), ref), index=idx)
-    if snpp_end is not None and k_noaa20 is not None and np.isfinite(k_noaa20):
-        after = idx > pd.Timestamp(snpp_end)
-        out[after] = k_noaa20 * get(NOAA20)[after]
-    return out
-
-
-# ---------- 5. validate ----------
-def _metrics(obs, pred):
-    ss_res = float(((obs - pred) ** 2).sum())
-    ss_tot = float(((obs - obs.mean()) ** 2).sum())
-    return {
-        "r2": 1 - ss_res / ss_tot if ss_tot > 0 else float("nan"),
-        "mae": float(np.abs(obs - pred).mean()),
-        "bias_pct": float(100 * (pred.sum() / obs.sum() - 1)) if obs.sum() > 0 else float("nan"),
-        "r": float(np.corrcoef(obs, pred)[0, 1]) if obs.std() > 0 and pred.std() > 0 else float("nan"),
+    m = veg[veg.family == "MODIS"]
+    v = veg[veg.family == "VIIRS"]
+    parts = {
+        "terra_cells": m[m.satellite == "Terra"].groupby(["year", "month"])["cell_id"].nunique(),
+        "aqua_cells": m[m.satellite == "Aqua"].groupby(["year", "month"])["cell_id"].nunique(),
+        "modis_cells": m.groupby(["year", "month"])["cell_id"].nunique(),   # cell seen by both = 1
+        "viirs_cells": v.groupby(["year", "month"])["cell_id"].nunique(),
+        "modis_hotspots": m.groupby(["year", "month"]).size(),
+        "viirs_hotspots": v.groupby(["year", "month"]).size(),
+        "modis_frp": m.groupby(["year", "month"])["frp"].sum(),
+        "viirs_frp": v.groupby(["year", "month"])["frp"].sum(),
     }
+    tab = pd.DataFrame(parts)
+    tab.index = pd.MultiIndex.from_arrays([tab.index.get_level_values(0).astype(int),
+                                           tab.index.get_level_values(1).astype(int)],
+                                          names=["year", "month"])
+    # Every month each sensor covers (zeros for quiet months; see syntra.clean.month_span)
+    spans = spans or {fam: month_span(veg, fam) for fam in ("MODIS", "VIIRS")}
+    months = spans["MODIS"].union(spans["VIIRS"])
+    full = pd.MultiIndex.from_arrays([months.year, months.month], names=["year", "month"])
+    tab = tab.reindex(full).fillna(0).reset_index()
+    tab["ym"] = tab.year * 100 + tab.month
+    # Which sensors actually flew that month (zeros before launch are "no data", not "no fire")
+    for fam, col in (("MODIS", "modis_flying"), ("VIIRS", "viirs_flying")):
+        span = spans[fam]
+        tab[col] = (tab.ym >= span[0].year * 100 + span[0].month) & (tab.ym <= span[-1].year * 100 + span[-1].month) \
+            if len(span) else False
+    return tab
 
 
-def validate(mon):
-    """Leave-one-year-out over the overlap years."""
-    ov = mon.dropna(subset=["viirs"])
-    years = sorted(set(ov.index.year))
-    parts = []
+# ---------------------------------------------------------------- shared: pooled monthly factor
+def monthly_factor(tab, target, source, years):
+    """Per calendar month: sum(target) / sum(source) over `years`; quiet months use the annual factor."""
+    cal = tab[(tab.year >= years[0]) & (tab.year <= years[1])]
+    s = cal.groupby("month")[[target, source]].sum()
+    annual = cal[target].sum() / cal[source].sum() if cal[source].sum() else np.nan
+    k = s[target] / s[source].replace(0, np.nan)
+    k = k.where(s[source] >= MIN_CELLS, annual).fillna(annual)
+    return k.reindex(range(1, 13)).fillna(annual), annual
+
+
+# ---------------------------------------------------------------- 2. MODIS consistency (Terra -> Terra+Aqua)
+def modis_consistent(tab, years=TERRA_CAL):
+    """Adds `modis_consistent`: Terra-only months scaled to Terra+Aqua. Returns (tab, k_month, k_annual)."""
+    tab = tab.copy()
+    k, k_all = monthly_factor(tab, "modis_cells", "terra_cells", years)
+    terra_only = tab.modis_flying & (tab.ym < AQUA_START)
+    tab["modis_consistent"] = tab.modis_cells.astype(float)
+    if terra_only.any():
+        if np.isnan(k_all):
+            raise ValueError(f"Cannot scale Terra-only months: no calibration data in {years}.")
+        tab.loc[terra_only, "modis_consistent"] = tab.loc[terra_only, "terra_cells"] * tab.loc[terra_only, "month"].map(k)
+    return tab, k, k_all
+
+
+# ---------------------------------------------------------------- 3. VIIRS-equivalent series
+def harmonize(tab, overlap=OVERLAP):
+    """Adds `harmonized_cells` (VIIRS units) and `source`. Returns (tab, k_month, k_annual)."""
+    tab = tab.copy()
+    k, k_all = monthly_factor(tab, "viirs_cells", "modis_consistent", overlap)
+    if np.isnan(k_all):
+        raise ValueError(f"No MODIS/VIIRS overlap in {overlap}: download those years first.")
+    tab["modis_as_viirs"] = tab.modis_consistent * tab.month.map(k)
+    tab["harmonized_cells"] = np.where(tab.viirs_flying, tab.viirs_cells, tab.modis_as_viirs)
+    tab["source"] = np.select(
+        [tab.viirs_flying, tab.modis_flying & (tab.ym < AQUA_START), tab.modis_flying],
+        ["VIIRS observed", "MODIS Terra-only, scaled", "MODIS, scaled"], default="no data")
+    tab.loc[tab.source == "no data", "harmonized_cells"] = np.nan
+    tab["flag"] = np.where(tab.ym == TERRA_OUTAGE, "Terra outage 15 Jun - 3 Jul 2001: undercount", "")
+    return tab, k, k_all
+
+
+# ---------------------------------------------------------------- 4. validation (Step 5)
+def validate(tab, overlap=OVERLAP):
+    """Leave-one-year-out on the overlap: predict each year's VIIRS from MODIS with factors fitted on the others."""
+    rows = []
+    years = range(overlap[0], overlap[1] + 1)
     for y in years:
-        train = [v for v in years if v != y]
-        part = ov[ov.index.year == y]
-        parts.append(part.assign(
-            ratio=part["modis"] * part.index.month.map(fit_ratio(mon, train)).values,
-            pred=predict(fit_model(mon, train), part.index, part["modis"].values),
-        ))
-    p = pd.concat(parts)
-    obs = p["viirs"].values
-    return {
-        "years": years,
-        "n_months": len(p),
-        "raw_modis": _metrics(obs, p["modis"].values),
-        "ratio": _metrics(obs, p["ratio"].values),
-        "harmonized": _metrics(obs, p["pred"].values),
-        "predictions": p,
-    }
+        k, _ = monthly_factor(tab[tab.year != y], "viirs_cells", "modis_consistent", overlap)
+        te = tab[(tab.year == y) & tab.viirs_flying & tab.modis_flying]
+        if te.empty or te.viirs_cells.sum() == 0:
+            continue
+        pred = te.modis_consistent * te.month.map(k)
+        busy = te.viirs_cells >= MIN_CELLS                     # % errors only where there is fire to measure
+        rows.append({
+            "year": y,
+            "viirs_cells": int(te.viirs_cells.sum()),
+            "predicted_cells": round(float(pred.sum())),
+            "annual_error_%": round(float((pred.sum() - te.viirs_cells.sum()) / te.viirs_cells.sum() * 100), 1),
+            "monthly_MAPE_%": round(float((abs(pred[busy] - te.viirs_cells[busy]) / te.viirs_cells[busy]).mean() * 100), 1)
+                              if busy.any() else np.nan,
+            "monthly_r": round(float(np.corrcoef(pred, te.viirs_cells)[0, 1]), 3) if len(te) > 2 else np.nan,
+        })
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------- for the app: any area the user draws
+def harmonize_area(veg_area, k_terra, k_viirs, spans=None):
+    """Harmonized monthly series for a user-drawn area, using factors fitted on the whole country.
+
+    Small areas have too few fires to fit their own factors, so the country's factors are reused.
+    spans: the country's month spans (see monthly_cells), so every year is in the table.
+    """
+    tab = monthly_cells(veg_area, spans)
+    terra_only = tab.modis_flying & (tab.ym < AQUA_START)
+    tab["modis_consistent"] = tab.modis_cells.astype(float)
+    tab.loc[terra_only, "modis_consistent"] = tab.loc[terra_only, "terra_cells"] * tab.loc[terra_only, "month"].map(k_terra)
+    tab["modis_as_viirs"] = tab.modis_consistent * tab.month.map(k_viirs)
+    tab["harmonized_cells"] = np.where(tab.viirs_flying, tab.viirs_cells, tab.modis_as_viirs)
+    return tab
+
+
+# ---------------------------------------------------------------- run everything
+def run(veg=None, country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
+    """Full Steps 4-5. Returns (series, factors, validation) and writes the outputs."""
+    if veg is None:
+        path = out_dir / f"clean_vegetation_{country}.csv"
+        veg = pd.read_csv(path, usecols=["family", "satellite", "year", "month", "cell_id", "frp"])
+    tab = monthly_cells(veg)
+    tab, k_terra, k_terra_all = modis_consistent(tab)
+    series, k_viirs, k_viirs_all = harmonize(tab)
+    val = validate(series)
+
+    factors = pd.DataFrame({"month": range(1, 13),
+                            "terra_to_terra_aqua": k_terra.round(3).values,
+                            "modis_to_viirs": k_viirs.round(3).values})
+    series.to_csv(out_dir / f"harmonized_{country}.csv", index=False)
+    factors.to_csv(out_dir / f"factors_{country}.csv", index=False)
+    val.to_csv(out_dir / f"validation_{country}.csv", index=False)
+
+    print(f"Terra -> Terra+Aqua (fit {TERRA_CAL[0]}-{TERRA_CAL[1]}): annual {k_terra_all:.2f}")
+    print(f"MODIS -> VIIRS      (fit {OVERLAP[0]}-{OVERLAP[1]}): annual {k_viirs_all:.2f}")
+    print(factors.to_string(index=False))
+    if not val.empty:
+        print("\nLeave-one-year-out validation:")
+        print(val.to_string(index=False))
+        print(f"\nMedian |annual error| {val['annual_error_%'].abs().median():.1f}% | "
+              f"median monthly MAPE {val['monthly_MAPE_%'].median():.1f}% | "
+              f"median monthly r {val['monthly_r'].median():.3f}")
+    print(f"\nSaved to {out_dir}")
+    return series, factors, val
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description="Harmonize MODIS and VIIRS into one series (Steps 4-5).")
+    ap.add_argument("--country", default=DEFAULT_COUNTRY)
+    a = ap.parse_args()
+    run(country=a.country)
