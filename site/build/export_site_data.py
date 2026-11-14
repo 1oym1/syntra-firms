@@ -50,9 +50,9 @@ S = lambda c: series.as_series(h, c)
 harm, mod, vii = S("harmonized_cells"), S("modis_cells"), S("viirs_cells")
 months = [str(p) for p in harm.index]
 out["months"] = months
-out["harm"] = [None if not np.isfinite(v) else round(float(v)) for v in harm.values]
+out["harm"] = [None if not np.isfinite(v) else round(float(v), 1) for v in harm.values]
 raw = mod.where(mod.index < pd.Period("2012-02", "M"), vii)
-out["raw"] = [None if not np.isfinite(v) else round(float(v)) for v in raw.values]
+out["raw"] = [None if not np.isfinite(v) else round(float(v), 1) for v in raw.values]
 out["heldout_r2"], out["raw_r2"] = round(cs["heldout"]["r2"], 3), round(cs["heldout"]["r2_raw_modis"], 2)
 out["data_to"] = str(d["info"]["complete_day"].date())
 

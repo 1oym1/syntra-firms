@@ -3,6 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNTRA Fire Record</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1600'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffc25c'/%3E%3Cstop offset='1' stop-color='%23ff8a2a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1600' height='1600' rx='300' fill='%2305070d'/%3E%3Cpath d='M1145 350H690a211 211 0 0 0 0 422h240a211 211 0 0 1 0 422H470' fill='none' stroke='url(%23g)' stroke-width='145'/%3E%3Ccircle cx='1145' cy='350' r='152.5' fill='%2305070d' stroke='%23ffc25c' stroke-width='45'/%3E%3Ccircle cx='470' cy='1187' r='152.5' fill='%2305070d' stroke='%23ff8a2a' stroke-width='45'/%3E%3Ccircle cx='805' cy='762' r='33' fill='%2305070d'/%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Team SYNTRA, NASA Space Apps 2026: MODIS and VIIRS fire hotspots harmonized into one record for Sudan, 2000 to today.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,6 +33,8 @@
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
+html.lenis, html.lenis body { height: auto; scroll-behavior: auto; }
+.lenis.lenis-stopped { overflow: hidden; }
 body { margin: 0; background: var(--void); color: var(--ink); font: 400 16px/1.6 var(--body); overflow-x: hidden; }
 body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60; opacity: .07; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
@@ -58,7 +61,9 @@ p { margin: 0; }
 nav.top { position: fixed; top: 0; left: 0; right: 0; z-index: 50; padding-top: env(safe-area-inset-top, 0px); }
 nav.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; }
 .logo { font: 800 1.05rem var(--display); letter-spacing: .08em; display: flex; align-items: center; gap: 10px; text-decoration: none; }
-.logo i { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 14px var(--ember); }
+.logo svg { width: 26px; height: 30px; filter: drop-shadow(0 0 10px rgba(255,138,42,.45)); transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+.logo:hover svg { transform: rotate(-8deg) scale(1.08); }
+footer .mk { width: 18px; height: 21px; vertical-align: -4px; margin-right: 8px; }
 .navlinks { display: flex; gap: 6px; align-items: center; padding: 6px; }
 .navlinks a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: .86rem; color: var(--dim); padding: 7px 12px; border-radius: 10px; }
 .navlinks a:hover { color: var(--ink); background: rgba(255,255,255,.06); }
@@ -73,7 +78,17 @@ nav.top .wrap { display: flex; align-items: center; justify-content: space-betwe
 .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: linear-gradient(90deg, rgba(5,7,13,.92) 0%, rgba(5,7,13,.55) 38%, transparent 62%),
               linear-gradient(0deg, var(--void) 0%, transparent 22%); }
-.hero .wrap { width: 100%; padding-block: 120px 80px; display: grid; gap: 26px; }
+.hero .wrap { width: 100%; padding-block: 120px 80px; display: grid; gap: 26px; pointer-events: none; }
+.hero .wrap a, .hero .wrap button { pointer-events: auto; }
+#globe canvas { cursor: grab; } #globe canvas:active { cursor: grabbing; }
+.gdock { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 28px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.gctl { display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 14px; }
+.gctl button { width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--ink); cursor: pointer; }
+.gctl button:hover { background: rgba(255,255,255,.08); } .gctl button:active { transform: scale(.94); }
+.gctl svg { width: 16px; height: 16px; }
+.gctl .zs { font: 400 .7rem var(--mono); color: var(--dim); padding: 0 8px 0 6px; min-width: 9.5em; transition: color .2s; }
+#globe.engaged ~ .gdock .zs { color: var(--ember-2); }
+@media (max-width: 900px) { .gctl .zs { display: none; } .gdock { bottom: 18px; } }
 .hero h1 { font-size: clamp(2.6rem, 6.6vw, 5.6rem); line-height: .98; font-weight: 800; max-width: 11ch; }
 .hero .lede { font-size: clamp(1.02rem, 1.6vw, 1.2rem); color: #c9d2e6; max-width: 46ch; }
 .hud { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -89,7 +104,7 @@ nav.top .wrap { display: flex; align-items: center; justify-content: space-betwe
 .btn:hover { transform: translateY(-2px); background: rgba(255,255,255,.08); }
 .btn.hot { background: linear-gradient(100deg, var(--ember-2), var(--ember)); color: #1b0d00; border: 0; box-shadow: 0 10px 40px -10px rgba(255,138,42,.7); }
 .hint { font: 400 .74rem var(--mono); color: var(--dim); }
-.readout { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 28px; padding: 14px 16px; font: 400 .74rem/1.7 var(--mono); color: var(--dim); }
+.readout { padding: 14px 16px; font: 400 .74rem/1.7 var(--mono); color: var(--dim); }
 .readout b { color: var(--ink); font-weight: 500; }
 @media (max-width: 900px) { .readout { display: none; } .hero::before { background: linear-gradient(0deg, var(--void) 8%, rgba(5,7,13,.55) 60%, rgba(5,7,13,.3)); } }
 
@@ -100,6 +115,17 @@ nav.top .wrap { display: flex; align-items: center; justify-content: space-betwe
 .ticker b { color: var(--ink); font-weight: 500; }
 .ticker span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ember); margin-right: 14px; vertical-align: 2px; }
 @keyframes slide { to { transform: translateX(-50%); } }
+@keyframes rise { from { transform: translateY(26px); opacity: 0; filter: blur(6px); } to { transform: none; opacity: 1; filter: none; } }
+.hero .wrap > * { animation: rise .8s cubic-bezier(.2,.7,.2,1) both; }
+.hero .wrap > *:nth-child(2) { animation-delay: .12s; } .hero .wrap > *:nth-child(3) { animation-delay: .24s; }
+.hero .wrap > *:nth-child(4) { animation-delay: .36s; } .hero .wrap > *:nth-child(5) { animation-delay: .44s; } .hero .wrap > *:nth-child(6) { animation-delay: .5s; }
+/* finale */
+.finale { padding-block: 120px 40px; text-align: center; display: grid; gap: 18px; justify-items: center; }
+.finale .huge { font: 800 clamp(3.2rem, 11vw, 9rem)/.9 var(--display); letter-spacing: -.05em; display: flex; flex-wrap: wrap; gap: .1em .3em; justify-content: center; align-items: baseline; }
+.finale .from { color: #3b4a6b; text-decoration: line-through; text-decoration-thickness: .06em; }
+.finale .to { background: linear-gradient(100deg, var(--ember-2), var(--ember) 40%, var(--harm)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.finale .arrow { color: var(--dim); font-weight: 400; font-size: .5em; }
+.finale p { color: #c3cbe0; max-width: 52ch; font-size: 1.08rem; }
 
 section { position: relative; z-index: 2; }
 .sec { padding-block: 110px 40px; }
@@ -153,6 +179,7 @@ section { position: relative; z-index: 2; }
 .ctrl input[type=range] { width: 100%; accent-color: var(--ember); }
 .monthpick { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .monthpick button { font: 500 .8rem var(--mono); padding: 8px 0; border-radius: 9px; border: 1px solid var(--rim); background: rgba(255,255,255,.03); color: var(--dim); cursor: pointer; }
+.monthpick button:disabled { opacity: .28; cursor: not-allowed; }
 .monthpick button[aria-pressed="true"] { background: var(--ember); color: #1b0d00; border-color: var(--ember); }
 .yearout { font: 800 2.6rem/1 var(--display); }
 .verdict { padding: 26px; display: grid; gap: 14px; border-left: 4px solid var(--c, var(--ember)); }
@@ -208,13 +235,14 @@ td .barcell { display: inline-block; height: 6px; border-radius: 4px; background
 footer { position: relative; z-index: 2; margin-top: 100px; border-top: 1px solid var(--rim); }
 footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; font: 400 .78rem var(--mono); color: var(--dim); }
 .nogl { display: none; position: absolute; inset: auto 16px 16px auto; font: 400 .74rem var(--mono); color: var(--dim); }
-@media (prefers-reduced-motion: reduce) { .ticker .track, .chip.live i { animation: none; } .glow { display: none; } html { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: reduce) { .ticker .track, .chip.live i, .hero .wrap > * { animation: none; } .glow { display: none; } html { scroll-behavior: auto; } }
 </style>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="mk-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc25c"/><stop offset="1" stop-color="#ff8a2a"/></linearGradient><symbol id="mk" viewBox="280 160 1060 1220"><path d="M1145 350H690a211 211 0 0 0 0 422h240a211 211 0 0 1 0 422H470" fill="none" stroke="url(#mk-g)" stroke-width="145"/><circle cx="1145" cy="350" r="152.5" fill="#05070d" stroke="#ffc25c" stroke-width="45"/><circle cx="470" cy="1187" r="152.5" fill="#05070d" stroke="#ff8a2a" stroke-width="45"/><circle cx="805" cy="762" r="33" fill="#05070d"/></symbol></defs></svg>
 <div class="glow" id="glow" aria-hidden="true"></div>
 
 <nav class="top"><div class="wrap">
-  <a class="logo" href="#top"><i></i>SYNTRA</a>
+  <a class="logo" href="#top" aria-label="SYNTRA home"><svg aria-hidden="true"><use href="#mk"/></svg>SYNTRA</a>
   <div class="navlinks glass">
     <a href="#seam">The seam</a><a href="#check">Check a month</a><a href="#risk">Risk clock</a><a href="#app">App</a>
     <a class="cta app-link" href="#app">Open the app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
@@ -239,9 +267,17 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       <a class="btn hot app-link" href="#app">Open the live app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       <a class="btn" href="#seam">See the 2012 seam <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M4 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
-    <div class="hint">Drag the globe to spin it · tap a layer to switch it off</div>
+    <div class="hint" id="ghint">Drag the globe to spin it · click it, then scroll to zoom · tap a layer to switch it off</div>
   </div>
-  <div class="readout glass" id="readout"></div>
+  <div class="gdock">
+    <div class="gctl glass" id="gctl" role="group" aria-label="Globe controls">
+      <span class="zs" id="zs">Click globe to zoom</span>
+      <button type="button" id="gz-in" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" id="gz-out" aria-label="Zoom out" title="Zoom out"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" id="gz-home" aria-label="Back to Sudan" title="Back to Sudan"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3M8 5.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="readout glass" id="readout"></div>
+  </div>
   <div class="nogl" id="nogl">3D needs WebGL; the rest of the page works without it.</div>
 </header>
 
@@ -283,6 +319,12 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   </div>
 </section>
 
+<section class="wrap finale" aria-labelledby="fin-h">
+  <div class="eyebrow">Accuracy on years the model never saw</div>
+  <h2 id="fin-h" class="huge"><span class="from mono">R² 0.36</span><span class="arrow">to</span><span class="to mono" id="fin">0.993</span></h2>
+  <p>Raw MODIS predicts what VIIRS saw with R² 0.36. After SYNTRA's harmonization: 0.993, tested leave-one-year-out on 119 months.</p>
+</section>
+
 <section class="wrap sec" aria-labelledby="pipe-h">
   <div class="sec-head">
     <div class="eyebrow">Under the hood</div>
@@ -292,7 +334,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     <div class="pcard glass"><span class="k">DOWNLOAD</span><span class="n mono" data-count="4462802">4,462,802</span><p>clean hotspots, 2000–2026, from the FIRMS archive and the near-real-time API.</p></div>
     <div class="pcard glass"><span class="k">CLEAN</span><span class="n mono" data-count="45464">45,464</span><p>always-hot sites set aside: gas flares, industry and other static heat sources.</p></div>
     <div class="pcard glass"><span class="k">HARMONIZE</span><span class="n mono">0.1°</span><p>fire cell-days: each grid cell counts once a day, then MODIS is converted month by month.</p></div>
-    <div class="pcard glass"><span class="k">VALIDATE</span><span class="n mono">R² 0.993</span><p>leave-one-year-out on 119 months. NOAA-20 × 0.986 bridges the end of Suomi NPP.</p></div>
+    <div class="pcard glass"><span class="k">VALIDATE</span><span class="n mono">R² 0.993</span><p>leave-one-year-out on 119 months. NOAA-20 × 0.986 takes over where Suomi NPP data ends.</p></div>
   </div>
 </section>
 
@@ -317,14 +359,14 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   <div class="sec-head">
     <div class="eyebrow">Fire season</div>
     <h2 id="risk-h">The risk clock</h2>
-    <p>52 weeks around the dial. Each slice shows how often that week has been a high-fire week since 2001. The needle is today.</p>
+    <p>52 weeks around the dial. Each slice shows how often that week has been a high-fire week since 2001. The needle marks the latest day of data.</p>
   </div>
   <div class="riskwrap">
     <div id="clock"></div>
     <div class="rlist">
       <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">Highest-risk period</span><span class="n" id="rp"></span><span class="dim" id="rp2"></span></div>
       <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">Season length</span><span class="n" id="rd"></span><span class="dim">more high-fire weeks per decade (linear fit, a direction only)</span></div>
-      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">This week</span><span class="n" id="rw"></span><span class="dim" id="rw2"></span></div>
+      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">Latest week of data</span><span class="n" id="rw"></span><span class="dim" id="rw2"></span></div>
       <div class="rkey" id="rkey"></div>
     </div>
   </div>
@@ -375,12 +417,13 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   </div>
 </section>
 
-<footer><div class="wrap"><span>Team SYNTRA · NASA Space Apps Challenge 2026 · Jeddah</span><span id="foot"></span></div></footer>
+<footer><div class="wrap"><span><svg class="mk" aria-hidden="true"><use href="#mk"/></svg>Team SYNTRA · NASA Space Apps Challenge 2026 · Jeddah</span><span id="foot"></span></div></footer>
 <div class="tip3d" id="tip" hidden></div>
 
 <script src="data.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -392,8 +435,21 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var COL = { MODIS: "#e69f00", VIIRS_SNPP: "#56b4e9", VIIRS_NOAA20: "#cc79a7", VIIRS_NOAA21: "#f0e442" };
   var tip = document.getElementById("tip");
+  var lenis = null;
+  if (window.Lenis && !reduce && !coarse) {
+    try {
+      lenis = new Lenis({ lerp: .1, smoothWheel: true, wheelMultiplier: .9 });
+      document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+        a.addEventListener("click", function (e) {
+          var id = a.getAttribute("href"), el = id.length > 1 && document.querySelector(id);
+          if (el) { e.preventDefault(); lenis.scrollTo(el, { duration: 1.4 }); }
+        });
+      });
+    } catch (e) { lenis = null; }
+  }
   function showTip(x, y, html) { tip.hidden = false; tip.style.left = x + "px"; tip.style.top = y + "px"; tip.innerHTML = html; }
   function hideTip() { tip.hidden = true; }
+  addEventListener("scroll", hideTip, { passive: true });
 
   // app links
   document.querySelectorAll(".app-link").forEach(function (a) {
@@ -420,13 +476,13 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       "October 2026 <b>+56%</b> vs a typical October · 2nd of 26",
       "Held-out R² <b>" + (D.heldout_r2 || 0.993) + "</b> · raw MODIS " + (D.raw_r2 || 0.36),
       "Extreme fire weeks <b>22 Oct – 23 Dec</b> · 97% of years",
-      "Suomi NPP ended 2 Nov 2026 · NOAA-20 × 0.986 takes over",
+      "Suomi NPP data ends 2 Nov 2026 · NOAA-20 × 0.986 takes over",
       "4.46 M hotspots · 26 years · one unit: fire cell-days"
     ];
     var html = items.map(function (t) { return "<span>" + t + "</span>"; }).join("");
     document.getElementById("ticker").innerHTML = html + html;
     document.getElementById("live-chip").textContent = "Live · " + fmt(D.live_total || 0) + " in 7 days";
-    document.getElementById("readout").innerHTML = "SUDAN · 15.6° N 30.2° E<br>FIRMS data through <b>" + (D.data_to || "") + "</b><br>live window <b>" +
+    document.getElementById("readout").innerHTML = "SUDAN · 8.6–22.3° N · 21.7–38.7° E<br>FIRMS data through <b>" + (D.data_to || "") + "</b><br>live window <b>" +
       (D.live_from || "") + " to " + (D.live_to || "") + "</b><br>grid 0.1° · VIIRS S-NPP units";
     document.getElementById("foot").textContent = "Data: NASA FIRMS through " + (D.data_to || "") + " · colors: Okabe-Ito, colorblind-safe";
   })();
@@ -445,7 +501,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     var host = document.getElementById("globe");
     var R = 1;
     var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+    renderer.setPixelRatio(Math.min(1.75, devicePixelRatio || 1));
     host.appendChild(renderer.domElement);
     var scene = new THREE.Scene();
     var cam = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
@@ -458,7 +514,53 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     cam.position.copy(home);
     var controls = new THREE.OrbitControls(cam, renderer.domElement);
     controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = .06; controls.rotateSpeed = .5;
+    var grabbed = false; controls.addEventListener("start", function () { grabbed = true; flyHome = false; });
+    if (!reduce) cam.position.copy(home).setLength(11);
+    // Mouse: OrbitControls rotates. Zoom is ours (wheel only after a click on the globe, so the page still scrolls;
+    // +/- buttons; pinch on touch). Touch: a sideways swipe spins, vertical swipes still scroll the page.
     controls.enabled = !coarse;
+    var cv = renderer.domElement, ZMIN = 1.75, ZMAX = 8, zoomGoal = null, flyHome = false, engaged = false, vel = 0;
+    cv.style.touchAction = "pan-y";
+    var zs = document.getElementById("zs");
+    function offs() { return cam.position.clone().sub(controls.target); }
+    function clampZ(v) { return Math.max(ZMIN, Math.min(ZMAX, v)); }
+    function zoomBy(f) { grabbed = true; flyHome = false; zoomGoal = clampZ((zoomGoal || offs().length()) * f); }
+    function spin(d) { var o = offs(), sp = new THREE.Spherical().setFromVector3(o); sp.theta += d; o.setFromSpherical(sp); cam.position.copy(controls.target).add(o); }
+    function engage(on) {
+      if (engaged === on) return; engaged = on; host.classList.toggle("engaged", on);
+      if (on) cv.setAttribute("data-lenis-prevent", ""); else cv.removeAttribute("data-lenis-prevent");
+      zs.textContent = on ? "Scroll to zoom" : "Click globe to zoom";
+    }
+    cv.addEventListener("pointerdown", function (e) { grabbed = true; flyHome = false; if (e.pointerType === "mouse") engage(true); });
+    cv.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse") engage(false); });
+    cv.addEventListener("wheel", function (e) {
+      if (!engaged) return;
+      e.preventDefault(); e.stopPropagation();
+      zoomBy(Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * .004));
+    }, { passive: false });
+    document.getElementById("gz-in").addEventListener("click", function () { zoomBy(.72); });
+    document.getElementById("gz-out").addEventListener("click", function () { zoomBy(1.38); });
+    document.getElementById("gz-home").addEventListener("click", function () { zoomGoal = null; vel = 0; flyHome = true; grabbed = true; });
+    if (coarse) {
+      document.getElementById("ghint").textContent = "Swipe sideways to spin the globe · pinch to zoom · tap a layer to switch it off";
+      var tp = {}, lastX = 0, pinch0 = 0, z0 = 0;
+      var npts = function () { return Object.keys(tp).length; };
+      var pdist = function () { var a = Object.keys(tp).map(function (k) { return tp[k]; }); return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; };
+      cv.addEventListener("pointerdown", function (e) {
+        tp[e.pointerId] = { x: e.clientX, y: e.clientY }; lastX = e.clientX; vel = 0;
+        if (npts() === 2) { pinch0 = pdist(); z0 = zoomGoal || offs().length(); }
+      });
+      cv.addEventListener("pointermove", function (e) {
+        if (!tp[e.pointerId]) return;
+        tp[e.pointerId] = { x: e.clientX, y: e.clientY };
+        if (npts() === 2 && pinch0) zoomGoal = clampZ(z0 * pinch0 / pdist());
+        else if (npts() === 1) { var dx = e.clientX - lastX; lastX = e.clientX; vel = -dx * .007; spin(vel); }
+      });
+      ["pointerup", "pointercancel"].forEach(function (n) { cv.addEventListener(n, function (e) {
+        delete tp[e.pointerId]; pinch0 = 0;
+        var k = Object.keys(tp); if (k.length) lastX = tp[k[0]].x;
+      }); });
+    }
     var world = new THREE.Group(); scene.add(world);
 
     // body: dark ocean with a soft rim
@@ -529,10 +631,16 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       for (var i = 0; i < N; i++) { var f = 1 - i / N; tc.set([cc.r * f, cc.g * f, cc.b * f], i * 3); }
       var trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending }));
       g.add(trail);
+      var bg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      var beam = new THREE.Line(bg, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: .45, blending: THREE.AdditiveBlending }));
+      g.add(beam);
       var q = new THREE.Quaternion().setFromEuler(new THREE.Euler(inc, raan, 0, "YXZ"));
       function at(t) { var a = t * 2 * Math.PI / period; return new THREE.Vector3(Math.cos(a) * rad, 0, Math.sin(a) * rad).applyQuaternion(q); }
       return function (t) {
         dot.position.copy(at(t));
+        var bp = bg.attributes.position; bp.setXYZ(0, dot.position.x, dot.position.y, dot.position.z);
+        var nad = dot.position.clone().setLength(1.004); bp.setXYZ(1, nad.x, nad.y, nad.z); bp.needsUpdate = true;
+        beam.material.opacity = .25 + .2 * Math.sin(t * 5);
         for (var i = 0; i < N; i++) { var v = at(t - i * .045); tp.set([v.x, v.y, v.z], i * 3); }
         tg.attributes.position.needsUpdate = true;
       };
@@ -548,6 +656,8 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
           layers[s].visible = on; var c = document.querySelector('#layers [data-layer="' + s + '"]'); if (c) c.setAttribute("aria-pressed", on);
         });
         else if (layers[k]) layers[k].visible = on;
+        var anyLive = ["MODIS", "VIIRS_NOAA20", "VIIRS_NOAA21"].some(function (s) { return layers[s].visible; });
+        document.querySelector('#layers [data-layer="live"]').setAttribute("aria-pressed", anyLive);
       });
     });
 
@@ -559,6 +669,18 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       world.children.forEach(function (o) { if (o.material && o.material.uniforms && o.material.uniforms.uTime) o.material.uniforms.uTime.value = t; });
       sats.forEach(function (f) { f(reduce ? 3 : t); });
       if (!reduce) world.rotation.y = Math.sin(t * .12) * .16;
+      if (!reduce && !grabbed && t < 3.2) { var k = Math.min(1, t / 3), e = 1 - Math.pow(1 - k, 4); cam.position.copy(home).setLength(11 + (3.9 - 11) * e); }
+      if (Math.abs(vel) > 1e-4 && !(coarse && Object.keys(tp).length)) { spin(vel); vel *= .93; }
+      if (zoomGoal) {
+        var o = offs(), L = o.length(), nL = L + (zoomGoal - L) * (reduce ? 1 : .18);
+        o.setLength(nL); cam.position.copy(controls.target).add(o);
+        if (Math.abs(zoomGoal - nL) < .003) zoomGoal = null;
+      }
+      if (flyHome) {
+        var L0 = cam.position.length(), a = reduce ? 1 : .09;
+        cam.position.lerp(home, a).setLength(L0 + (home.length() - L0) * a);
+        if (cam.position.distanceTo(home) < .01) { cam.position.copy(home); flyHome = false; }
+      }
       // keep Sudan clear of the text on wide screens
       controls.target.set(0, wide() ? 0 : .62, 0);
       controls.update();
@@ -573,7 +695,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   if (hasGL) (function () {
     var host = document.getElementById("land");
     var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+    renderer.setPixelRatio(Math.min(1.75, devicePixelRatio || 1));
     host.appendChild(renderer.domElement);
     var scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0x05070d, 26, 60);
@@ -611,11 +733,14 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     var seam = new THREE.Mesh(new THREE.PlaneGeometry(12 * gx + .6, H * .9), new THREE.MeshBasicMaterial({ color: 0x56b4e9, transparent: true, opacity: .07, side: THREE.DoubleSide, depthWrite: false }));
     seam.position.set(0, H * .45, (2011.5 - (Y0 + Y1) / 2) * gz); scene.add(seam);
 
-    var mix = 0, target = 0;
+    var mix = 0, target = 0, userMoved = false, rh = Math.hypot(15, 19), cy0 = 11.5, az0 = Math.atan2(-15, 19), az = az0, azT = az0;
+    controls.addEventListener("start", function () { userMoved = true; });
+    var grow = reduce ? 1 : 0, flash = 0, flashed = false;
     function apply(k) {
       cells.forEach(function (c, i) {
         var v = c.modis ? c.raw + (c.harm - c.raw) * k : c.harm;
-        var h = Math.max(.02, v / VMAX * H);
+        var row = (c.y - Y0) / (NY - 1), g = Math.min(1, Math.max(0, grow * 1.7 - row * .7)), ge = 1 - Math.pow(1 - g, 3);
+        var h = Math.max(.02, v / VMAX * H * ge);
         dummy.position.set(c.x, 0, c.z); dummy.scale.set(1, h, 1); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix);
         if (c.modis) tmp.copy(cM).lerp(cH, k); else tmp.copy(cV);
         mesh.setColorAt(i, tmp);
@@ -640,16 +765,24 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
 
     var S = { on: false, el: host }; visibleWatch(host, S);
     S.tick = function (now) {
-      mix += (target - mix) * (reduce ? 1 : .08);
-      if (Math.abs(target - mix) > .0005 || S.dirty) { apply(mix); S.dirty = false; }
-      if (!reduce && !controls.state) { var a = now / 9000; }
+      var dt = Math.min(.05, (now - (S.last || now)) / 1000); S.last = now;
+      var a = reduce ? 1 : 1 - Math.exp(-dt * 6);
+      mix += (target - mix) * a;
+      var growing = grow < 1;
+      if (growing) grow = Math.min(1, grow + dt / 1.8);
+      if (Math.abs(target - mix) > .0005 || growing) apply(mix);
+      if (mix > .97 && !flashed) { flashed = true; flash = 1; }
+      if (mix < .5) flashed = false;
+      flash = Math.max(0, flash - dt * 1.2);
+      seam.material.opacity = .05 + .35 * flash + .06 * (1 - mix);
+      if (!userMoved && !reduce) { az += (azT - az) * a; cam.position.set(Math.sin(az) * rh, cy0, Math.cos(az) * rh); }
       controls.update(); renderer.render(scene, cam);
     };
     S.resize = function () { sizeTo(renderer, cam, host); };
     scenes.push(S);
-    landAPI = { set: function (k) { target = k; } };
+    landAPI = { set: function (k) { target = k; }, drift: function (p) { azT = az0 + (p - .5) * .7; } };
   })();
-  if (!hasGL) document.getElementById("nogl").style.display = "block";
+  if (!hasGL) { document.getElementById("nogl").style.display = "block"; document.getElementById("gctl").hidden = true; }
 
   // scroll story
   (function () {
@@ -668,6 +801,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     function onScroll() {
       var r = story.getBoundingClientRect(), total = r.height - innerHeight;
       var p = Math.min(1, Math.max(0, -r.top / total));
+      if (landAPI) landAPI.drift(p);
       var s = p < .22 ? 0 : p < .45 ? 1 : p < .72 ? 2 : 3;
       steps.forEach(function (el, i) { el.classList.toggle("on", i === s); });
       if (mode === "auto") setK(Math.min(1, Math.max(0, (p - .42) / .3)));
@@ -679,13 +813,15 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     }
     ["raw", "auto", "harm"].forEach(function (k) { document.getElementById("m-" + k).addEventListener("click", function () { setMode(k); }); });
     document.getElementById("m-auto").setAttribute("aria-pressed", "true"); document.getElementById("m-raw").setAttribute("aria-pressed", "false");
-    addEventListener("scroll", onScroll, { passive: true }); onScroll();
+    var queued = false;
+    addEventListener("scroll", function () { if (!queued) { queued = true; requestAnimationFrame(function () { queued = false; onScroll(); }); } }, { passive: true });
+    onScroll();
   })();
 
   // render loop
   function resizeAll() { scenes.forEach(function (s) { s.resize(); }); }
   addEventListener("resize", resizeAll); resizeAll();
-  (function loop(now) { scenes.forEach(function (s) { if (s.on) s.tick(now); }); requestAnimationFrame(loop); })(performance.now());
+  (function loop(now) { if (lenis) lenis.raf(now); scenes.forEach(function (s) { if (s.on) s.tick(now); }); requestAnimationFrame(loop); })(performance.now());
 
   // counters
   (function () {
@@ -699,6 +835,23 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     }, { threshold: .6 });
     els.forEach(function (el) { io.observe(el); });
   })();
+
+  // finale count-up
+  (function () {
+    var el = document.getElementById("fin"), done = false;
+    new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting || done || reduce) return; done = true;
+      var t0 = null; (function step(ts) { if (t0 === null) t0 = ts; var p = Math.min(1, (ts - t0) / 1600), k = 1 - Math.pow(1 - p, 4);
+        el.textContent = (0.36 + (0.993 - 0.36) * k).toFixed(3); if (p < 1) requestAnimationFrame(step); })(performance.now());
+    }, { threshold: .5 }).observe(el);
+  })();
+
+  // magnetic buttons
+  if (!coarse && !reduce) document.querySelectorAll(".btn.hot").forEach(function (b) {
+    b.addEventListener("pointermove", function (e) { var r = b.getBoundingClientRect();
+      b.style.transform = "translate(" + ((e.clientX - r.left - r.width / 2) * .22) + "px," + ((e.clientY - r.top - r.height / 2) * .3) + "px)"; });
+    b.addEventListener("pointerleave", function () { b.style.transform = ""; });
+  });
 
   // month checker
   (function () {
@@ -723,7 +876,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       var hist = []; for (var y = 2000; y < sel.y; y++) { var h = val(harm, y, sel.m); if (h !== null) hist.push(h); }
       var name = MON[sel.m - 1] + " " + sel.y;
       if (hist.length < 5) { out.style.setProperty("--c", "#97a3bd");
-        out.innerHTML = "<span class='vbadge'>TOO EARLY</span><div class='vnum mono'>" + fmt(v) + "</div><p class='dim'>" + name + ": fewer than 5 earlier " + MON[sel.m - 1] + "s to compare with.</p>"; return; }
+        out.innerHTML = "<span class='vbadge'>TOO EARLY</span><div class='vnum mono'>" + fmt(v) + "</div><p class='dim'>" + name + ": fewer than 5 earlier years of this month to compare with.</p>"; return; }
       var s = hist.slice().sort(function (a, b) { return a - b; }), med = pct(s, .5), p90 = pct(s, .9), an = 100 * (v - med) / med;
       var rank = 1 + hist.filter(function (h) { return h > v; }).length;
       var lv = v > p90 ? "Very high" : an >= 20 ? "Above normal" : an <= -20 ? "Below normal" : "Normal";
@@ -744,7 +897,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
         svg += "<rect x='" + (i * bw + 2) + "' y='" + (Hh - hh) + "' width='" + (bw - 4) + "' height='" + hh + "' rx='3' fill='" + (on ? LV[lv] : "#2b3a5c") + "'><title>" + MON[sel.m - 1] + " " + yy + ": " + fmt(vs[i]) + "</title></rect>";
         if ((yy % 5 === 0 && Math.abs(yy - sel.y) > 1) || on) svg += "<text x='" + (i * bw + bw / 2) + "' y='" + (Hh + 14) + "' text-anchor='middle'" + (on ? " style='fill:#eef1f8'" : "") + ">" + yy + "</text>";
       });
-      svg += "<text x='" + W + "' y='" + (Hh - med / mx * Hh - 5) + "' text-anchor='end'>median " + fmt(med) + "</text></svg>";
+      svg += "<text x='" + W + "' y='" + (Hh - med / mx * Hh - 5) + "' text-anchor='end'>median before " + sel.y + ": " + fmt(med) + "</text></svg>";
       document.getElementById("spark").innerHTML = svg;
     }
     render();
@@ -764,8 +917,9 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     });
     [25, 50, 75, 100].forEach(function (t) { svg += "<circle cx='" + cx + "' cy='" + cy + "' r='" + (r1 + (r2 - r1) * t / 100) + "' fill='none' stroke='rgba(148,170,220,.14)' stroke-dasharray='2 5'/>"; });
     MON.forEach(function (n, i) { var a = (i / 12) * 2 * Math.PI + Math.PI / 12, p = pol(r2 + 20, a); svg += "<text x='" + p[0] + "' y='" + (p[1] + 4) + "' text-anchor='middle' fill='#97a3bd' font-size='12'>" + n.toUpperCase() + "</text>"; });
-    var now = new Date(D.data_to || Date.now()), doy = (now - new Date(now.getFullYear(), 0, 1)) / 864e5, wi = Math.min(51, Math.floor(doy / 7));
-    var na = (doy / 365) * 2 * Math.PI, np = pol(r2 + 6, na);
+    var dp = (D.data_to || "2026-11-13").split("-").map(Number);
+    var doy = (Date.UTC(dp[0], dp[1] - 1, dp[2]) - Date.UTC(dp[0], 0, 1)) / 864e5, wi = Math.min(51, Math.floor(doy / 7));
+    var na = (Math.min(doy, 363.9) / 364) * 2 * Math.PI, np = pol(r2 + 6, na);
     svg += "<line x1='" + cx + "' y1='" + cy + "' x2='" + np[0] + "' y2='" + np[1] + "' stroke='#eef1f8' stroke-width='2.5' stroke-linecap='round'/><circle cx='" + cx + "' cy='" + cy + "' r='5' fill='#eef1f8'/>";
     svg += "<text x='" + cx + "' y='" + (cy - 22) + "' text-anchor='middle' fill='#97a3bd' font-size='11' letter-spacing='2'>SUDAN</text>";
     svg += "<text x='" + cx + "' y='" + (cy + 30) + "' text-anchor='middle' fill='#eef1f8' font-size='13'>" + (R0.years ? R0.years[0] + "–" + R0.years[1] : "") + "</text></svg>";
