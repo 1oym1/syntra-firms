@@ -2,6 +2,10 @@
 
 Short record of decisions the team has agreed on. Newest first.
 
+## 2026-11-14: Count vegetation fires only (`type = 0`)
+
+**Decision.** We keep only hotspots with `type = 0` ("presumed vegetation fire") and drop volcanoes (1), static land sources such as gas flares (2) and offshore sources (3). For 2026 NRT data, which has no `type` field, we drop hotspots that fall in a static-source mask built from the archive. Details: [FIRE_SOURCE.md](FIRE_SOURCE.md).
+
 ## 2026-11-14: Build and test on Sudan
 
 **Decision.** Sudan is our working area: we build the harmonization code and algorithm on it, and test and calibrate there. It is set once in `syntra/data.py` as `DEFAULT_COUNTRY = "Sudan"`. The fetch script, the notebooks and the app all read it from there.
