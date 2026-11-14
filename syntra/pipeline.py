@@ -10,8 +10,8 @@ or save everything to data/processed/ from the repo root:
 
     python -m syntra.pipeline --country Sudan
 
-Steps: fetch yearly files (syntra.data) -> clean inside the border (syntra.clean, Step 3) -> add 2026 from
-the API (syntra.recent, same cleaning) -> one static-source mask applied to ALL years.
+Steps: fetch yearly files (syntra.data) -> clean inside the border (syntra.clean, Step 3) -> add this year
+from the FIRMS API (syntra.nrt, same cleaning) -> one static-source mask applied to ALL years.
 Harmonization (Steps 4-5) is syntra.harmonize; syntra.series extends it to 2026 for the app.
 """
 import argparse
@@ -22,23 +22,38 @@ import json
 
 import pandas as pd
 
-from syntra import series
+from syntra import nrt, series
 from syntra.clean import apply_static_mask, clean_all, country_shape, static_mask
 from syntra.data import DEFAULT_COUNTRY, PROCESSED_DIR, fetch
-from syntra.recent import load_recent
 
 INSTS = ["modis", "viirs-snpp", "viirs-jpss1"]
 
 
+def this_year(country, year, mask, archive):
+    """This year's clean hotspots from syntra.nrt (all three sensors), or none without a MAP_KEY."""
+    try:
+        nrt.map_key()
+    except RuntimeError:
+        return archive.iloc[0:0], {"key": False, "snpp_last_day": None}
+    # nrt reads the static mask from this file (the same mask clean.run writes)
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    mask.to_csv(PROCESSED_DIR / f"static_mask_{country}.csv", index=False)
+    fires, _ = nrt.run(country, year)
+    fires = fires.drop(columns=["sensor", "type_known"], errors="ignore")
+    fires = fires[fires.year > archive.year.max()]        # never count a year twice
+    snpp = fires.loc[fires.satellite == series.SNPP, "acq_date"]
+    return fires, {"key": True, "snpp_last_day": snpp.max() if len(snpp) else None}
+
+
 def load_country(country, with_2026=True, quiet=True):
     out = io.StringIO() if quiet else None
+    year = dt.date.today().year          # yearly files exist up to last year; this year comes from the API
     with (contextlib.redirect_stdout(out) if quiet else contextlib.nullcontext()):
-        fetch(country, 2000, 2025)
-        shape = country_shape(country)  # Natural Earth 1:10m border, same clip for archive and 2026
+        fetch(country, 2000, year - 1)
+        shape = country_shape(country)  # Natural Earth 1:10m border, same clip for archive and this year
         archive = clean_all(country, insts=INSTS, shape=shape)
-        recent, info = (load_recent(country, archive, shape=shape) if with_2026
-                        else (archive.iloc[0:0], {"key": False}))
         mask = static_mask(archive)
+        recent, info = this_year(country, year, mask, archive) if with_2026 else (archive.iloc[0:0], {"key": False})
     fires = pd.concat([archive, recent], ignore_index=True) if len(recent) else archive
     flagged_by_type = int(fires["is_static"].sum())
     fires = apply_static_mask(fires, mask)
@@ -99,7 +114,7 @@ def save(country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
         "snpp_last_day": str(info["snpp_end"].date()) if info["snpp_end"] is not None else None,
         "rows_clean": info["rows_clean"], "rows_vegetation": len(veg),
         "static_by_type": info["static_by_type"], "static_by_mask": info["static_by_mask"],
-        "mask_cells": info["mask_cells"], "api_dropped_outside_border": info.get("dropped_outside", 0),
+        "mask_cells": info["mask_cells"],
         "rows_by_satellite": {k: int(v) for k, v in veg.satellite.value_counts().items()},
         "k_terra_annual": round(cs["k_terra_all"], 3), "k_modis_to_viirs_annual": round(cs["k_viirs_all"], 3),
         "heldout_r2": round(cs["heldout"]["r2"], 3), "heldout_r2_raw_modis": round(cs["heldout"]["r2_raw_modis"], 3),

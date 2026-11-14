@@ -72,7 +72,7 @@ validation, a hotspot map and CSV downloads. Data is downloaded from FIRMS on fi
 **2026 data** comes from the FIRMS API and needs a free MAP_KEY: copy `.env.example` to `.env` and fill in
 `FIRMS_MAP_KEY` (never commit `.env`). On Streamlit Cloud put the same line in the app's Secrets. Without a key the
 app still works on the archive (to Dec 2025). The whole chain (fetch → `syntra/clean.py` → 2026 → static mask →
-harmonization) is `syntra/pipeline.py`:
+harmonization) is `syntra/pipeline.py` (this year from `syntra/nrt.py`):
 
 ```python
 from syntra.pipeline import load_country

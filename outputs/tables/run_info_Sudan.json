@@ -4,16 +4,15 @@
   "last_full_month": "2026-10",
   "snpp_last_day": "2026-11-02",
   "rows_clean": 4462802,
-  "rows_vegetation": 4417341,
-  "static_by_type": 33694,
-  "static_by_mask": 11767,
+  "rows_vegetation": 4417338,
+  "static_by_type": 34066,
+  "static_by_mask": 11398,
   "mask_cells": 700,
-  "api_dropped_outside_border": 543545,
   "rows_by_satellite": {
     "N": 2157879,
-    "N20": 1336897,
-    "Aqua": 536898,
-    "Terra": 385667
+    "N20": 1336896,
+    "Aqua": 536897,
+    "Terra": 385666
   },
   "k_terra_annual": 1.526,
   "k_modis_to_viirs_annual": 1.842,

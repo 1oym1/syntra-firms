@@ -39,7 +39,7 @@ st.set_page_config(page_title="SYNTRA fire calendar", page_icon="🔥", layout="
 
 
 # ---------- data ----------
-try:  # deployed: key in Streamlit secrets; local: .env (read by syntra.recent)
+try:  # deployed: key in Streamlit secrets; local: .env (read by syntra.nrt)
     if "FIRMS_MAP_KEY" in st.secrets:
         os.environ.setdefault("FIRMS_MAP_KEY", st.secrets["FIRMS_MAP_KEY"])
 except Exception:  # noqa: BLE001  (no secrets file)
@@ -356,8 +356,8 @@ with tab_m:
                 "3 offshore) flagged; plus one static-source mask (~1 km cells that were static in the archive) "
                 "applied to every year, so 2026 near-real-time data (no `type`) is cleaned exactly like the archive.")
     st.markdown(f"This run: {info['rows_clean']:,} clean hotspots; {info['static_by_type']:,} static by type and "
-                f"{info['static_by_mask']:,} more by the mask ({info['mask_cells']:,} cells); "
-                f"{info.get('dropped_outside', 0):,} 2026 API hotspots outside the country removed.")
+                f"{info['static_by_mask']:,} more by the mask ({info['mask_cells']:,} cells). "
+                "2026 comes from the FIRMS API through `syntra/nrt.py` and is cleaned by the same code.")
     st.markdown("**Data:** NASA FIRMS (Fire Information for Resource Management System): MODIS Collection 6.1 "
                 "(Terra + Aqua) and VIIRS 375 m (S-NPP, NOAA-20) yearly country archives 2000–2025, and the FIRMS "
                 "area API for 2026 (standard data where available, then near-real-time). "

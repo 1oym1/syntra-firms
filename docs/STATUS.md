@@ -4,6 +4,15 @@ Where the project stands. Newest first. Update it when something lands.
 
 
 
+
+## 2026-11-14, about 15:00 (Hisham): one 2026 loader, Riyadh's `syntra/nrt.py`
+
+- The app and `syntra/pipeline.py` now get 2026 from `syntra/nrt.py` (PR #4). `syntra/recent.py` is deleted, so there
+  is one copy of the 2026 logic. On top of nrt the app still converts NOAA-20 to S-NPP units (× 0.992) after S-NPP's
+  last day; `harmonize.run` uses raw NOAA-20 there. The difference is 0.8 % for Nov 3 on.
+- Same Sudan results as before: 4,462,802 clean rows, held-out R² 0.975, Oct 2026 1,545 (normal), Nov 1–13 −11 %.
+- `python -m syntra.pipeline` writes `clean_vegetation_<country>.csv` as MODIS + one VIIRS per day (nrt's rule), so
+  `python -m syntra.harmonize` reads it correctly.
 ## 2026-11-14, about 14:30 (Hisham): checklist step 3, MODIS vs VIIRS on clean data
 
 Riyadh's checklist: 1 download ✅ → 2 clean ✅ → **3 handle the difference ✅** → 4 aggregate monthly ✅ → 5 app ✅ (deploy still to do).
