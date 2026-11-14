@@ -203,6 +203,25 @@ section { position: relative; z-index: 2; }
 .rkey i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
 @media (max-width: 860px) { .riskwrap { grid-template-columns: minmax(0, 1fr); } }
 
+/* live now */
+.livewrap { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.livemap { padding: 14px; }
+#lmap { width: 100%; display: block; cursor: crosshair; touch-action: pan-y; }
+.lkey { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.lkey .belt { font: 400 .74rem var(--mono); color: var(--dim); margin-left: 4px; }
+.lkey .belt i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: rgba(255,138,42,.28); margin-right: 6px; vertical-align: -2px; }
+.rstat[hidden] { display: none; }
+.lbars { display: grid; gap: 9px; margin-top: 6px; }
+.lbar { display: grid; grid-template-columns: 82px minmax(0, 1fr) 56px; align-items: center; gap: 10px; font: 400 .78rem var(--mono); color: var(--dim); }
+.lbar .t { height: 8px; border-radius: 4px; background: rgba(148,170,220,.1); overflow: hidden; }
+.lbar .t b { display: block; height: 100%; border-radius: 4px; }
+.lbar .v { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+#l-hours svg { width: 100%; height: auto; display: block; margin-top: 8px; overflow: visible; }
+#l-hours text { font: 400 10px var(--mono); fill: var(--dim); }
+.eyebrow .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4d4d; margin-right: 9px; vertical-align: 1px; animation: ping 1.6s infinite; }
+.navlinks a.livenav::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; margin-right: 7px; vertical-align: 1px; }
+@media (max-width: 900px) { .livewrap { grid-template-columns: minmax(0, 1fr); } }
+
 /* bento */
 .bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; perspective: 1200px; }
 .tile { grid-column: span 2; padding: 24px; min-height: 190px; display: grid; gap: 8px; align-content: end; position: relative; overflow: hidden;
@@ -233,7 +252,7 @@ td .barcell { display: inline-block; height: 6px; border-radius: 4px; background
 footer { position: relative; z-index: 2; margin-top: 100px; border-top: 1px solid var(--rim); }
 footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; font: 400 .78rem var(--mono); color: var(--dim); }
 .nogl { display: none; position: absolute; inset: auto 16px 16px auto; font: 400 .74rem var(--mono); color: var(--dim); }
-@media (prefers-reduced-motion: reduce) { .ticker .track, .chip.live i, .hero .wrap > * { animation: none; } .glow { display: none; } html { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: reduce) { .ticker .track, .chip.live i, .eyebrow .pulse, .hero .wrap > * { animation: none; } .glow { display: none; } html { scroll-behavior: auto; } }
 </style>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="mk-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc25c"/><stop offset="1" stop-color="#ff8a2a"/></linearGradient><symbol id="mk" viewBox="280 160 1060 1220"><path d="M1145 350H690a211 211 0 0 0 0 422h240a211 211 0 0 1 0 422H470" fill="none" stroke="url(#mk-g)" stroke-width="145"/><circle cx="1145" cy="350" r="152.5" fill="#05070d" stroke="#ffc25c" stroke-width="45"/><circle cx="470" cy="1187" r="152.5" fill="#05070d" stroke="#ff8a2a" stroke-width="45"/><circle cx="805" cy="762" r="33" fill="#05070d"/></symbol></defs></svg>
@@ -242,7 +261,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
 <nav class="top"><div class="wrap">
   <a class="logo" href="#top" aria-label="SYNTRA home"><svg aria-hidden="true"><use href="#mk"/></svg>SYNTRA</a>
   <div class="navlinks glass">
-    <a href="#seam">The seam</a><a href="#check">Check a month</a><a href="#risk">Risk clock</a><a href="#app">App</a>
+    <a class="livenav" href="#live">Live now</a><a href="#seam">The seam</a><a href="#check">Check a month</a><a href="#risk">Risk clock</a><a href="#app">App</a>
     <a class="cta app-link" href="#app">Open the app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
   </div>
 </div></nav>
@@ -263,6 +282,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     </div>
     <div class="btns">
       <a class="btn hot app-link" href="#app">Open the live app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a class="btn" href="#live">Today's fires <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M4 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       <a class="btn" href="#seam">See the 2012 seam <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M4 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
     <div class="hint" id="ghint">Drag the globe to spin it · click it, then scroll to zoom · tap a layer to switch it off</div>
@@ -280,6 +300,28 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
 </header>
 
 <div class="ticker" aria-label="Key numbers"><div class="track" id="ticker"></div></div>
+
+<section class="wrap sec" id="live" aria-labelledby="live-h">
+  <div class="sec-head">
+    <div class="eyebrow"><span class="pulse"></span>Live · NASA FIRMS</div>
+    <h2 id="live-h">Sudan right now</h2>
+    <p>Every fire hotspot NASA's satellites picked up over Sudan in the last 24 hours, cleaned the same way as the 26-year record
+      (inside the border, confident detections only, gas flares and other fixed heat sources removed). It refreshes every 30 minutes.
+      Hover a dot for its details.</p>
+  </div>
+  <div class="livewrap">
+    <div class="livemap glass">
+      <canvas id="lmap" role="img" aria-label="Map of Sudan with the latest fire hotspots"></canvas>
+      <div class="lkey" id="lkey"></div>
+    </div>
+    <div class="rlist">
+      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)" id="l-lab">Hotspots in the last 24 h</span><span class="n mono" id="l-total">…</span><span class="dim" id="l-when">Loading the live feed…</span></div>
+      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">By satellite</span><div class="lbars" id="l-bars"></div></div>
+      <div class="rstat glass" id="l-hours-box"><span class="eyebrow" style="color:var(--dim)">Hotspots by hour of the satellite pass</span><div id="l-hours"></div></div>
+      <div class="rstat glass" id="l-max-box"><span class="eyebrow" style="color:var(--dim)">Strongest fire</span><span class="n mono" id="l-max"></span><span class="dim" id="l-max2"></span></div>
+    </div>
+  </div>
+</section>
 
 <section class="story" id="seam" aria-labelledby="seam-h">
   <div class="pin">
@@ -493,6 +535,118 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   renderStats();
   var globeLive = null;   // set by the globe: rebuilds its live layers from a list of [lon, lat, sensor, ...]
 
+  // "Sudan right now": flat map + numbers. Points are [lon, lat, sensor] (snapshot) or
+  // [lon, lat, sensor, pass minutes since 1970 UTC, FRP MW] (live feed).
+  var SN = { MODIS: "MODIS", VIIRS_NOAA20: "NOAA-20", VIIRS_NOAA21: "NOAA-21" };
+  var SNL = { MODIS: "MODIS (Terra/Aqua)", VIIRS_NOAA20: "VIIRS on NOAA-20", VIIRS_NOAA21: "VIIRS on NOAA-21" };
+  var LS = { pts: [], off: {}, vis: [], hover: null, live: false, failed: false };
+  var LB = (function () {
+    var b = D.border || [], x0 = 21.8, x1 = 38.6, y0 = 8.7, y1 = 22.2;
+    if (b.length) { x0 = 99; x1 = -99; y0 = 99; y1 = -99; b.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }); }
+    return { x0: x0 - .3, x1: x1 + .3, y0: y0 - .3, y1: y1 + .3, kx: Math.cos((y0 + y1) / 2 * Math.PI / 180) };
+  })();
+  var cellMax = Math.max.apply(null, (D.cells || [[0, 0, 1]]).map(function (c) { return c[2]; }));
+  function isoOf(t) { return new Date(t * 6e4).toISOString(); }
+  function ago(iso) {
+    var m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 6e4));
+    return m < 60 ? m + " min ago" : Math.floor(m / 60) + " h " + (m % 60) + " min ago";
+  }
+  function drawLMap() {
+    var cv = document.getElementById("lmap"), w = cv.clientWidth; if (!w) return;
+    var h = Math.round(w * (LB.y1 - LB.y0) / ((LB.x1 - LB.x0) * LB.kx)), dpr = Math.min(2, devicePixelRatio || 1);
+    cv.style.height = h + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    var c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var sx = w / (LB.x1 - LB.x0), sy = h / (LB.y1 - LB.y0);
+    function px(lon, lat) { return [(lon - LB.x0) * sx, (LB.y1 - lat) * sy]; }
+    // graticule every 4 degrees
+    c.strokeStyle = "rgba(148,170,220,.08)"; c.lineWidth = 1; c.fillStyle = "rgba(151,163,189,.55)"; c.font = "10px JetBrains Mono, monospace";
+    for (var lo = 24; lo < LB.x1; lo += 4) { var a = px(lo, 0)[0]; c.beginPath(); c.moveTo(a, 0); c.lineTo(a, h); c.stroke(); c.fillText(lo + "°E", a + 3, h - 4); }
+    for (var la = 12; la < LB.y1; la += 4) { var y = px(0, la)[1]; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); c.fillText(la + "°N", 3, y - 3); }
+    // typical fire belt (2016-25), faint
+    (D.cells || []).forEach(function (cl) { var q = px(cl[0] - .05, cl[1] + .05); c.fillStyle = "rgba(255,138,42," + (.04 + .22 * Math.sqrt(cl[2] / cellMax)).toFixed(3) + ")"; c.fillRect(q[0], q[1], .1 * sx, .1 * sy); });
+    // border
+    var b = D.border || [];
+    if (b.length) { c.beginPath(); b.forEach(function (p, i) { var q = px(p[0], p[1]); if (i) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); }); c.strokeStyle = "rgba(255,138,42,.85)"; c.lineWidth = 1.4; c.stroke(); }
+    // hotspots
+    LS.vis = []; c.strokeStyle = "rgba(5,7,13,.85)"; c.lineWidth = .8;
+    LS.order.forEach(function (p) {
+      if (LS.off[p[2]]) return; var q = px(p[0], p[1]); LS.vis.push([q[0], q[1], p]);
+      c.fillStyle = COL[p[2]] || "#fff"; c.beginPath(); c.arc(q[0], q[1], 2.6, 0, 6.2832); c.fill(); c.stroke();
+    });
+    if (LS.hover) { c.strokeStyle = "#eef1f8"; c.lineWidth = 2; c.beginPath(); c.arc(LS.hover[0], LS.hover[1], 7, 0, 6.2832); c.stroke(); }
+  }
+  (function () {
+    var cv = document.getElementById("lmap"), key = document.getElementById("lkey");
+    Object.keys(SN).forEach(function (k) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", "true");
+      b.innerHTML = "<i style='background:" + COL[k] + "'></i>" + SN[k];
+      b.addEventListener("click", function () { var on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", on); LS.off[k] = !on; LS.hover = null; drawLMap(); });
+      key.appendChild(b);
+    });
+    var belt = document.createElement("span"); belt.className = "belt"; belt.innerHTML = "<i></i>usual fire belt 2016–25"; key.appendChild(belt);
+    cv.addEventListener("pointermove", function (e) {
+      var r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, best = null, bd = 100;
+      LS.vis.forEach(function (v) { var d = (v[0] - x) * (v[0] - x) + (v[1] - y) * (v[1] - y); if (d < bd) { bd = d; best = v; } });
+      if (best !== LS.hover) { LS.hover = best; drawLMap(); }
+      if (!best) { hideTip(); return; }
+      var p = best[2];
+      showTip(e.clientX, e.clientY, "<b>" + SNL[p[2]] + "</b>" + (p[3] ? "<br>pass " + hhmm(isoOf(p[3])) : "") +
+        (p[4] != null ? "<br>fire power " + p[4] + " MW" : "") + "<br>" + p[1].toFixed(2) + "° N, " + p[0].toFixed(2) + "° E");
+    });
+    cv.addEventListener("pointerleave", function () { hideTip(); if (LS.hover) { LS.hover = null; drawLMap(); } });
+    addEventListener("resize", drawLMap);
+  })();
+  function renderLive() {
+    // draw in a fixed mixed order so one satellite does not paint over the others where they saw the same fire
+    LS.order = LS.pts.slice().sort(function (a, b) { var h = function (p) { var v = Math.sin(p[0] * 12.9898 + p[1] * 78.233) * 43758.5453; return v - Math.floor(v); }; return h(a) - h(b); });
+    var pts = LS.pts, n = pts.length, by = {};
+    pts.forEach(function (p) { by[p[2]] = (by[p[2]] || 0) + 1; });
+    document.getElementById("l-lab").textContent = LS.live ? "Hotspots in the last 24 h" : "Hotspots, " + (D.live_from || "") + " to " + (D.live_to || "");
+    document.getElementById("l-total").textContent = fmt(n);
+    document.getElementById("l-when").textContent = LS.live
+      ? "newest pass " + hhmm(LIVE.newest_pass_utc) + " (" + ago(LIVE.newest_pass_utc) + ") · checked " + hhmm(LIVE.fetched_utc)
+      : LS.failed ? "The live feed is not reachable, so this is the saved 7-day snapshot." : "Loading the live feed…";
+    var mx = Math.max.apply(null, Object.keys(SN).map(function (k) { return by[k] || 0; }).concat([1]));
+    var miss = LS.live && LIVE.missing || [];
+    document.getElementById("l-bars").innerHTML = Object.keys(SN).map(function (k) {
+      if (miss.indexOf(k) >= 0) return "<div class='lbar'><span>" + SN[k] + "</span><span class='t'></span><span class='v dim'>no data</span></div>";
+      return "<div class='lbar'><span>" + SN[k] + "</span><span class='t'><b style='width:" + (100 * (by[k] || 0) / mx).toFixed(1) + "%;background:" + COL[k] + "'></b></span><span class='v'>" + fmt(by[k] || 0) + "</span></div>";
+    }).join("");
+    document.getElementById("lmap").setAttribute("aria-label", "Map of Sudan with " + fmt(n) + " fire hotspots: " +
+      Object.keys(SN).map(function (k) { return SN[k] + " " + fmt(by[k] || 0); }).join(", "));
+    // by hour, last 24 h before the check
+    var hb = document.getElementById("l-hours-box"), timed = LS.live && n && pts[0][3];
+    hb.hidden = !timed;
+    if (timed) {
+      var end = Date.parse(LIVE.fetched_utc) / 6e4, bins = []; for (var i = 0; i < 24; i++) bins.push(0);
+      pts.forEach(function (p) { var k = Math.floor((end - p[3]) / 60); if (k >= 0 && k < 24) bins[23 - k]++; });
+      var W = 320, H = 64, bw = W / 24, hm = Math.max.apply(null, bins.concat([1]));
+      var svg = "<svg viewBox='0 0 " + W + " " + (H + 16) + "' role='img' aria-label='Hotspots per hour over the last 24 hours'>";
+      bins.forEach(function (v, i) {
+        var hh = v ? Math.max(3, v / hm * H) : 1.5;
+        svg += "<rect class='hb' data-i='" + i + "' x='" + (i * bw + 1) + "' y='" + (H - hh) + "' width='" + (bw - 2) + "' height='" + hh + "' rx='2' fill='" + (v ? "#ff8a2a" : "#2b3a5c") + "'/>";
+      });
+      svg += "<line x1='0' x2='" + W + "' y1='" + H + "' y2='" + H + "' stroke='rgba(148,170,220,.25)'/>";
+      svg += "<text x='0' y='" + (H + 13) + "'>24 h ago</text><text x='" + W / 2 + "' y='" + (H + 13) + "' text-anchor='middle'>12 h ago</text><text x='" + W + "' y='" + (H + 13) + "' text-anchor='end'>now</text></svg>";
+      var hw = document.getElementById("l-hours"); hw.innerHTML = svg;
+      hw.querySelectorAll(".hb").forEach(function (r) {
+        r.addEventListener("pointermove", function (e) { var i = +r.dataset.i, a = isoOf(end - (24 - i) * 60), z = isoOf(end - (23 - i) * 60);
+          showTip(e.clientX, e.clientY, "<b>" + fmt(bins[i]) + " hotspots</b><br>" + a.slice(11, 16) + "–" + z.slice(11, 16) + " UTC"); });
+        r.addEventListener("pointerleave", hideTip);
+      });
+    }
+    // strongest fire by radiative power
+    var mb = document.getElementById("l-max-box"), top = null;
+    pts.forEach(function (p) { if (p[4] != null && (!top || p[4] > top[4])) top = p; });
+    mb.hidden = !(LS.live && top);
+    if (LS.live && top) {
+      document.getElementById("l-max").textContent = (top[4] >= 10 ? fmt(top[4]) : top[4].toFixed(1)) + " MW";
+      document.getElementById("l-max2").textContent = "fire radiative power · " + SNL[top[2]] + " · " + top[1].toFixed(2) + "° N, " + top[0].toFixed(2) + "° E · " + hhmm(isoOf(top[3]));
+    }
+    drawLMap();
+  }
+  LS.pts = D.live || []; renderLive();
+
   var hasGL = !!window.THREE && (function () { try { var c = document.createElement("canvas"); return !!(c.getContext("webgl") || c.getContext("experimental-webgl")); } catch (e) { return false; } })();
   var scenes = [];
   function visibleWatch(el, s) { new IntersectionObserver(function (es) { s.on = es[0].isIntersecting; }, { rootMargin: "100px" }).observe(el); }
@@ -623,7 +777,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       ["MODIS", "VIIRS_NOAA20", "VIIRS_NOAA21"].forEach(function (k) {
         var was = layers[k], vis = was ? was.visible : true;
         if (was) { world.remove(was); was.geometry.dispose(); was.material.dispose(); }
-        layers[k] = points(list.filter(function (p) { return p[2] === k; }).map(function (p) { return { lon: p[0], lat: p[1], color: COL[k], size: 3.6 }; }),
+        layers[k] = points(list.filter(function (p) { return p[2] === k; }).map(function (p) { return { lon: p[0], lat: p[1], color: COL[k], size: 5 }; }),
           { r: R * 1.009, add: true, pulse: true });
         layers[k].visible = vis;
       });
@@ -800,12 +954,13 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   // live feed: /api/live (Netlify Function relaying NASA FIRMS public 24 h files). Elsewhere, or if it fails,
   // the page keeps the 7-day snapshot from data.js.
   function pullLive() {
-    if (!/^https?:$/.test(location.protocol) || !window.fetch) return;
+    if (!/^https?:$/.test(location.protocol) || !window.fetch) { LS.failed = true; renderLive(); return; }
     fetch("/api/live", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (L) {
-      if (!L || !Array.isArray(L.points)) return;
+      if (!L || !Array.isArray(L.points)) throw 0;
       LIVE = L; renderStats();
       if (globeLive) globeLive(L.points);
-    }).catch(function () {});
+      LS.pts = L.points; LS.live = true; renderLive();
+    }).catch(function () { if (!LS.live) { LS.failed = true; renderLive(); } });
   }
   pullLive(); setInterval(pullLive, 30 * 60 * 1000);
 

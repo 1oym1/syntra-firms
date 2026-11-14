@@ -37,7 +37,7 @@ function clean(text, sensor) {
   const h = lines[0].trim().split(",");
   const at = (n) => h.indexOf(n);
   const iLat = at("latitude"), iLon = at("longitude"), iConf = at("confidence");
-  const iDate = at("acq_date"), iTime = at("acq_time");
+  const iDate = at("acq_date"), iTime = at("acq_time"), iFrp = at("frp");
   const out = [];
   let newest = "";
   for (let k = 1; k < lines.length; k++) {
@@ -50,21 +50,25 @@ function clean(text, sensor) {
     if (!ok || !inside(lon, lat) || MASK.has(maskCell(lat, lon))) continue;
     const when = f[iDate] + "T" + f[iTime].padStart(4, "0").replace(/(\d\d)(\d\d)/, "$1:$2") + "Z";
     if (when > newest) newest = when;
-    out.push([Math.round(lon * 1e3) / 1e3, Math.round(lat * 1e3) / 1e3, sensor]);   // what the globe draws
+    // [lon, lat, sensor, pass time in minutes since 1970 UTC, fire radiative power in MW]
+    out.push([Math.round(lon * 1e3) / 1e3, Math.round(lat * 1e3) / 1e3, sensor, Math.round(Date.parse(when) / 6e4),
+      iFrp >= 0 ? Math.round(+f[iFrp] * 10) / 10 : null]);
   }
   return { points: out, newest };
 }
 
 export default async () => {
   const got = await Promise.allSettled(Object.entries(FILES).map(async ([sensor, path]) => {
-    const r = await fetch(BASE + path + REGION, { signal: AbortSignal.timeout(9000) });
-    if (!r.ok) throw new Error(`${sensor}: HTTP ${r.status}`);
-    return [sensor, clean(await r.text(), sensor)];
+    try {
+      const r = await fetch(BASE + path + REGION, { signal: AbortSignal.timeout(9000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return [sensor, clean(await r.text(), sensor)];
+    } catch (e) { throw { sensor, message: `${sensor}: ${e && e.message || e}` }; }
   }));
-  const points = [], by_sensor = {}, errors = [];
+  const points = [], by_sensor = {}, errors = [], missing = [];
   let newest = "";
   for (const g of got) {
-    if (g.status === "rejected") { errors.push(String(g.reason && g.reason.message || g.reason)); continue; }
+    if (g.status === "rejected") { errors.push(String(g.reason && g.reason.message || g.reason)); missing.push(g.reason && g.reason.sensor); continue; }
     const [sensor, res] = g.value;
     by_sensor[sensor] = res.points.length;
     points.push(...res.points);
@@ -73,7 +77,7 @@ export default async () => {
   const body = {
     source: "NASA FIRMS active fire data, last 24 h (MODIS C6.1, VIIRS NOAA-20 and NOAA-21 C2, NRT)",
     window: "24h", fetched_utc: new Date().toISOString(), newest_pass_utc: newest || null,
-    total: points.length, by_sensor, errors, points,
+    total: points.length, by_sensor, missing, errors, points,
   };
   const ok = errors.length < Object.keys(FILES).length;
   return new Response(JSON.stringify(body), {
@@ -83,7 +87,8 @@ export default async () => {
       "access-control-allow-origin": "*",
       "cache-control": "public, max-age=300",
       // cache at Netlify's edge: fresh for 30 min, then served stale while one request refreshes it
-      "netlify-cdn-cache-control": ok ? "public, s-maxage=1800, stale-while-revalidate=3600, durable" : "no-store",
+      // a partial answer (one satellite file timed out) is kept only 2 min so the next visitor retries
+      "netlify-cdn-cache-control": !ok ? "no-store" : errors.length ? "public, s-maxage=120" : "public, s-maxage=1800, stale-while-revalidate=3600, durable",
     },
   });
 };
