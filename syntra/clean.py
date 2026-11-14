@@ -90,12 +90,22 @@ def inside(df, shape):
     return shapely.contains_xy(shape, df["longitude"].to_numpy(), df["latitude"].to_numpy())
 
 
-def instruments(raw_dir=RAW_DIR):
-    """MODIS plus ONE VIIRS series: Suomi NPP when present, otherwise NOAA-20.
+def raw_files(inst, country=DEFAULT_COUNTRY, raw_dir=RAW_DIR):
+    """Yearly files of exactly this country, e.g. modis_2025_Sudan.csv.
+
+    The year must be 4 digits: a plain "*" would also match modis_2025_South_Sudan.csv
+    when looking for Sudan (or Equatorial_Guinea when looking for Guinea).
+    """
+    return sorted((raw_dir / inst).glob(f"{inst}_[0-9][0-9][0-9][0-9]_{country}.csv"))
+
+
+def instruments(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR):
+    """MODIS plus ONE VIIRS series: Suomi NPP when this country has its files, otherwise NOAA-20.
 
     Never add both VIIRS satellites together: that doubles the counts from 2018.
+    Checks the country's files, not just the folder, which can hold other countries.
     """
-    return ["modis"] + (["viirs-snpp"] if (raw_dir / "viirs-snpp").exists() else ["viirs-jpss1"])
+    return ["modis"] + (["viirs-snpp"] if raw_files("viirs-snpp", country, raw_dir) else ["viirs-jpss1"])
 
 
 def cell_id(lat, lon, deg):
@@ -143,8 +153,8 @@ def clean_all(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, o
     out_dir.mkdir(parents=True, exist_ok=True)
     shape = country_shape(country) if shape is None else shape
     paths = []
-    for inst in instruments(raw_dir):
-        for path in sorted((raw_dir / inst).glob(f"{inst}_*_{country}.csv")):
+    for inst in instruments(country, raw_dir):
+        for path in raw_files(inst, country, raw_dir):
             out = out_dir / f"clean_v{CLEAN_VERSION}_{path.stem}.parquet"
             if overwrite or not out.exists():
                 clean_file(path, inst, shape).to_parquet(out, index=False)
@@ -176,11 +186,25 @@ def apply_static_mask(df, mask):
 
 
 def monthly_table(veg):
-    """Per sensor and month: hotspots, burned 0.1 degree cells, FRP sum."""
-    return (veg.groupby(["family", "year", "month"], observed=True)
-               .agg(hotspots=("frp", "size"), burned_cells=("cell_id", "nunique"),
-                    frp_sum=("frp", "sum"))
-               .reset_index())
+    """Per sensor and month: hotspots, burned 0.1 degree cells, FRP sum.
+
+    A month with no fires gets a row of zeros (between the sensor's first and last
+    month). Without it, quiet months such as Sudan's rainy season or most months in
+    Saudi Arabia would simply be missing, and a monthly median would skip them.
+    """
+    tab = (veg.groupby(["family", "year", "month"], observed=True)
+              .agg(hotspots=("frp", "size"), burned_cells=("cell_id", "nunique"),
+                   frp_sum=("frp", "sum"))
+              .reset_index())
+    full = []
+    for fam, g in tab.groupby("family"):
+        first, last = (pd.Period(year=int(y), month=int(m), freq="M")
+                       for y, m in (g.iloc[0][["year", "month"]], g.iloc[-1][["year", "month"]]))
+        months = pd.period_range(first, last, freq="M")
+        idx = pd.MultiIndex.from_arrays([[fam] * len(months), months.year, months.month],
+                                        names=["family", "year", "month"])
+        full.append(g.set_index(["family", "year", "month"]).reindex(idx, fill_value=0))
+    return pd.concat(full).reset_index()
 
 
 def check(fires, veg, monthly):
