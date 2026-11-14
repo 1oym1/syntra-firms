@@ -1,0 +1,6 @@
+# Same line endings for everyone (Windows and Mac), so diffs show only real changes
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pptx binary
+*.mp4 binary
