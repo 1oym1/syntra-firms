@@ -60,10 +60,20 @@ def load_country(country, with_2026=True, quiet=True):
     return {"veg": veg, "static": static.reset_index(drop=True), "info": info}
 
 
+def one_viirs(veg, snpp_end):
+    """MODIS + one VIIRS satellite per day: Suomi NPP up to its last day, NOAA-20 after it (as syntra.nrt)."""
+    if snpp_end is None:
+        return veg[veg.satellite != series.N20]
+    viirs_ok = ((veg.satellite == series.SNPP) & (veg.acq_date <= snpp_end)) | \
+               ((veg.satellite == series.N20) & (veg.acq_date > snpp_end))
+    return veg[(veg.family == "MODIS") | viirs_ok]
+
+
 def save(country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
     """Clean + harmonize one country (archive and 2026) and write the results to data/processed/.
 
-    clean_vegetation_<country>.csv/.parquet  clean vegetation fires, all sensors, 2000 -> yesterday
+    clean_vegetation_<country>.csv           clean vegetation fires 2000 -> yesterday, MODIS + one VIIRS per day
+    clean_vegetation_all_sensors_<country>.parquet   the same with both VIIRS satellites (for checks)
     static_sources_<country>.csv             hotspots flagged as static (type 1-3 or the mask)
     harmonized_<country>.csv                 monthly burned 0.1 deg cells, harmonized, to the last full month
     factors_<country>.csv, validation_<country>.csv, run_info_<country>.json
@@ -72,8 +82,10 @@ def save(country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
     d = load_country(country, quiet=False)
     veg, info = d["veg"], d["info"]
     cs = series.country_series(veg, info)
-    veg.to_parquet(out_dir / f"clean_vegetation_{country}.parquet", index=False)
-    veg.to_csv(out_dir / f"clean_vegetation_{country}.csv", index=False)
+    veg.to_parquet(out_dir / f"clean_vegetation_all_sensors_{country}.parquet", index=False)
+    # harmonize.run reads this file: MODIS + ONE VIIRS satellite per day (S-NPP to its last day, NOAA-20
+    # after), the same rule as syntra.nrt, so VIIRS cells are never counted from two satellites at once
+    one_viirs(veg, info["snpp_end"]).to_csv(out_dir / f"clean_vegetation_{country}.csv", index=False)
     d["static"].to_csv(out_dir / f"static_sources_{country}.csv", index=False)
     cs["tab"].to_csv(out_dir / f"harmonized_{country}.csv", index=False)
     pd.DataFrame({"month": range(1, 13), "terra_to_terra_aqua": cs["k_terra"].round(3).values,
