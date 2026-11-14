@@ -11,25 +11,31 @@ Riyadh Barnawi (team owner), Yazeed Firas, Obai Merdad, Ahmad Qadah, Hisham Alba
 ## Quick start
 
 ```bash
-git clone <repo url>
+git clone https://github.com/1oym1/syntra-firms.git
 cd syntra-firms
 pip install -r requirements.txt
 python scripts/fetch_firms.py
 ```
 
-`fetch_firms.py` downloads the FIRMS yearly files (Saudi Arabia, 2000 to 2025 by default) into `data/raw/`. The data folder is not stored in git, so every member downloads it once with this command.
+The last command downloads the FIRMS yearly files (Saudi Arabia, 2000 to 2025) into `data/raw/`. Data is not stored in git, so everyone runs it once.
 
-Then open `notebooks/00_starter_load_firms_data.ipynb` in VS Code or Jupyter and run all cells.
+Then open `notebooks/00_load_data.ipynb` and run all cells. The app runs with `streamlit run app/app.py`.
 
 ## Folders
 
-| Folder | What goes there |
-| --- | --- |
-| `notebooks/` | Analysis notebooks, numbered by workflow phase |
-| `scripts/` | Command-line helpers (data download) |
-| `data/raw/` | FIRMS files as downloaded (not in git) |
-| `data/processed/` | Cleaned and merged tables (not in git) |
-| `docs/` | Team guide and method notes |
+```
+syntra-firms/
+├── syntra/          shared Python code (loading, harmonization). Notebooks and the app import it.
+├── notebooks/       one notebook per phase: 00_load_data, 01_harmonization, ...
+├── app/             the Streamlit web app
+├── scripts/         command-line helpers (data download)
+├── outputs/
+│   ├── figures/     PNG charts for the slides
+│   └── tables/      small result tables (CSV under 1 MB)
+├── presentation/    slides and the 30-second video
+├── docs/            team guide and method notes
+└── data/            raw/ and processed/ FIRMS files, NOT in git
+```
 
 ## Data
 
@@ -37,4 +43,4 @@ Then open `notebooks/00_starter_load_firms_data.ipynb` in VS Code or Jupyter and
 
 ## Working together
 
-See [docs/TEAM_GUIDE.md](docs/TEAM_GUIDE.md) for how we use branches, pulls and commits.
+Read [docs/TEAM_GUIDE.md](docs/TEAM_GUIDE.md) before your first commit.
