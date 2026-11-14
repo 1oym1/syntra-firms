@@ -2,6 +2,21 @@
 
 Short record of decisions the team has agreed on. Newest first.
 
+## 2026-11-14: Sudan is our main study area
+
+**Decision.** Sudan is the main example for the harmonization, the app (default country) and the presentation.
+Saudi Arabia stays as a comparison case that shows the limits of the method. Agreed by the team; recorded by Hisham.
+
+**Why.**
+- Ahmad's 2025 screen (`country_recommendation`): mostly vegetation fires (type 0), thousands of hotspots a month,
+  a clear fire season, high MODIS–VIIRS agreement, a manageable data size, and close to Saudi Arabia.
+- Confirmed over 14 years, not only 2025: leave-one-year-out validation 2012–2025 gives **R² 0.99** for Sudan
+  (Ethiopia 0.97, Iraq 0.88, Saudi Arabia 0.28). See `outputs/tables/harmonization_validation.csv`.
+- Saudi Arabia has few, scattered vegetation fires (most raw hotspots are gas flares and other static sources), so its
+  conversion is weak (R² 0.28). Showing it honestly strengthens the Validity criterion.
+
+**Backup.** Ethiopia (R² 0.97), if Sudan causes a problem.
+
 ## 2026-11-14: The app is built with Streamlit
 
 **Decision.** The web app is built with Streamlit (`app/app.py`). We do not use FastAPI + Leaflet.
