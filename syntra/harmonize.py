@@ -227,9 +227,14 @@ def run(veg=None, country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
         if nrt:
             new = pd.concat([pd.read_csv(p, usecols=cols) for p in nrt], ignore_index=True)
             new = new[new.year > veg.year.max()]          # never count a year twice
-            last_day = pd.to_datetime(new.acq_date).max()
-            veg = pd.concat([veg, new], ignore_index=True)
-            print(f"Added {len(new):,} vegetation fires from the FIRMS API, data to {last_day:%d %b %Y}")
+            if len(new):
+                veg = pd.concat([veg, new], ignore_index=True)
+                print(f"Added {len(new):,} vegetation fires from the FIRMS API")
+        # This year's data stops at its last day (also when the clean file already holds this year,
+        # as written by `python -m syntra.pipeline`): flag the part month
+        if int(veg.year.max()) == pd.Timestamp.today().year:
+            last_day = pd.to_datetime(veg.acq_date).max()
+            print(f"Data to {last_day:%d %b %Y}")
     tab = monthly_cells(veg)
     tab, k_terra, k_terra_all = modis_consistent(tab)
     series, k_viirs, k_viirs_all = harmonize(tab)

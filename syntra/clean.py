@@ -211,8 +211,10 @@ def apply_static_mask(df, mask):
     return df
 
 
-# First month each sensor family has data (Terra MODIS: Nov 2000; Suomi NPP VIIRS: Jan 2012)
-SENSOR_START = {"MODIS": (2000, 11), "VIIRS": (2012, 1)}
+# First FULL month each sensor family has data. Terra MODIS: Nov 2000. Suomi NPP VIIRS data in FIRMS starts on
+# 20 Jan 2012, so Jan 2012 is a part month: VIIRS counts from Feb 2012, and Jan 2012 is MODIS x factor like the
+# years before (counting it as a full VIIRS month undercounts it by ~60 % in Sudan and biases the fit).
+SENSOR_START = {"MODIS": (2000, 11), "VIIRS": (2012, 2)}
 
 
 def month_span(veg, family):

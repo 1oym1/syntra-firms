@@ -20,11 +20,13 @@ import numpy as np
 import pandas as pd
 
 from syntra import harmonize as hz
+from syntra.clean import SENSOR_START
 
 SNPP, N20 = "N", "N20"
-# VIIRS S-NPP data in FIRMS starts on 20 Jan 2012, so its first FULL month is Feb 2012. Jan 2012 is filled
-# from MODIS x factor like the years before, and is left out of the MODIS -> VIIRS fit.
-MODIS_START, VIIRS_START = pd.Period("2000-11", "M"), pd.Period("2012-02", "M")
+# First full month of each sensor, shared with syntra.clean / syntra.harmonize (S-NPP data starts 20 Jan 2012,
+# so VIIRS counts from Feb 2012 and Jan 2012 is MODIS x factor).
+MODIS_START, VIIRS_START = (pd.Period(year=y, month=m, freq="M") for y, m in
+                            (SENSOR_START["MODIS"], SENSOR_START["VIIRS"]))
 
 
 def last_full_month(day):

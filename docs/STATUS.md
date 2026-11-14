@@ -5,6 +5,25 @@ Where the project stands. Newest first. Update it when something lands.
 
 
 
+## 2026-11-14, about 18:30 (Hisham): thresholds written down, Jan 2012 fixed everywhere, faster first load
+
+- **Status and risk thresholds are written down**: in the app ("How the status is decided" under the status card,
+  and the caption under the risk chart) and in `docs/DECISIONS.md`. Very high = above the 90th percentile of the
+  same calendar month; Above / Below normal = at least 20 % above / below the median; risk classes by the share of
+  years a week was high (≥ 75 % Extreme, ≥ 50 % High, ≥ 25 % Moderate). These are choices, not physics
+  **[TO CONFIRM with the team]**.
+- **Sensor switches**: the map tab now says the sensor and static-source switches change only the map, the counts
+  above it and the hotspot CSV. Calendar, status, trends, risk and 3D always use the harmonized record of all
+  sensors (sidebar "Calendar shows → Raw MODIS / Raw VIIRS" for one sensor's raw counts).
+- **January 2012, done everywhere**: the sensor start months now live in one place, `clean.SENSOR_START`
+  (VIIRS from Feb 2012), used by `harmonize.py`, `series.py` and the app. `harmonize.run("Sudan")` now gives the
+  app's numbers: held-out R² 0.993, RMSE 301. (The Riyadh item in the 18:00 entry is done.) Also fixed a crash in
+  `harmonize.run` when the FIRMS API adds no new year.
+- **Faster load**: this year's FIRMS API data is cleaned once and cached on disk for 3 h
+  (`data/processed/cache/nrt_<country>_<year>.parquet`, git-ignored with `data/`). Sudan: 44 s → 6 s; cold start
+  of the whole app about 27 s. A country opened for the first time still downloads its yearly archive files
+  (1–3 min), so before the demo run `python scripts/warm_cache.py` (Sudan, Ethiopia, Saudi Arabia, Iraq).
+
 ## 2026-11-14, about 18:00 (Hisham): risk periods tab; January 2012 fix
 
 - **⚠️ Risk periods** (Yazeed's question 2: which periods historically carry the greatest fire risk). Per week of
@@ -17,7 +36,7 @@ Where the project stands. Newest first. Update it when something lands.
   counted as full VIIRS (Sudan: 1,523 instead of ~4,069). `syntra/series.py` now starts VIIRS in Feb 2012; Jan 2012
   is MODIS × factor and is left out of the fit. Sudan held-out R² 0.988 → **0.993**, RMSE 393 → 301, R² on
   anomalies 0.79 → 0.87. Oct 2026 and Nov 1–13 unchanged.
-- **[TO CONFIRM with Riyadh]** `syntra/harmonize.py` (`harmonize.run`, `scripts/harmonize_hotspots.py`) still
+- [DONE 18:30] **[TO CONFIRM with Riyadh]** `syntra/harmonize.py` (`harmonize.run`, `scripts/harmonize_hotspots.py`) still
   counts Jan 2012 as a VIIRS month, so its validation numbers differ slightly from the app's. Same one-line fix
   there (VIIRS span from Feb 2012) would make them match.
 

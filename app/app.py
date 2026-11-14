@@ -181,17 +181,28 @@ def ordinal(n):
     return f"{n}{'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')}"
 
 
+# Status thresholds (written out in the app under "How the status is decided" and in docs/DECISIONS.md)
+VERY_HIGH_PCTL = 90      # above the 90th percentile of the same month in all earlier years -> Very high
+NORMAL_BAND = 20         # within +/-20 % of the median of the same month -> Normal
+# Risk-period classes: share of years in which a week of the year had high activity
+RISK_CLASSES = [(75, "Extreme"), (50, "High"), (25, "Moderate"), (0, "Low")]
+
+
 def level(c):
     """Plain-language status of a month vs the same month in earlier years: (label, icon, color).
-    Icon + word + color, so it never relies on color alone."""
+    Icon + word + color, so it never relies on color alone. Checked in this order:
+    1. above the 90th percentile of earlier same months -> Very high
+    2. >= +20 % vs their median -> Above normal
+    3. <= -20 % -> Below normal
+    4. otherwise Normal."""
     a = c["anomaly_pct"]
     if not np.isfinite(a):
         return "No baseline yet", "⚪", "#999999"
     if np.isfinite(c["p90"]) and c["value"] > c["p90"]:
         return "Very high", "🔴", "#D55E00"
-    if a >= 20:
+    if a >= NORMAL_BAND:
         return "Above normal", "🟠", "#E69F00"
-    if a <= -20:
+    if a <= -NORMAL_BAND:
         return "Below normal", "🔵", "#56B4E9"
     return "Normal", "🟢", "#009E73"
 
@@ -242,7 +253,8 @@ with st.sidebar:
     other = st.text_input("…or another FIRMS country name", placeholder="e.g. Kazakhstan")
     country = other.strip().replace(" ", "_") or country
 
-with st.spinner(f"Loading {country.replace('_', ' ')} from NASA FIRMS (first time takes a few minutes)…"):
+with st.spinner(f"Loading {country.replace('_', ' ')} from NASA FIRMS… (about 30 s; a country opened for the "
+                "first time downloads ~60 yearly files, 1–3 min)"):
     try:
         data = get_country(country)
         veg, info = data["veg"], data["info"]
@@ -348,6 +360,17 @@ k3.metric(f"Busiest month on record: {rec.idxmax().strftime('%b %Y')}", f"{rec.m
 top = fc.busiest_years(harm)
 k4.metric(f"Busiest full year: {top.index[0]}" if len(top) else "Busiest full year",
           f"{top.iloc[0]:,.0f}" if len(top) else "n/a")
+with st.expander("How the status is decided"):
+    st.markdown(f"The month is compared with **the same calendar month in every earlier year** "
+                f"({cmp['n_years']} {mon}s here), all in harmonized fire cell-days. Rules, checked in this order:\n"
+                f"1. 🔴 **Very high**: above the **{VERY_HIGH_PCTL}th percentile** of those months "
+                f"(here {cmp['p90']:,.0f}).\n"
+                f"2. 🟠 **Above normal**: at least **{NORMAL_BAND}% above** their median ({cmp['median']:,.0f}).\n"
+                f"3. 🔵 **Below normal**: at least **{NORMAL_BAND}% below** the median.\n"
+                f"4. 🟢 **Normal**: anything in between.\n\n"
+                "\"This month so far\" uses the same idea on days 1–D of the month, against the same days of "
+                "every VIIRS year. The thresholds are choices, not physics: ±20 % is roughly the typical "
+                "year-to-year spread of a busy month, and the 90th percentile marks about one year in ten.")
 with st.expander("What is a fire cell-day?"):
     st.markdown("Each day, the map is cut into 0.1° squares (about 11 km). A square with at least one vegetation-fire "
                 "detection that day counts 1. A month's value is the sum over its days. One fire counts once per "
@@ -450,7 +473,9 @@ with tab_risk:
     thr = float(np.nanpercentile(base.values, q))
     freq = 100 * (base >= thr).mean()
     med, p90 = base.median(), base.quantile(0.9)
-    cls = pd.cut(freq, [-1, 25, 50, 75, 101], labels=["Low", "Moderate", "High", "Extreme"])
+    cuts = sorted(t for t, _ in RISK_CLASSES)                       # 0, 25, 50, 75
+    cls = pd.cut(freq, [-1] + cuts[1:] + [101], labels=[n for _, n in sorted(RISK_CLASSES)],
+                 right=False)                                        # "at least 75 %" -> Extreme
     RISK = {"Low": "#FEE391", "Moderate": "#FB9A29", "High": "#CC4C02", "Extreme": "#662506"}  # YlOrBr steps
     ref = pd.Timestamp("2001-01-01")
     lab = [(ref + pd.Timedelta(days=7 * w)).strftime("%d %b") for w in range(52)]
@@ -548,8 +573,11 @@ with tab_risk:
                    f"{'earlier' if b_start < 0 else 'later'} (linear fits; years vary, so read these as directions). "
                    + (f"Fire years start in the quietest week ({wlab(0)}), so a season that crosses New Year stays "
                       "in one piece." if origin else ""))
-    st.caption("All values are harmonized fire cell-days (VIIRS units) per 7 days. Change the percentile and years "
-               "above to make 'high activity' stricter or looser.")
+    st.caption("How the classes are decided: a week of a given year has **high activity** when its harmonized fire "
+               f"cell-days (per 7 days) reach the **{q}th percentile** of all weeks in the chosen years. For each week "
+               "of the year, the share of years with high activity sets the class: **Extreme ≥ 75 %**, **High "
+               "50–75 %**, **Moderate 25–50 %**, **Low < 25 %**. Change the percentile and years above to make "
+               "'high activity' stricter or looser.")
 
 # ---------- trend + 2012 jump ----------
 with tab_tr:
@@ -682,8 +710,11 @@ with tab_map:
         if "VIIRS_SNPP" in keep and snpp_end is not None and pd.Timestamp(rng[1]) > snpp_end:
             st.caption(f"Suomi NPP data ends {snpp_end:%d %b %Y}; after that VIIRS comes from NOAA-20.")
         st.caption(f"**{rng[0]:%d %b %Y} → {rng[1]:%d %b %Y}** · {len(pts):,} vegetation-fire hotspots ("
-                   + ", ".join(f"{n.get(k, 0):,} {SENSOR_LABEL[k]}" for k in keep) + "). "
-                   "Calendar and anomalies use vegetation fires only.")
+                   + ", ".join(f"{n.get(k, 0):,} {SENSOR_LABEL[k]}" for k in keep) + ").")
+        st.info("The sensor and static-source switches change **this map, the counts above and the hotspot CSV** "
+                "only. The calendar, status, trends, risk periods and 3D views always use the harmonized record of "
+                "all sensors, vegetation fires only (static sources removed). To see one sensor's raw counts "
+                "there, use **Calendar shows → Raw MODIS / Raw VIIRS** in the sidebar.", icon="ℹ️")
         show = pts.sample(30000, random_state=0) if len(pts) > 30000 else pts
         show = show[["sensor", "acq_date", "latitude", "longitude", "frp"]]
         if show_static:

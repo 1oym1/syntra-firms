@@ -29,12 +29,38 @@ from syntra.data import DEFAULT_COUNTRY, PROCESSED_DIR, fetch
 INSTS = ["modis", "viirs-snpp", "viirs-jpss1"]
 
 
+NRT_CACHE_HOURS = 3      # near-real-time data is re-read from the FIRMS API at most every 3 hours
+
+
 def this_year(country, year, mask, archive):
-    """This year's clean hotspots from syntra.nrt (all three sensors), or none without a MAP_KEY."""
+    """This year's clean hotspots from syntra.nrt (all three sensors), or none without a MAP_KEY.
+
+    The cleaned result is kept on disk (data/processed/cache/) for NRT_CACHE_HOURS, so restarting the app does
+    not call the FIRMS API again (that call is most of a cold start: ~35 s for Sudan)."""
     try:
         nrt.map_key()
     except RuntimeError:
         return archive.iloc[0:0], {"key": False, "snpp_last_day": None}
+    cache = PROCESSED_DIR / "cache" / f"nrt_{country}_{year}.parquet"
+    stamp = cache.with_suffix(".json")
+    mask_id = str(int(pd.util.hash_pandas_object(mask, index=False).sum()))
+    if cache.exists() and stamp.exists():
+        meta = json.loads(stamp.read_text())
+        age_h = (dt.datetime.now() - dt.datetime.fromisoformat(meta["saved"])).total_seconds() / 3600
+        if age_h < NRT_CACHE_HOURS and meta.get("mask") == mask_id and meta.get("archive_last") == str(archive.year.max()):
+            fires = pd.read_parquet(cache)
+            return fires, {"key": True, "snpp_last_day": meta.get("snpp_last_day")}
+    fires, info = _this_year_api(country, year, mask, archive)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    fires.to_parquet(cache, index=False)
+    stamp.write_text(json.dumps({"saved": dt.datetime.now().isoformat(), "mask": mask_id,
+                                 "archive_last": str(archive.year.max()),
+                                 "snpp_last_day": str(info["snpp_last_day"]) if info["snpp_last_day"] is not None
+                                 else None}))
+    return fires, info
+
+
+def _this_year_api(country, year, mask, archive):
     # nrt reads the static mask from this file (the same mask clean.run writes)
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     mask.to_csv(PROCESSED_DIR / f"static_mask_{country}.csv", index=False)

@@ -85,3 +85,33 @@ no code change, only its figures for the slides.
 | Run locally | `streamlit run app/app.py` |
 
 Shared logic lives in `syntra/` and is imported by both the notebooks and the app, so the harmonization code exists in one place only.
+
+## 2026-11-14: Status and risk thresholds (Hisham)
+
+**Monthly status** (app header). A month is compared with the same calendar month in every earlier year, in
+harmonized fire cell-days. Rules, checked in this order (`VERY_HIGH_PCTL`, `NORMAL_BAND` in `app/app.py`):
+| Status | Rule |
+| --- | --- |
+| 🔴 Very high | above the 90th percentile of the earlier same months |
+| 🟠 Above normal | ≥ +20 % vs their median |
+| 🔵 Below normal | ≤ −20 % vs their median |
+| 🟢 Normal | anything in between |
+
+**Risk periods** (Risk periods tab, `RISK_CLASSES`). A week of a given year has *high activity* when its
+harmonized fire cell-days per 7 days reach the 75th percentile of all weeks in the chosen years (the user can
+change 50–90). For each week of the year, the share of years with high activity sets the class:
+Extreme ≥ 75 %, High 50–75 %, Moderate 25–50 %, Low < 25 %.
+
+**Why these numbers.** They are choices, not physics: ±20 % is about the usual year-to-year spread of a busy
+month, the 90th percentile marks about one year in ten, and the risk classes are quarters of the years.
+[TO CONFIRM with the team before the slides.]
+
+**Colors.** Every color scale is colorblind-safe (Okabe-Ito for sensors, inferno/cividis/viridis for amounts,
+yellow-orange-brown for risk). No red-green scales (NFR4), including in slide figures.
+
+## 2026-11-14: VIIRS counts from Feb 2012 (Hisham)
+
+Suomi NPP VIIRS data in FIRMS starts on 20 Jan 2012. Jan 2012 was counted as a full VIIRS month (Sudan: 1,523
+cell-days instead of ~4,069). `syntra/clean.SENSOR_START["VIIRS"]` is now Feb 2012, used by `harmonize.py`,
+`series.py` and the app alike: Jan 2012 is MODIS × factor and is left out of the MODIS → VIIRS fit.
+Sudan held-out R² 0.988 → 0.993 (119 months). `harmonize.run` and the app now give the same numbers.
