@@ -37,30 +37,32 @@ Then open `notebooks/00_load_data.ipynb` and run all cells. The app runs with `s
 ## Harmonization (phases 4 and 5)
 
 Code: `syntra/harmonize.py` (method in its docstring and `docs/MODIS_vs_VIIRS.md`).
-1. Count **burned 0.1° cells per month** (about 11 km) instead of raw hotspots, per sensor.
+1. Count **fire cell-days per month** instead of raw hotspots, per sensor: each day, the 0.1° cells (about 11 km)
+   with a vegetation fire, summed over the month (PR #5; `COUNT = "cells"` in `harmonize.py` gives the old
+   once-per-month count, which saturated in Sudan's peak months).
 2. MODIS Terra-only months (Nov 2000–Jun 2002) are scaled to Terra + Aqua (monthly factor, fitted 2003–2021).
 3. A monthly factor VIIRS / MODIS, fitted on the 2012–2021 overlap, converts MODIS into VIIRS units. The series
    uses observed VIIRS from 2012 and MODIS × factor before that.
 4. Validation is leave-one-year-out: each overlap year is predicted from MODIS by factors that never saw it.
 
 `syntra/series.py` extends this to 2026 for the app: months run to the last complete month, and after Suomi NPP's
-data ends (2 Nov 2026) VIIRS = NOAA-20 cells × k (S-NPP / NOAA-20, fitted on every month both flew, 2018 on).
+data ends (2 Nov 2026) VIIRS = NOAA-20 × k (S-NPP / NOAA-20, fitted on every month both flew, 2018 on).
 
 ```bash
 python scripts/validate_harmonization.py --countries Sudan Ethiopia Iraq Saudi_Arabia
 ```
 
-Monthly R², leave-one-year-out 2012–2021 (120 months per country), archive data:
+Monthly R², leave-one-year-out 2012–2021 (120 months per country), archive data, cell-days (rerun 14 Nov after PR #5):
 
 | Country | R² raw MODIS | **R² harmonized** | Median annual error | Median monthly r |
 | --- | --- | --- | --- | --- |
-| Sudan | 0.39 | **0.97** | 3.0 % | 0.99 |
-| Ethiopia | 0.55 | **0.98** | 4.3 % | 0.99 |
-| Iraq | 0.34 | **0.83** | 9.6 % | 0.97 |
-| Saudi Arabia | −20.7 | **−0.75** | 7.0 % | 0.44 |
+| Sudan | 0.36 | **0.99** | 2.4 % | 1.00 |
+| Ethiopia | 0.21 | **0.97** | 3.3 % | 1.00 |
+| Iraq | 0.27 | **0.91** | 8.0 % | 0.98 |
+| Saudi Arabia | −12.6 | **−0.87** | 17.6 % | 0.48 |
 
-Saudi Arabia has few, scattered vegetation fires (about 1,700 burned cells a year), so its monthly signal is noisy:
-the yearly totals are close (7 % error) but single months are not. It shows where the method reaches its limits.
+Saudi Arabia has few, scattered vegetation fires (about 3,300 VIIRS cell-days a year), so its monthly signal is noisy:
+single months and even yearly totals (18 % error) are off. It shows where the method reaches its limits.
 Tables: `outputs/tables/harmonization_validation.csv` and `harmonization_validation_by_year.csv`.
 
 Slide figures: `notebooks/01_harmonization.ipynb` writes them to `outputs/figures/` (code in `syntra/figures.py`).

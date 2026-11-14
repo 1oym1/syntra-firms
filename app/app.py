@@ -4,7 +4,7 @@ Run from the repo root:
     streamlit run app/app.py
 
 Data: syntra.pipeline (FIRMS yearly files 2000-2025 + 2026 from the FIRMS API, cleaned by syntra.clean).
-Harmonization: syntra.harmonize (burned 0.1 degree cells per month, MODIS -> VIIRS monthly factors),
+Harmonization: syntra.harmonize (fire-active 0.1 degree cell-days per month, MODIS -> VIIRS monthly factors),
 extended to 2026 by syntra.series. Calendar: syntra.fire_calendar.
 2026 needs FIRMS_MAP_KEY in .env (local) or in Streamlit secrets (deployed).
 """
@@ -32,7 +32,7 @@ COUNTRIES = ["Sudan", "Ethiopia", "Iraq", "Saudi_Arabia", "Australia", "Zambia",
 COLORS = {"MODIS": "#E69F00", "VIIRS_SNPP": "#56B4E9", "VIIRS_NOAA20": "#CC79A7", "harmonized": "#009E73",
           "Static source": "#D55E00"}  # Okabe-Ito, colorblind-safe
 SENSOR = {"Terra": "MODIS", "Aqua": "MODIS", "N": "VIIRS_SNPP", "N20": "VIIRS_NOAA20"}
-UNIT = "burned cells"
+UNIT = "fire cell-days"
 MAP_COLS = ["latitude", "longitude", "acq_date", "acq_time", "satellite", "frp", "daynight", "type"]
 
 st.set_page_config(page_title="SYNTRA fire calendar", page_icon="🔥", layout="wide")
@@ -163,9 +163,10 @@ ho = cs["heldout"]
 # ---------- header + KPIs ----------
 place = country.replace("_", " ") + ("" if bbox is None else f" · box W{bbox[0]} S{bbox[1]} E{bbox[2]} N{bbox[3]}")
 st.header(f"Burning activity: {place}")
-st.caption("Unit: **burned cells**, the number of 0.1° grid cells (about 11 km) with at least one vegetation-fire "
-           "detection in the month, in VIIRS S-NPP units. Measures how widespread burning is, not how often the "
-           "same place burns. Source: NASA FIRMS.")
+st.caption("Unit: **fire cell-days**: each day, the number of 0.1° grid cells (about 11 km) with at least one "
+           "vegetation-fire detection, summed over the month, in VIIRS S-NPP units. One fire counts once per day "
+           "for both sensors, so it measures how much burning there was, not how many pixels saw it. "
+           "Source: NASA FIRMS.")
 
 k1, k2, k3, k4 = st.columns(4)
 k1.metric(sel.strftime("%b %Y"), f"{cmp['value']:,.0f}",
@@ -347,8 +348,8 @@ with tab_m:
     st.markdown("**2026 (`syntra/series.py`):** months run to the last complete month. Suomi NPP data ends "
                 f"{info['snpp_end']:%d %b %Y}" if info.get("snpp_end") is not None else "**2026:** archive only.")
     if info.get("snpp_end") is not None:
-        st.markdown(f"From that month on VIIRS = NOAA-20 cells × {info['k_n20']:.3f}, the ratio of S-NPP to NOAA-20 "
-                    "cells over every full month both flew (2018 on). \"This month so far\" compares days 1–D of "
+        st.markdown(f"From that month on VIIRS = NOAA-20 × {info['k_n20']:.3f}, the ratio of S-NPP to NOAA-20 "
+                    "cell-days over every full month both flew (2018 on). \"This month so far\" compares days 1–D of "
                     "the current month with the same days of every VIIRS year.")
     st.markdown("**Cleaning (Step 3, `syntra/clean.py`):** hotspots outside the country border (Natural Earth "
                 "1:10m) removed; confidence MODIS ≥ 30 ≙ VIIRS n/h; rows with no location or date and exact "

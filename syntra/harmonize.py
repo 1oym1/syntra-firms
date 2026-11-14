@@ -12,8 +12,12 @@ or from the repo root (after `python -m syntra.clean`):
     python -m syntra.harmonize
 
 Method (details and reasons in docs/MODIS_vs_VIIRS.md):
-1. Gridding. Count burned 0.1 degree cells per month instead of raw hotspots. This
-   removes much of the 1 km vs 375 m resolution gap on its own.
+1. Gridding. Count fire-active 0.1 degree cell-days per month (each cell once per
+   day) instead of raw hotspots. This removes much of the 1 km vs 375 m resolution
+   gap on its own. Counting each cell only once per MONTH saturates in the peak
+   month: in Sudan's November most cells in the fire belt burn at least once, so a
+   big and a quiet November looked the same (r = 0.11 with VIIRS hotspots, 0.74
+   with cell-days). Set COUNT = "cells" for the old behaviour.
 2. MODIS consistency. Nov 2000 to Jun 2002 only Terra flew; Aqua joined in Jul 2002.
    A per-month factor Terra -> Terra+Aqua, fitted on 2003-2021, scales the Terra-only
    months so MODIS has no jump in 2002. (2022 on is left out of the fit because
@@ -46,13 +50,24 @@ OVERLAP = (2012, 2021)         # MODIS and VIIRS both flying, before Terra's orb
 AQUA_START = 200207            # first month with Aqua data (yyyymm)
 TERRA_OUTAGE = 200106          # 15 Jun - 3 Jul 2001: Terra data gap, shown as missing data
 MIN_CELLS = 50                 # fewer source cells than this in a month -> annual factor
+COUNT = "cell_days"            # "cell_days": each cell once per day | "cells": once per month
+
+
+def _count(df):
+    """Fire-active cells per month: cell-days (needs acq_date) or unique cells."""
+    if COUNT == "cell_days":
+        if "acq_date" not in df:
+            raise ValueError("cell-days need the acq_date column in the clean vegetation table.")
+        return df.drop_duplicates(["acq_date", "cell_id"]).groupby(["year", "month"]).size()
+    return df.groupby(["year", "month"])["cell_id"].nunique()
 
 
 # ---------------------------------------------------------------- 1. gridded monthly table
 def monthly_cells(veg, spans=None):
-    """One row per month: burned 0.1 degree cells per sensor and satellite, plus hotspots and FRP.
+    """One row per month: fire-active 0.1 degree cells per sensor and satellite, plus hotspots and FRP.
 
-    `veg` = clean vegetation fires (columns family, satellite, year, month, cell_id, frp).
+    `veg` = clean vegetation fires (columns family, satellite, year, month, cell_id, frp, acq_date).
+    The *_cells columns are cell-days when COUNT = "cell_days" (the default).
     Months with no fire inside the data's time span get zeros, not a missing row.
     spans: optional {"MODIS": PeriodIndex, "VIIRS": PeriodIndex} of the months each sensor covers.
     Pass the COUNTRY's spans for a small drawn area: its own fires would give a span that starts at
@@ -61,10 +76,10 @@ def monthly_cells(veg, spans=None):
     m = veg[veg.family == "MODIS"]
     v = veg[veg.family == "VIIRS"]
     parts = {
-        "terra_cells": m[m.satellite == "Terra"].groupby(["year", "month"])["cell_id"].nunique(),
-        "aqua_cells": m[m.satellite == "Aqua"].groupby(["year", "month"])["cell_id"].nunique(),
-        "modis_cells": m.groupby(["year", "month"])["cell_id"].nunique(),   # cell seen by both = 1
-        "viirs_cells": v.groupby(["year", "month"])["cell_id"].nunique(),
+        "terra_cells": _count(m[m.satellite == "Terra"]),
+        "aqua_cells": _count(m[m.satellite == "Aqua"]),
+        "modis_cells": _count(m),          # a cell seen by Terra and Aqua on one day counts once
+        "viirs_cells": _count(v),
         "modis_hotspots": m.groupby(["year", "month"]).size(),
         "viirs_hotspots": v.groupby(["year", "month"]).size(),
         "modis_frp": m.groupby(["year", "month"])["frp"].sum(),
@@ -154,6 +169,32 @@ def validate(tab, overlap=OVERLAP):
     return pd.DataFrame(rows)
 
 
+def scores(tab, overlap=OVERLAP):
+    """One set of numbers for the slides, pooled over all leave-one-year-out predictions.
+
+    r2       real R2 (1 - SS_res / SS_tot), not the squared correlation
+    rmse     root mean square error, in cell-days per month
+    r2_anom  R2 after removing each calendar month's mean: how well the model gets a
+             month that is busier or quieter than usual, not just the seasonal cycle
+    """
+    parts = []
+    for y in range(overlap[0], overlap[1] + 1):
+        k, _ = monthly_factor(tab[tab.year != y], "viirs_cells", "modis_consistent", overlap)
+        te = tab[(tab.year == y) & tab.viirs_flying & tab.modis_flying]
+        parts.append(te.assign(pred=te.modis_consistent * te.month.map(k)))
+    p = pd.concat(parts)
+    obs, pred = p.viirs_cells, p.pred
+
+    def r2(o, q):
+        return float(1 - ((o - q) ** 2).sum() / ((o - o.mean()) ** 2).sum())
+
+    anom_o = obs - p.groupby("month").viirs_cells.transform("mean")
+    anom_p = pred - p.groupby("month").pred.transform("mean")
+    return {"months": len(p), "r2": round(r2(obs, pred), 3),
+            "rmse": round(float(np.sqrt(((obs - pred) ** 2).mean())), 1),
+            "r2_anom": round(r2(anom_o, anom_p), 3)}
+
+
 # ---------------------------------------------------------------- for the app: any area the user draws
 def harmonize_area(veg_area, k_terra, k_viirs, spans=None):
     """Harmonized monthly series for a user-drawn area, using factors fitted on the whole country.
@@ -179,15 +220,15 @@ def run(veg=None, country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
     """
     last_day = None
     if veg is None:
-        cols = ["family", "satellite", "year", "month", "cell_id", "frp"]
+        cols = ["family", "satellite", "year", "month", "cell_id", "frp", "acq_date"]
         veg = pd.read_csv(out_dir / f"clean_vegetation_{country}.csv", usecols=cols)
         # Current year from the FIRMS API (python -m syntra.nrt), cleaned with the same rules
         nrt = sorted(out_dir.glob(f"clean_vegetation_nrt_[0-9][0-9][0-9][0-9]_{country}.csv"))
         if nrt:
-            new = pd.concat([pd.read_csv(p, usecols=cols + ["acq_date"]) for p in nrt], ignore_index=True)
+            new = pd.concat([pd.read_csv(p, usecols=cols) for p in nrt], ignore_index=True)
             new = new[new.year > veg.year.max()]          # never count a year twice
             last_day = pd.to_datetime(new.acq_date).max()
-            veg = pd.concat([veg, new[cols]], ignore_index=True)
+            veg = pd.concat([veg, new], ignore_index=True)
             print(f"Added {len(new):,} vegetation fires from the FIRMS API, data to {last_day:%d %b %Y}")
     tab = monthly_cells(veg)
     tab, k_terra, k_terra_all = modis_consistent(tab)
@@ -214,6 +255,9 @@ def run(veg=None, country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
         print(f"\nMedian |annual error| {val['annual_error_%'].abs().median():.1f}% | "
               f"median monthly MAPE {val['monthly_MAPE_%'].median():.1f}% | "
               f"median monthly r {val['monthly_r'].median():.3f}")
+        s = scores(series)
+        print(f"Pooled over {s['months']} held-out months: R2 {s['r2']:.3f} | RMSE {s['rmse']:.1f} "
+              f"cell-days | R2 on anomalies (month minus its usual level) {s['r2_anom']:.3f}")
     print(f"\nSaved to {out_dir}")
     return series, factors, val
 

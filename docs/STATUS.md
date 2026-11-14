@@ -5,12 +5,27 @@ Where the project stands. Newest first. Update it when something lands.
 
 
 
+## 2026-11-14, about 16:30 (Hisham): main's PR #5 merged into PR #1, unit is now cell-days
+
+- PR #5 (Riyadh/it3x) changed `syntra/harmonize.py` to count **fire cell-days per month** (each 0.1° cell once per
+  day) instead of burned cells per month. Merged into `hisham/harmonization-app`; kept the `spans` argument the app
+  needs. `syntra/series.py` (NOAA-20 factor, "this month so far") now uses the same count, so the app, notebook
+  and `harmonize.run` agree. App labels say "fire cell-days".
+- **New Sudan numbers (replace the 14:00/15:00 ones):** held-out R² **0.988** (raw MODIS 0.36), RMSE 393 cell-days,
+  R² on anomalies 0.79, median annual error 2.4 %. NOAA-20 k = 0.986 (held-out R² 0.997).
+  **October 2026 = 7,753 cell-days, +56 % vs median 4,966, #2 of 26** (a big October again: under the old unit the
+  extra fires burned in cells that were already burning, so they did not show).
+  Nov 1–13: +0.3 % vs median, #8 of 15 (normal). Darfur box (22–26E, 10–14N): Oct +29 %, Nov 1–13 +25 % (#3 of 15).
+- 4-country validation rerun (README table): Sudan 0.99, Ethiopia 0.97, Iraq 0.91, Saudi −0.87.
+- **Still on the old unit [TO UPDATE]:** figures 01–07 (`notebooks/01_harmonization.ipynb`) and the WhatsApp
+  update posted 13:47 ("October 2026 normal" is now wrong). Step 3 (`compare.py`, figures 08–11) is a sensor
+  comparison and stays as it is.
 ## 2026-11-14, about 15:00 (Hisham): one 2026 loader, Riyadh's `syntra/nrt.py`
 
 - The app and `syntra/pipeline.py` now get 2026 from `syntra/nrt.py` (PR #4). `syntra/recent.py` is deleted, so there
   is one copy of the 2026 logic. On top of nrt the app still converts NOAA-20 to S-NPP units (× 0.992) after S-NPP's
   last day; `harmonize.run` uses raw NOAA-20 there. The difference is 0.8 % for Nov 3 on.
-- Same Sudan results as before: 4,462,802 clean rows, held-out R² 0.975, Oct 2026 1,545 (normal), Nov 1–13 −11 %.
+- [OUTDATED numbers: old unit, see 16:30] Same Sudan results as before: 4,462,802 clean rows, held-out R² 0.975, Oct 2026 1,545 (normal), Nov 1–13 −11 %.
 - `python -m syntra.pipeline` writes `clean_vegetation_<country>.csv` as MODIS + one VIIRS per day (nrt's rule), so
   `python -m syntra.harmonize` reads it correctly.
 ## 2026-11-14, about 14:30 (Hisham): checklist step 3, MODIS vs VIIRS on clean data

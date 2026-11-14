@@ -1,12 +1,13 @@
 """The app's monthly series: syntra.harmonize (Steps 4-5) extended to 2026.
 
-Unit everywhere: burned 0.1 degree cells per month (syntra.harmonize), in VIIRS S-NPP units.
+Unit everywhere: the one syntra.harmonize uses (hz.COUNT: fire-active 0.1 degree cell-days per month by
+default), in VIIRS S-NPP units.
 
 What this adds on top of syntra.harmonize
 1. Month spans from the sensors' mission dates up to the last COMPLETE month (not from the fires,
    and never a part month), shared by the country and any area drawn inside it.
-2. Suomi NPP stopped on 2 Nov 2026. For months from S-NPP's last month on, VIIRS = k x NOAA-20 cells,
-   with k = S-NPP / NOAA-20 cells fitted on every full month both flew (2018 on), checked leave-one-year-out.
+2. Suomi NPP stopped on 2 Nov 2026. For months from S-NPP's last month on, VIIRS = k x NOAA-20,
+   with k = S-NPP / NOAA-20 fitted on every full month both flew (2018 on), checked leave-one-year-out.
 3. "This month so far": days 1..D of the current month against the same days of every VIIRS year.
 4. Held-out R2 of the MODIS -> VIIRS factors (same leave-one-year-out as harmonize.validate).
 
@@ -45,12 +46,20 @@ def _snpp_and_modis(veg):
 
 
 def _cells_per_month(rows):
-    return rows.groupby(["year", "month"])["cell_id"].nunique()
+    """Same count as syntra.harmonize (cell-days or cells, per hz.COUNT)."""
+    return hz._count(rows)
+
+
+def _cells_per_year(rows):
+    """Per year, with the same count as syntra.harmonize (used for one part month at a time)."""
+    if hz.COUNT == "cell_days":
+        return rows.drop_duplicates(["acq_date", "cell_id"]).groupby("year").size()
+    return rows.groupby("year")["cell_id"].nunique()
 
 
 # ---------- NOAA-20 -> S-NPP ----------
 def _pairs(veg, snpp_end):
-    """Monthly 0.1 deg cells for S-NPP and NOAA-20, full months both flew (May 2018 to before S-NPP's last month)."""
+    """Monthly counts for S-NPP and NOAA-20, full months both flew (May 2018 to before S-NPP's last month)."""
     v = veg[veg.family == "VIIRS"]
     t = pd.DataFrame({"snpp": _cells_per_month(v[v.satellite == SNPP]),
                       "n20": _cells_per_month(v[v.satellite == N20])}).dropna()
@@ -80,7 +89,7 @@ def validate_n20(veg, snpp_end):
 
 
 def _apply_n20(tab, veg, info):
-    """From S-NPP's last month on, VIIRS = k x NOAA-20 cells (S-NPP has only part of that month)."""
+    """From S-NPP's last month on, VIIRS = k x NOAA-20 (S-NPP has only part of that month)."""
     end, k = info.get("snpp_end"), info.get("k_n20")
     tab["source"] = tab.get("source", pd.Series("VIIRS observed", index=tab.index))
     if end is None or k is None or not np.isfinite(k):
@@ -145,7 +154,7 @@ def heldout(tab, overlap=hz.OVERLAP):
 
 # ---------- this month so far ----------
 def month_to_date(veg, info):
-    """Days 1..D of the current month vs the same days in every VIIRS year (0.1 deg cells, S-NPP units).
+    """Days 1..D of the current month vs the same days in every VIIRS year (same count as harmonize, S-NPP units).
 
     Uses VIIRS years only (2012 on), so no monthly factor is applied to a part month.
     Returns None when the last complete day is the end of a month.
@@ -154,11 +163,11 @@ def month_to_date(veg, info):
     if day.to_period("M") == last_full_month(day):
         return None
     v = veg[(veg.family == "VIIRS") & (veg.month == day.month) & (pd.to_datetime(veg.acq_date).dt.day <= day.day)]
-    snpp = v[v.satellite == SNPP].groupby("year")["cell_id"].nunique()
+    snpp = _cells_per_year(v[v.satellite == SNPP])
     vals = {y: float(snpp.get(y, 0)) for y in range(2012, day.year)}
     end, k = info.get("snpp_end"), info.get("k_n20")
     if end is not None and day > end and k is not None and np.isfinite(k):
-        cur = v[(v.satellite == N20) & (v.year == day.year)].cell_id.nunique() * k
+        cur = float(_cells_per_year(v[(v.satellite == N20) & (v.year == day.year)]).sum()) * k
         src = f"NOAA-20 x {k:.3f}"
     else:
         cur, src = float(snpp.get(day.year, 0)), "S-NPP"
