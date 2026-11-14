@@ -25,14 +25,15 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from syntra import fire_calendar as fc  # noqa: E402
 from syntra import harmonize as hz  # noqa: E402
 from syntra import series  # noqa: E402
-from syntra.data import DEFAULT_COUNTRY  # noqa: E402
+from syntra import apppack, datapack, live  # noqa: E402
 from syntra.pipeline import load_country  # noqa: E402
 
-COUNTRIES = ["Sudan", "Ethiopia", "Iraq", "Saudi_Arabia", "Australia", "Zambia", "South_Sudan", "Mexico"]
-COLORS = {"MODIS": "#E69F00", "VIIRS_SNPP": "#56B4E9", "VIIRS_NOAA20": "#CC79A7", "harmonized": "#009E73",
-          "Static source": "#D55E00"}  # Okabe-Ito, colorblind-safe
-SENSOR = {"Terra": "MODIS", "Aqua": "MODIS", "N": "VIIRS_SNPP", "N20": "VIIRS_NOAA20"}
-SENSOR_LABEL = {"MODIS": "MODIS", "VIIRS_SNPP": "VIIRS S-NPP", "VIIRS_NOAA20": "VIIRS NOAA-20"}
+COUNTRY = "Sudan"   # team decision (PR #6): Sudan only
+COLORS = {"MODIS": "#E69F00", "VIIRS_SNPP": "#56B4E9", "VIIRS_NOAA20": "#CC79A7", "VIIRS_NOAA21": "#F0E442",
+          "harmonized": "#009E73", "Static source": "#D55E00"}  # Okabe-Ito, colorblind-safe
+SENSOR = {"Terra": "MODIS", "Aqua": "MODIS", "N": "VIIRS_SNPP", "N20": "VIIRS_NOAA20", "N21": "VIIRS_NOAA21"}
+SENSOR_LABEL = {"MODIS": "MODIS", "VIIRS_SNPP": "VIIRS S-NPP", "VIIRS_NOAA20": "VIIRS NOAA-20",
+                "VIIRS_NOAA21": "VIIRS NOAA-21"}
 UNIT = "fire cell-days"
 RAMPS = {"Inferno": px.colors.sequential.Inferno, "Cividis": px.colors.sequential.Cividis,
          "Viridis": px.colors.sequential.Viridis}
@@ -42,7 +43,22 @@ st.set_page_config(page_title="SYNTRA fire calendar", page_icon="🔥", layout="
 
 # Look: dark theme in .streamlit/config.toml; cards below. Data colors stay Okabe-Ito (colorblind-safe).
 st.markdown("""<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap');
 .block-container {padding-top: 1.4rem;}
+h1, h2, h3, .hero h1, .stat b, .big {font-family: 'Space Grotesk', 'Source Sans Pro', sans-serif; letter-spacing: -.01em;}
+.orbit {position: absolute; border-radius: 50%; border: 1px dashed rgba(255,255,255,.14); pointer-events: none;}
+.orbit::before {content: ""; position: absolute; top: 50%; left: -5px; width: 10px; height: 10px; border-radius: 50%;}
+.o1 {width: 300px; height: 300px; right: -90px; top: -120px; animation: spin 28s linear infinite;}
+.o1::before {background: #E69F00; box-shadow: 0 0 14px #E69F00;}
+.o2 {width: 200px; height: 200px; right: -40px; top: -70px; animation: spin 17s linear infinite reverse;}
+.o2::before {background: #56B4E9; box-shadow: 0 0 14px #56B4E9;}
+@keyframes spin {to {transform: rotate(360deg);}}
+@media (prefers-reduced-motion: reduce) {.orbit, .pill.live::before {animation: none;}}
+.stats {display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 12px; position: relative;}
+.stat {background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 12px; padding: 10px 14px;}
+.stat b {display: block; font-size: 1.4rem; color: #fff; line-height: 1.2;}
+.stat span {font-size: .72rem; opacity: .75; text-transform: uppercase; letter-spacing: .06em;}
+@media (max-width: 700px) {.stats {grid-template-columns: repeat(2, minmax(0, 1fr));} .hero h1 {font-size: 1.6rem;}}
 .hero {position: relative; overflow: hidden; border-radius: 18px; padding: 22px 26px 16px; margin-bottom: 14px;
   background: radial-gradient(900px 260px at 0% -30%, rgba(242,140,40,.38), transparent 62%),
               radial-gradient(700px 240px at 100% 130%, rgba(86,180,233,.22), transparent 60%),
@@ -82,8 +98,19 @@ except Exception:  # noqa: BLE001  (no secrets file)
 
 @st.cache_resource(show_spinner=False, ttl=6 * 3600)
 def get_country(country):
-    """Clean fires (shared, read-only: cache_resource does not copy millions of rows on every rerun)."""
-    return load_country(country)
+    """Clean fires (shared, read-only: cache_resource does not copy millions of rows on every rerun).
+
+    From the data pack (`python -m syntra.datapack`, a few seconds); without one, rebuilt from FIRMS (minutes)."""
+    try:
+        return apppack.as_country(datapack.load(country))
+    except FileNotFoundError:
+        return load_country(country)
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def get_live(days=7):
+    """FIRMS near-real-time, last `days` days, every sensor, cleaned like the archive (syntra.live)."""
+    return live.live_points(days=days, sensors=list(live.LIVE_SOURCES), include_static=True, country=COUNTRY)
 
 
 @st.cache_data(show_spinner=False, ttl=6 * 3600)
@@ -248,13 +275,9 @@ def report_html(title, blocks, figs):
 with st.sidebar:
     st.title("🔥 SYNTRA fire calendar")
     st.caption("MODIS + VIIRS hotspots harmonized into one record · NASA Space Apps 2026, Jeddah")
-    country = st.selectbox("Country", COUNTRIES, index=COUNTRIES.index(DEFAULT_COUNTRY) if DEFAULT_COUNTRY in COUNTRIES else 0,
-                           format_func=lambda c: c.replace("_", " "))
-    other = st.text_input("…or another FIRMS country name", placeholder="e.g. Kazakhstan")
-    country = other.strip().replace(" ", "_") or country
+    country = COUNTRY
 
-with st.spinner(f"Loading {country.replace('_', ' ')} from NASA FIRMS… (about 30 s; a country opened for the "
-                "first time downloads ~60 yearly files, 4–6 min)"):
+with st.spinner("Loading 26 years of NASA FIRMS hotspots for Sudan…"):
     try:
         data = get_country(country)
         veg, info = data["veg"], data["info"]
@@ -309,15 +332,21 @@ ho = cs["heldout"]
 
 # ---------- hero + status ----------
 place = country.replace("_", " ") + ("" if bbox is None else f" · box W{bbox[0]} S{bbox[1]} E{bbox[2]} N{bbox[3]}")
-live = (f'<span class="pill live">Live · FIRMS data through {info["complete_day"]:%d %b %Y}</span>' if info.get("key")
-        else f'<span class="pill">Archive · data through {info["complete_day"]:%d %b %Y}</span>')
+live_pill = (f'<span class="pill live">Live · FIRMS data through {info["complete_day"]:%d %b %Y}</span>' if info.get("key")
+             else f'<span class="pill">Archive · data through {info["complete_day"]:%d %b %Y}</span>')
+n_years = info["complete_day"].year - 2000
 st.markdown(f"""<div class="hero">
-<div class="eyebrow">NASA Space Apps 2026 · Harmonization of MODIS and VIIRS hot spots</div>
+<div class="orbit o1"></div><div class="orbit o2"></div>
+<div class="eyebrow">NASA Space Apps 2026 · Harmonization of MODIS and VIIRS hot spots · Team SYNTRA</div>
 <h1>Burning activity: {place}</h1>
 <p>One consistent record of vegetation fires from 2000 to today, whichever satellite saw them.</p>
-{live}<span class="pill">MODIS Terra + Aqua · VIIRS S-NPP + NOAA-20</span>
-<span class="pill">Harmonization R² {ho['r2']:.2f} on held-out years (raw MODIS {ho['r2_raw_modis']:.2f})</span>
-</div>""", unsafe_allow_html=True)
+{live_pill}<span class="pill">MODIS Terra + Aqua · VIIRS S-NPP + NOAA-20 + NOAA-21</span>
+<div class="stats">
+<div class="stat"><b>{n_years}</b><span>years in one record</span></div>
+<div class="stat"><b>{info['rows_clean'] / 1e6:.1f} M</b><span>hotspots cleaned</span></div>
+<div class="stat"><b>×2.5 → ×0.99</b><span>2012 satellite jump, raw → harmonized</span></div>
+<div class="stat"><b>R² {ho['r2']:.2f}</b><span>on held-out years (raw {ho['r2_raw_modis']:.2f})</span></div>
+</div></div>""", unsafe_allow_html=True)
 
 lab, icon, col = level(cmp)
 mon = sel.strftime("%B")
@@ -691,8 +720,20 @@ with tab_map:
     show_static = c3.toggle("Static sources (gas flares, industry)", value=False,
                             help="Always-hot places removed by cleaning. Turn on to see what was filtered out.")
     density = c3.toggle("Density view", value=False, help="Heat map of where fires cluster, instead of points.")
+    live_pts = None
     if when.startswith("Live"):
-        rng = (last - pd.Timedelta(days=6), last)
+        if info.get("key"):
+            with st.spinner("Fetching the last 7 days from FIRMS near-real-time…"):
+                try:
+                    live_pts = in_box(get_live(), bbox)
+                except Exception as e:  # noqa: BLE001  (errors never contain the key: syntra.live)
+                    st.caption(f"Live FIRMS feed unavailable ({e}); showing the last 7 days of the record.")
+        if live_pts is not None and len(live_pts):
+            rng = (live_pts.acq_date.min().date(), live_pts.acq_date.max().date())
+            st.caption("🔴 **Live**: FIRMS near-real-time, refreshed hourly, today's passes included. "
+                       "Provisional until NASA's standard processing.")
+        else:
+            rng = (last - pd.Timedelta(days=6), last)
     elif when == "Custom dates":
         rng = st.date_input("Date range", (d0, d1), min_value=veg.acq_date.min().date(), max_value=last)
     else:
@@ -700,7 +741,8 @@ with tab_map:
     keep = [k for k, v in SENSOR_LABEL.items() if v in (picked or [])]
     pts = pts_all.iloc[0:0].assign(sensor=pd.Series(dtype=str))
     if isinstance(rng, (tuple, list)) and len(rng) == 2:
-        pts = pts_all[pts_all.acq_date.between(pd.Timestamp(rng[0]), pd.Timestamp(rng[1]))]
+        src = live_pts[~live_pts.is_static] if live_pts is not None and len(live_pts) else pts_all
+        pts = src[src.acq_date.between(pd.Timestamp(rng[0]), pd.Timestamp(rng[1]))]
         pts = pts.assign(sensor=pts.satellite.map(SENSOR))
         pts = pts[pts.sensor.isin(keep)]
         if when.startswith("Live") and not info.get("key"):
@@ -710,7 +752,7 @@ with tab_map:
         if "VIIRS_SNPP" in keep and snpp_end is not None and pd.Timestamp(rng[1]) > snpp_end:
             st.caption(f"Suomi NPP data ends {snpp_end:%d %b %Y}; after that VIIRS comes from NOAA-20.")
         st.caption(f"**{rng[0]:%d %b %Y} → {rng[1]:%d %b %Y}** · {len(pts):,} vegetation-fire hotspots ("
-                   + ", ".join(f"{n.get(k, 0):,} {SENSOR_LABEL[k]}" for k in keep) + ").")
+                   + ", ".join(f"{n.get(k, 0):,} {SENSOR_LABEL[k]}" for k in keep if n.get(k, 0)) + ").")
         st.info("The sensor and static-source switches change **this map, the counts above and the hotspot CSV** "
                 "only. The calendar, status, trends, risk periods and 3D views always use the harmonized record of "
                 "all sensors, vegetation fires only (static sources removed). To see one sensor's raw counts "
@@ -718,7 +760,7 @@ with tab_map:
         show = pts.sample(30000, random_state=0) if len(pts) > 30000 else pts
         show = show[["sensor", "acq_date", "latitude", "longitude", "frp"]]
         if show_static:
-            stc = in_box(data["static"], bbox)
+            stc = in_box(live_pts[live_pts.is_static] if live_pts is not None and len(live_pts) else data["static"], bbox)
             stc = stc[stc.acq_date.between(pd.Timestamp(rng[0]), pd.Timestamp(rng[1]))]
             stc = stc[stc.satellite.map(SENSOR).isin(keep)] if "satellite" in stc else stc
             st.caption(f"Plus {len(stc):,} static-source hotspots (red): always-hot sites removed by cleaning, "

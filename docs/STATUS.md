@@ -5,6 +5,25 @@ Where the project stands. Newest first. Update it when something lands.
 
 
 
+## 2026-11-14, about 23:15 (Hisham): app on the PR #6 backend, Sudan only, live NOAA-21, story page
+
+- Merged PR #6 (backend) into the app branch. All 17 backend tests pass on the combined code.
+- The app now loads from the data pack (`python -m syntra.datapack`) through `syntra/apppack.py`: same `veg`,
+  `static` and `info` as `pipeline.load_country`, checked to give **identical** monthly tables and month-so-far
+  numbers. Pack to app about 5 s, first page under 20 s on a fresh server (was 45 s+). Without a pack the app falls
+  back to the old loader.
+- **Sudan only** (team decision in PR #6): country picker removed.
+- Map "Live: last 7 days" now uses `syntra.live` (FIRMS near-real-time, cached 1 h), including **VIIRS NOAA-21**
+  (yellow, Okabe-Ito). 14 Nov 2026: 24,429 hotspots in 7 days (2,383 MODIS, 11,262 NOAA-20, 10,784 NOAA-21).
+- New header: stats strip (26 years, 4.5 M hotspots, 2012 jump ×2.5 → ×0.99, held-out R² 0.99) and two orbit rings.
+- `site/index.html`: one-page story for the judges (problem, 4 steps, what the record says, app features,
+  validation table, data and AI tools). The "Open the app" button gets its link once the app is deployed.
+- Numbers note: PR #6's text says 1–14 Nov −16 %. With the Jan 2012 fix and complete days only (to 13 Nov) the
+  backend gives 5,384 vs median 5,925 (rank 19, Normal); the app gives 5,290 vs 5,276 (+0 %, 8th of 15). The
+  difference: the backend compares with every year since 2000, the app with VIIRS years only (2012 on).
+  **[TO CONFIRM with the team]** which one the slides use.
+- Still open: deploy (NFR6). The pack is 54 MB and git-ignored; the team decides whether to commit it.
+
 ## 2026-11-14, about 18:30 (Hisham): thresholds written down, Jan 2012 fixed everywhere, faster first load
 
 - **Status and risk thresholds are written down**: in the app ("How the status is decided" under the status card,

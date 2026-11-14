@@ -1,0 +1,450 @@
+<meta charset="utf-8">
+<title>SYNTRA Fire Record</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Team SYNTRA, NASA Space Apps 2026: MODIS and VIIRS fire hotspots harmonized into one record for Sudan, 2000 to today.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one long night-pass story. A dark ground like a satellite night image, one ember accent,
+   sensor colors (Okabe-Ito, colorblind-safe) only where data is drawn. */
+:root {
+  --ground: #070b14;
+  --panel: #0e1526;
+  --panel-2: #131c31;
+  --line: #24304a;
+  --ink: #e9edf5;
+  --muted: #9aa6bd;
+  --ember: #f28c28;
+  --modis: #e69f00;
+  --viirs: #56b4e9;
+  --harm: #2fbf8f;
+  --display: "Bricolage Grotesque", "Space Grotesk", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 400 16px/1.6 var(--body); }
+a { color: var(--ink); }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; border-radius: 4px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -.02em; }
+h2 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); line-height: 1.12; font-weight: 800; }
+h3 { font-size: 1.12rem; font-weight: 600; letter-spacing: -.01em; }
+p { margin: 0; max-width: 65ch; }
+.eyebrow { font: 500 .74rem/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ember); }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* hero */
+.hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(60% 70% at 85% 0%, rgba(242,140,40,.16), transparent 70%),
+    radial-gradient(50% 60% at 0% 100%, rgba(86,180,233,.10), transparent 70%),
+    var(--ground); }
+.grat { position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 72px 72px; mask-image: radial-gradient(80% 70% at 70% 30%, #000 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(80% 70% at 70% 30%, #000 20%, transparent 75%); }
+.hero .wrap { position: relative; display: grid; gap: 28px; padding-block: 56px 48px; }
+.hero h1 { font-size: clamp(2.3rem, 6.2vw, 4.4rem); line-height: 1.02; font-weight: 800; max-width: 16ch; }
+.hero h1 em { font-style: normal; color: var(--ember); }
+.lede { font-size: 1.12rem; color: #c8d0e0; max-width: 58ch; }
+.coords { font: 400 .78rem/1.5 var(--mono); color: var(--muted); }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 10px; font-weight: 600;
+  text-decoration: none; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.btn.primary { background: var(--ember); border-color: var(--ember); color: #1a0f02; }
+.btn:hover { border-color: var(--ember); }
+.btn.primary:hover { filter: brightness(1.08); }
+.soon { font: 400 .8rem/1.4 var(--mono); color: var(--muted); }
+
+/* chart frame */
+.figure { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 12px; min-width: 0; }
+.fig-head { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.fig-title { font-weight: 600; }
+.seg { display: inline-flex; background: var(--ground); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.seg button { font: 500 .85rem var(--body); color: var(--muted); background: none; border: 0; padding: 7px 12px; border-radius: 7px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82rem; color: var(--muted); }
+.legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font: 400 11px var(--mono); }
+.tip { position: absolute; pointer-events: none; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font: 400 .78rem/1.45 var(--mono); color: var(--ink); white-space: nowrap; transform: translate(-50%, -110%); }
+.tip b { font-weight: 500; }
+.caption { font-size: .86rem; color: var(--muted); margin-top: 8px; max-width: 75ch; }
+.callout { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 10px; font: 500 .9rem var(--mono); }
+.callout span { color: var(--muted); font-weight: 400; }
+
+/* sections */
+section { padding-block: 64px 8px; }
+.sec-head { display: grid; gap: 10px; margin-bottom: 26px; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.fact { border-top: 2px solid var(--line); padding-top: 14px; display: grid; gap: 6px; align-content: start; }
+.fact .num { font: 800 2rem/1 var(--display); }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.step { padding: 20px 18px 22px; display: grid; gap: 8px; align-content: start; background: var(--panel); border-right: 1px solid var(--line); }
+.step:last-child { border-right: 0; }
+.step .n { font: 500 .76rem var(--mono); color: var(--ember); letter-spacing: .1em; }
+.step p { font-size: .92rem; color: #c8d0e0; }
+.step .stat { font: 500 .82rem var(--mono); color: var(--ink); margin-top: 4px; }
+.now { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.status { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; display: grid; gap: 12px; }
+.badge { justify-self: start; font: 600 .76rem var(--mono); letter-spacing: .1em; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--ember); color: var(--ember); }
+.status .big { font: 800 clamp(2.4rem, 5vw, 3.4rem)/1 var(--display); }
+.status dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: .92rem; }
+.status dt { color: var(--muted); }
+.status dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.feature { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 6px; align-content: start; }
+.feature p { font-size: .92rem; color: #c8d0e0; }
+.feature .tag { font: 500 .72rem var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .92rem; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+th { font: 500 .74rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--panel); }
+td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+th.n { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+tr.us td { color: var(--ink); font-weight: 600; }
+.credits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; font-size: .92rem; color: #c8d0e0; }
+.credits h3 { margin-bottom: 6px; }
+.credits ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+footer { margin-top: 64px; border-top: 1px solid var(--line); }
+footer .wrap { padding-block: 24px 40px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between;
+  font: 400 .8rem var(--mono); color: var(--muted); }
+
+@media (max-width: 860px) {
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .step:nth-child(2) { border-right: 0; }
+  .step:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .now, .features, .credits { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .facts, .steps { grid-template-columns: minmax(0, 1fr); }
+  .step { border-right: 0; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: 0; }
+  .hero .wrap { padding-block: 40px 36px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="hero">
+  <div class="grat" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="eyebrow">NASA Space Apps 2026 · Harmonization of MODIS and VIIRS Hot Spots · Team SYNTRA, Jeddah</div>
+    <h1>In 2012, Sudan's fires didn't double. <em>The satellites changed.</em></h1>
+    <p class="lede">NASA has watched fires from space since 2000, first with MODIS, then with the sharper VIIRS. Stitch the two
+      together and you get a fake jump. SYNTRA turns both into one record you can trust, from 2000 to this week.</p>
+
+    <div class="figure" id="fig-jump">
+      <div class="fig-head">
+        <div>
+          <div class="fig-title">Sudan, vegetation fires per year</div>
+          <div class="muted mono" style="font-size:.78rem">fire cell-days · 0.1° cells · VIIRS S-NPP units</div>
+        </div>
+        <div class="seg" role="group" aria-label="Which record to show">
+          <button type="button" id="b-raw" aria-pressed="true">Raw: MODIS, then VIIRS</button>
+          <button type="button" id="b-harm" aria-pressed="false">SYNTRA harmonized</button>
+        </div>
+      </div>
+      <div class="legend" id="legend-jump"></div>
+      <div class="chart" id="chart-jump"></div>
+      <div class="callout" id="callout-jump"></div>
+    </div>
+
+    <div class="cta">
+      <a class="btn primary" id="app-link" href="#app">Open the app ↗</a>
+      <a class="btn" href="#how">How it works</a>
+      <span class="soon" id="app-soon">Live link added at deployment</span>
+    </div>
+    <div class="coords">Sudan · 21.7–38.7° E, 8.6–22.3° N · NASA FIRMS data through 13 Nov 2026</div>
+  </div>
+</header>
+
+<main>
+  <section class="wrap" aria-labelledby="why">
+    <div class="sec-head">
+      <div class="eyebrow">The problem</div>
+      <h2 id="why">Two good satellites, one broken record</h2>
+    </div>
+    <div class="facts">
+      <div class="fact"><div class="num mono">1 km</div><h3>MODIS, since 2000</h3>
+        <p class="muted">Terra and Aqua give the long history, but their coarse pixels miss small fires.</p></div>
+      <div class="fact"><div class="num mono">375 m</div><h3>VIIRS, since 2012</h3>
+        <p class="muted">S-NPP, NOAA-20 and NOAA-21 see about seven times more pixels per area, so they count far more fires.</p></div>
+      <div class="fact"><div class="num mono">×2.5</div><h3>A jump that isn't real</h3>
+        <p class="muted">Joining the two raw counts makes 2012 look 2.5 times worse than 2011. Any trend or anomaly built on that is wrong.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap" id="how" aria-labelledby="how-h">
+    <div class="sec-head">
+      <div class="eyebrow">How it works</div>
+      <h2 id="how-h">Four steps from raw hotspots to one record</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="n">STEP 1</div><h3>Download</h3>
+        <p>Yearly FIRMS archives for MODIS and VIIRS, plus the near-real-time API for this year.</p>
+        <div class="stat">4.46 M hotspots, 2000–2026</div></div>
+      <div class="step"><div class="n">STEP 2</div><h3>Clean</h3>
+        <p>Same confidence rule for both sensors, clip to the border, and set aside gas flares, industry and other always-hot sites.</p>
+        <div class="stat">45,464 static hotspots removed</div></div>
+      <div class="step"><div class="n">STEP 3</div><h3>Harmonize</h3>
+        <p>Count fire cell-days on a 0.1° grid, then convert MODIS to VIIRS units with a factor for each calendar month, fitted on the 2012–2021 overlap.</p>
+        <div class="stat">NOAA-20 × 0.986 after S-NPP ended</div></div>
+      <div class="step"><div class="n">STEP 4</div><h3>Validate</h3>
+        <p>Leave one year out: fit on the other years, predict the hidden one, compare with what VIIRS actually saw.</p>
+        <div class="stat">R² 0.993 vs 0.36 raw</div></div>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="now-h">
+    <div class="sec-head">
+      <div class="eyebrow">What the record says</div>
+      <h2 id="now-h">October 2026 was the second-worst October in 26 years</h2>
+    </div>
+    <div class="now">
+      <div class="status">
+        <span class="badge">VERY HIGH</span>
+        <div><span class="big mono">7,753</span> <span class="muted">fire cell-days in October 2026</span></div>
+        <dl>
+          <dt>vs a typical October</dt><dd>+56% (median 4,966)</dd>
+          <dt>Rank</dt><dd>2nd of 26 Octobers since 2000</dd>
+          <dt>Highest-risk weeks</dt><dd>22 Oct – 23 Dec, busy in 97% of years</dd>
+          <dt>Fire season</dt><dd>+3.1 high-activity weeks per decade</dd>
+          <dt>1–13 Nov 2026</dt><dd>Normal (+0%, 8th of 15)</dd>
+        </dl>
+        <p class="muted" style="font-size:.86rem">Status rules: Very high above the 90th percentile of the same month; above or below normal at ±20% of the median.</p>
+      </div>
+      <div class="figure">
+        <div class="fig-title">A typical year in Sudan</div>
+        <div class="muted mono" style="font-size:.78rem;margin-bottom:6px">median fire cell-days per month, 2000–2026</div>
+        <div class="chart" id="chart-clim"></div>
+        <p class="caption">Burning starts in October after the rains and peaks in November. The marker shows October 2026.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="app-h" id="app">
+    <div class="sec-head">
+      <div class="eyebrow">Inside the app</div>
+      <h2 id="app-h">Built for people who plan for fire season</h2>
+      <p class="muted">Pick any area of Sudan by drawing on the map or typing coordinates. Every view uses the same harmonized record.</p>
+    </div>
+    <div class="features">
+      <div class="feature"><span class="tag">Status</span><h3>This month in plain words</h3>
+        <p>Very high, above normal, normal or below normal, with the rule that decided it and what next month usually brings.</p></div>
+      <div class="feature"><span class="tag">Calendar</span><h3>Burning calendar</h3>
+        <p>Every month since 2000 in one heatmap, plus a fire-season clock and every October side by side.</p></div>
+      <div class="feature"><span class="tag">Risk</span><h3>Risk periods</h3>
+        <p>Which weeks of the year are most often busy, and how long the season lasted in each year.</p></div>
+      <div class="feature"><span class="tag">3D</span><h3>Fire landscape</h3>
+        <p>Rotate 26 years of burning, watch the 2012 cliff disappear, and compare 2–3 regions week by week.</p></div>
+      <div class="feature"><span class="tag">Live</span><h3>Live hotspot map</h3>
+        <p>The last 7 days from FIRMS near-real-time, with MODIS, NOAA-20 and NOAA-21 on or off, and static sources shown apart.</p></div>
+      <div class="feature"><span class="tag">Export</span><h3>Report and data</h3>
+        <p>One interactive HTML report with every chart, plus CSVs of the monthly series, the calendar and the hotspots.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="test-h">
+    <div class="sec-head">
+      <div class="eyebrow">Does it hold up?</div>
+      <h2 id="test-h">Tested on held-out years, and beyond Sudan</h2>
+      <p class="muted">Accuracy on years the model never saw, 119 months each. It works where vegetation burns. In Saudi Arabia, with few
+        real fires and many gas flares, it does not, and we say so.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Country</th><th class="n">R² raw MODIS</th><th class="n">R² harmonized</th><th class="n">Median annual error</th></tr></thead>
+        <tbody>
+          <tr class="us"><td>Sudan</td><td class="n">0.36</td><td class="n">0.99</td><td class="n">2.4%</td></tr>
+          <tr><td>Ethiopia</td><td class="n">0.21</td><td class="n">0.99</td><td class="n">3.3%</td></tr>
+          <tr><td>Iraq</td><td class="n">0.26</td><td class="n">0.91</td><td class="n">7.8%</td></tr>
+          <tr><td>Saudi Arabia</td><td class="n">−13.7</td><td class="n">−0.93</td><td class="n">14.2%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="cred-h">
+    <div class="sec-head">
+      <div class="eyebrow">Data and tools</div>
+      <h2 id="cred-h">Open NASA data, open method</h2>
+    </div>
+    <div class="credits">
+      <div><h3>NASA data</h3><ul>
+        <li>FIRMS MODIS hotspots, Terra and Aqua</li>
+        <li>FIRMS VIIRS 375 m hotspots, S-NPP, NOAA-20, NOAA-21</li>
+        <li>FIRMS near-real-time API for 2026</li></ul></div>
+      <div><h3>Other data and code</h3><ul>
+        <li>Natural Earth country borders</li>
+        <li>Python, pandas, Streamlit, Plotly</li>
+        <li>Method and code documented on GitHub</li></ul></div>
+      <div><h3>AI tools used</h3><ul>
+        <li>Claude (Anthropic) for coding help, review and writing</li>
+        <li>All numbers come from our own code runs on FIRMS data</li></ul></div>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <span>Team SYNTRA · NASA Space Apps Challenge 2026 · Jeddah</span>
+  <span>Data: NASA FIRMS · Colors: Okabe-Ito, colorblind-safe</span>
+</div></footer>
+
+<script>
+(function () {
+  // Live app URL: fill in after deployment (Streamlit Community Cloud).
+  var APP_URL = "";
+  var link = document.getElementById("app-link"), soon = document.getElementById("app-soon");
+  if (APP_URL) { link.href = APP_URL; link.target = "_blank"; link.rel = "noopener"; soon.hidden = true; }
+
+  var css = getComputedStyle(document.documentElement);
+  var C = function (n) { return css.getPropertyValue(n).trim(); };
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  var fmt = function (v) { return Math.round(v).toLocaleString("en-US"); };
+
+  // Annual totals of complete years, Sudan (syntra.series on the data pack, built 14 Nov 2026)
+  var years = [2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025];
+  var harm = [50091,44740,45278,48550,47806,41954,53469,50761,43097,35489,37322,38633,41041,37456,38351,35670,37485,38765,42702,50653,48145,43256,57585,53442,71866];
+  var raw = [9691,14105,18136,18578,18992,16429,21118,19479,16392,14222,14468,36087,41041,37456,38351,35670,37485,38765,42702,50653,48145,43256,57585,53442,71866];
+
+  // ---------- hero chart ----------
+  (function () {
+    var host = document.getElementById("chart-jump");
+    var W = 960, H = 340, m = { l: 56, r: 16, t: 16, b: 30 };
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": "Sudan vegetation fires per year 2001-2025: raw counts jump 2.5 times in 2012; harmonized counts do not." }, host);
+    var ymax = 80000;
+    var x = function (i) { return m.l + i * (W - m.l - m.r) / (years.length - 1); };
+    var y = function (v) { return m.t + (1 - v / ymax) * (H - m.t - m.b); };
+    [0, 20000, 40000, 60000, 80000].forEach(function (t) {
+      el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: C("--line"), "stroke-width": 1 }, svg);
+      el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, svg).textContent = t ? (t / 1000) + "k" : "0";
+    });
+    years.forEach(function (yr, i) {
+      if (yr % 4 === 1) el("text", { x: x(i), y: H - 8, "text-anchor": "middle" }, svg).textContent = yr;
+    });
+    var i12 = years.indexOf(2012), xv = (x(i12 - 1) + x(i12)) / 2;
+    el("line", { x1: xv, x2: xv, y1: m.t, y2: H - m.b, stroke: C("--viirs"), "stroke-width": 1.5, "stroke-dasharray": "4 4" }, svg);
+    el("text", { x: xv + 6, y: m.t + 12 }, svg).textContent = "VIIRS starts";
+
+    var area = el("path", { fill: C("--ember"), "fill-opacity": .08, stroke: "none" }, svg);
+    var pre = el("path", { fill: "none", stroke: C("--modis"), "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    var post = el("path", { fill: "none", stroke: C("--viirs"), "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    var dots = years.map(function (_, i) { return el("circle", { r: 4, fill: i < i12 ? C("--modis") : C("--viirs"), stroke: C("--panel"), "stroke-width": 2 }, svg); });
+    var cross = el("line", { y1: m.t, y2: H - m.b, stroke: C("--muted"), "stroke-width": 1, opacity: 0 }, svg);
+    var hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" }, svg);
+    var tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; host.appendChild(tip);
+
+    var legend = document.getElementById("legend-jump"), callout = document.getElementById("callout-jump");
+    var cur = raw.slice(), mode = "raw";
+    function path(vals, a, b) {
+      var d = "";
+      for (var i = a; i <= b; i++) d += (i === a ? "M" : "L") + x(i).toFixed(1) + "," + y(vals[i]).toFixed(1);
+      return d;
+    }
+    function draw(vals) {
+      pre.setAttribute("d", path(vals, 0, i12 - 1));
+      post.setAttribute("d", path(vals, i12 - 1, years.length - 1));
+      area.setAttribute("d", path(vals, 0, years.length - 1) + "L" + x(years.length - 1) + "," + y(0) + "L" + x(0) + "," + y(0) + "Z");
+      dots.forEach(function (c, i) { c.setAttribute("cx", x(i)); c.setAttribute("cy", y(vals[i])); });
+      var r = mode === "raw";
+      pre.setAttribute("stroke", r ? C("--modis") : C("--harm"));
+      dots.forEach(function (c, i) { if (i < i12) c.setAttribute("fill", r ? C("--modis") : C("--harm")); });
+    }
+    function labels() {
+      var r = mode === "raw";
+      legend.innerHTML = r
+        ? '<span><i style="background:' + C("--modis") + '"></i>Raw MODIS, 2001–2011</span><span><i style="background:' + C("--viirs") + '"></i>Raw VIIRS, 2012–2025</span>'
+        : '<span><i style="background:' + C("--harm") + '"></i>MODIS converted to VIIRS units</span><span><i style="background:' + C("--viirs") + '"></i>VIIRS, 2012–2025</span>';
+      var a = (r ? raw : harm)[i12] / (r ? raw : harm)[i12 - 1];
+      callout.innerHTML = "<div><span>2012 vs 2011 </span>×" + a.toFixed(2) + "</div>" +
+        (r ? "<div><span>Looks like </span>fires more than doubled</div>" : "<div><span>Held-out R² </span>0.993</div><div><span>Raw MODIS R² </span>0.36</div>");
+    }
+    function setMode(next) {
+      if (next === mode) return;
+      mode = next;
+      document.getElementById("b-raw").setAttribute("aria-pressed", next === "raw");
+      document.getElementById("b-harm").setAttribute("aria-pressed", next === "harm");
+      var from = cur.slice(), to = next === "raw" ? raw : harm, t0 = null, dur = reduce ? 0 : 900;
+      labels();
+      function step(ts) {
+        if (t0 === null) t0 = ts;
+        var p = dur ? Math.min(1, (ts - t0) / dur) : 1, e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        cur = from.map(function (v, i) { return v + (to[i] - v) * e; });
+        draw(cur);
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    document.getElementById("b-raw").addEventListener("click", function () { setMode("raw"); });
+    document.getElementById("b-harm").addEventListener("click", function () { setMode("harm"); });
+    hit.addEventListener("mousemove", function (ev) {
+      var pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      var p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      var i = Math.max(0, Math.min(years.length - 1, Math.round((p.x - m.l) / ((W - m.l - m.r) / (years.length - 1)))));
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", .6);
+      var box = host.getBoundingClientRect(), sx = box.width / W;
+      tip.hidden = false;
+      tip.style.left = Math.max(70, Math.min(box.width - 70, x(i) * sx)) + "px";
+      tip.style.top = (y(Math.max(raw[i], harm[i])) * sx) + "px";
+      tip.innerHTML = "<b>" + years[i] + "</b><br>raw " + fmt(raw[i]) + "<br>harmonized " + fmt(harm[i]);
+    });
+    hit.addEventListener("mouseleave", function () { tip.hidden = true; cross.setAttribute("opacity", 0); });
+    draw(cur); labels();
+    // Show the fix once on load, after the raw jump has been seen.
+    if (!reduce) setTimeout(function () { if (mode === "raw") setMode("harm"); }, 2200);
+  })();
+
+  // ---------- climatology chart ----------
+  (function () {
+    var host = document.getElementById("chart-clim");
+    var clim = [5201,4207,3332,2254,1554,714,274,94,147,5103,12720,7938];
+    var mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var oct26 = 7753;
+    var W = 480, H = 250, m = { l: 44, r: 8, t: 22, b: 26 }, ymax = 14000;
+    var svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+      "aria-label": "Median fire cell-days per month in Sudan: low in the rainy season, peak in November at 12,720. October 2026 had 7,753." }, host);
+    var bw = (W - m.l - m.r) / 12;
+    var y = function (v) { return m.t + (1 - v / ymax) * (H - m.t - m.b); };
+    [0, 5000, 10000].forEach(function (t) {
+      el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: C("--line"), "stroke-width": 1 }, svg);
+      el("text", { x: m.l - 6, y: y(t) + 4, "text-anchor": "end" }, svg).textContent = t ? (t / 1000) + "k" : "0";
+    });
+    var tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; host.appendChild(tip);
+    clim.forEach(function (v, i) {
+      var x0 = m.l + i * bw + 3, w = bw - 6, top = y(v), h = y(0) - top, r = Math.min(4, h);
+      var d = "M" + x0 + "," + y(0) + "V" + (top + r) + "Q" + x0 + "," + top + " " + (x0 + r) + "," + top +
+              "H" + (x0 + w - r) + "Q" + (x0 + w) + "," + top + " " + (x0 + w) + "," + (top + r) + "V" + y(0) + "Z";
+      el("path", { d: d, fill: C("--ember"), "fill-opacity": i === 9 || i === 10 ? 1 : .55 }, svg);
+      el("text", { x: x0 + w / 2, y: H - 8, "text-anchor": "middle" }, svg).textContent = mon[i][0];
+      var hit = el("rect", { x: m.l + i * bw, y: m.t, width: bw, height: H - m.t - m.b, fill: "transparent" }, svg);
+      hit.addEventListener("mousemove", function () {
+        var sx = host.getBoundingClientRect().width / W;
+        tip.hidden = false; tip.style.left = Math.max(60, Math.min(host.getBoundingClientRect().width - 60, (x0 + w / 2) * sx)) + "px";
+        tip.style.top = (top * sx) + "px";
+        tip.innerHTML = "<b>" + mon[i] + "</b> median " + fmt(v) + (i === 9 ? "<br>Oct 2026 " + fmt(oct26) : "");
+      });
+      hit.addEventListener("mouseleave", function () { tip.hidden = true; });
+    });
+    var cx = m.l + 9 * bw + bw / 2, cy = y(oct26);
+    el("line", { x1: cx - bw / 2 - 2, x2: cx + bw / 2 + 2, y1: cy, y2: cy, stroke: C("--ink"), "stroke-width": 2.5, "stroke-linecap": "round" }, svg);
+    el("text", { x: cx - bw / 2 - 6, y: cy + 4, "text-anchor": "end", style: "fill:" + C("--ink") }, svg).textContent = "Oct 2026: 7,753";
+  })();
+})();
+</script>
