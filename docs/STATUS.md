@@ -7,8 +7,8 @@ Where the project stands. Newest first. Update it when something lands.
 **2026 is in the app.** Data now runs to yesterday (13 Nov 2026), not Dec 2025.
 
 - `syntra/recent.py` downloads 2026 from the FIRMS area API (MAP_KEY in `.env`, never committed) for MODIS,
-  VIIRS S-NPP and VIIRS NOAA-20, keeps only hotspots inside the country, and cleans them with **`syntra/clean.py`**
-  (the teammate's Step 3), exactly like the archive.
+  VIIRS S-NPP and VIIRS NOAA-20 and cleans them with **`syntra/clean.py`** (the team's Step 3), exactly like the
+  archive, including the same Natural Earth 1:10m border clip (PR #2).
 - `syntra/pipeline.py` is the whole chain for one country: fetch, clean, 2026, static mask, fire-cells.
   The app uses it.
 - **Static-source mask on every year, not only 2026.** Tested: mask built from 2000–2024, applied to 2025.
@@ -23,11 +23,11 @@ Where the project stands. Newest first. Update it when something lands.
 - Map: toggle to show static sources (Riyadh's Part 5a). Calendar and anomalies always use vegetation fires only.
 
 **Sudan results (provisional, near-real-time):**
-- **October 2026 = 20,993 fire-cells, highest October in 26 years (+77 % vs median 11,892)**, above the 90th
+- **October 2026 = 20,403 fire-cells, highest October in 26 years (+72 % vs median 11,892)**, above the 90th
   percentile. Both VIIRS satellites agree (S-NPP 20,993, NOAA-20 20,617); MODIS is up 43 % on Oct 2025; the jump
   is in 16–31 Oct. Present it as an anomaly to check, not a confirmed record; possible causes are
   [TO CONFIRM].
-- November 1–13, 2026: 14,460, −6 % vs median, #15 of 27 (normal).
+- November 1–13, 2026: 13,702, −11 % vs median, #17 of 27 (normal).
 - MODIS → VIIRS held-out R² is now 0.98 over 2012–2026 (178 months).
 
 **Still to do:** review + merge PR #1; Streamlit Cloud deploy (put `FIRMS_MAP_KEY` in the app's secrets);

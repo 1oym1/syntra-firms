@@ -6,7 +6,7 @@
     d["static"]     # hotspots flagged as static sources (for the map toggle)
     d["info"]       # dates, counts dropped, calibration factors
 
-Steps: fetch yearly files (syntra.data) -> clean (syntra.clean, Step 3) -> add 2026 from the API
+Steps: fetch yearly files (syntra.data) -> clean inside the border (syntra.clean, Step 3) -> add 2026 from the API
 (syntra.recent, same cleaning) -> one static-source mask applied to ALL years -> fire-cells (syntra.harmonize).
 """
 import contextlib
@@ -16,7 +16,7 @@ import io
 import pandas as pd
 
 from syntra import harmonize as hz
-from syntra.clean import apply_static_mask, clean_all, static_mask
+from syntra.clean import apply_static_mask, clean_all, country_shape, static_mask
 from syntra.data import fetch
 from syntra.recent import load_recent
 
@@ -27,8 +27,10 @@ def load_country(country, with_2026=True, quiet=True):
     out = io.StringIO() if quiet else None
     with (contextlib.redirect_stdout(out) if quiet else contextlib.nullcontext()):
         fetch(country, 2000, 2025)
-        archive = clean_all(country, insts=INSTS)
-        recent, info = load_recent(country, archive) if with_2026 else (archive.iloc[0:0], {"key": False})
+        shape = country_shape(country)  # Natural Earth 1:10m border, same clip for archive and 2026
+        archive = clean_all(country, insts=INSTS, shape=shape)
+        recent, info = (load_recent(country, archive, shape=shape) if with_2026
+                        else (archive.iloc[0:0], {"key": False}))
         mask = static_mask(archive)
     fires = pd.concat([archive, recent], ignore_index=True) if len(recent) else archive
     flagged_by_type = int(fires["is_static"].sum())

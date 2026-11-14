@@ -12,10 +12,9 @@ What it does
   1. Asks FIRMS which dates each source covers (data_availability) and downloads 2026 for
      MODIS, VIIRS S-NPP and VIIRS NOAA-20: standard data (SP) where it exists, then near-real-time (NRT).
      The API returns at most 5 days per call, so 2026 is fetched in 5-day chunks (cached in data/raw/api/).
-  2. Keeps only hotspots inside the country. The API takes a bounding box, which also covers
-     neighbours, so we keep points in 0.05 deg cells where the country had hotspots in 2000-2025.
-  3. Cleans them with syntra.clean.clean_frame, exactly like the archive (confidence, duplicates,
-     static flags). NRT rows have no `type`; the caller applies the static-source mask to everything.
+  2. Cleans them with syntra.clean.clean_frame, exactly like the archive: the same country border
+     (Natural Earth 1:10m; the API returns a rectangle that includes neighbours), confidence, duplicates,
+     static flags. NRT rows have no `type`; the caller applies the static-source mask to everything.
 """
 import datetime as dt
 import io
@@ -119,26 +118,35 @@ def _cells(lat, lon, g):
     return np.floor(np.asarray(lat) / g).astype("int64") * 100000 + np.floor(np.asarray(lon) / g).astype("int64")
 
 
-def load_recent(country, archive, key=None, start=START, end=None):
+def load_recent(country, archive, key=None, start=START, end=None, shape=None):
     """2026 hotspots for `country`, cleaned by syntra.clean.clean_frame (static mask NOT applied yet).
 
-    archive: clean_all(country, ...) output, used for the bounding box and the country footprint.
+    archive: clean_all(country, ...) output. shape: country border (syntra.clean.country_shape); without it,
+    points are kept in 0.05 deg cells where the country had hotspots in 2000-2025 (fallback).
     Returns (fires, info). fires is empty when no key is set.
     """
     key = key or map_key()
     info = {"key": bool(key), "snpp_last_day": None, "last_day": None, "dropped_outside": 0}
     if not key or archive.empty:
         return archive.iloc[0:0], info
-    bbox = (archive["longitude"].min() - 0.05, archive["latitude"].min() - 0.05,
-            archive["longitude"].max() + 0.05, archive["latitude"].max() + 0.05)
+    if shape is not None:
+        w, s_, e, n = shape.bounds
+        bbox = (w - 0.05, s_ - 0.05, e + 0.05, n + 0.05)
+    else:
+        bbox = (archive["longitude"].min() - 0.05, archive["latitude"].min() - 0.05,
+                archive["longitude"].max() + 0.05, archive["latitude"].max() + 0.05)
     raw, avail = download(country, bbox, key, start, end)
     info["snpp_last_day"] = max((v[1] for k, v in avail.items() if k.startswith("VIIRS_SNPP")), default=None)
     if not len(raw):
         return archive.iloc[0:0], info
-    inside = np.isin(_cells(raw["latitude"], raw["longitude"], FOOTPRINT_GRID),
-                     np.unique(_cells(archive["latitude"], archive["longitude"], FOOTPRINT_GRID)))
-    info["dropped_outside"] = int((~inside).sum())
-    raw = raw[inside]
+    if shape is not None:
+        from syntra.clean import inside
+        keep = inside(raw, shape)
+    else:
+        keep = np.isin(_cells(raw["latitude"], raw["longitude"], FOOTPRINT_GRID),
+                       np.unique(_cells(archive["latitude"], archive["longitude"], FOOTPRINT_GRID)))
+    info["dropped_outside"] = int((~keep).sum())
+    raw = raw[keep]
     prefix = raw["source"].str.replace(r"_(SP|NRT)$", "", regex=True)
     parts = [clean_frame(raw[prefix == p], inst) for p, inst in SOURCES.items() if (prefix == p).any()]
     fires = pd.concat(parts, ignore_index=True)
