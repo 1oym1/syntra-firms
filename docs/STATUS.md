@@ -5,6 +5,22 @@ Where the project stands. Newest first. Update it when something lands.
 
 
 
+## 2026-11-14, about 18:00 (Hisham): risk periods tab; January 2012 fix
+
+- **⚠️ Risk periods** (Yazeed's question 2: which periods historically carry the greatest fire risk). Per week of
+  the year, from every full year: how often the week had high activity (above a percentile of all weeks, default
+  75th, adjustable), typical and bad-year values, classed Low / Moderate / High / Extreme; a years × weeks ranking
+  heatmap; and the fire season per year (first to last high week, fire years start at the quietest week so the
+  Oct–Mar season stays whole). Sudan: **22 Oct – 23 Dec is Extreme (high activity in 97 % of years)**; the number
+  of high-activity weeks grows **+3.1 weeks per decade** (linear fit, a direction only).
+- **Fix, January 2012:** VIIRS S-NPP data in FIRMS starts on **20 Jan 2012**, so Jan 2012 was a part month
+  counted as full VIIRS (Sudan: 1,523 instead of ~4,069). `syntra/series.py` now starts VIIRS in Feb 2012; Jan 2012
+  is MODIS × factor and is left out of the fit. Sudan held-out R² 0.988 → **0.993**, RMSE 393 → 301, R² on
+  anomalies 0.79 → 0.87. Oct 2026 and Nov 1–13 unchanged.
+- **[TO CONFIRM with Riyadh]** `syntra/harmonize.py` (`harmonize.run`, `scripts/harmonize_hotspots.py`) still
+  counts Jan 2012 as a VIIRS month, so its validation numbers differ slightly from the app's. Same one-line fix
+  there (VIIRS span from Feb 2012) would make them match.
+
 ## 2026-11-14, about 17:30 (Hisham): app redesign, 3D views, FR gaps closed
 
 - New look: dark theme (`.streamlit/config.toml`), hero header with live-data pill, plain-language status card

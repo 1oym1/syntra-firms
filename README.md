@@ -52,17 +52,18 @@ data ends (2 Nov 2026) VIIRS = NOAA-20 × k (S-NPP / NOAA-20, fitted on every mo
 python scripts/validate_harmonization.py --countries Sudan Ethiopia Iraq Saudi_Arabia
 ```
 
-Monthly R², leave-one-year-out 2012–2021 (120 months per country), archive data, cell-days (rerun 14 Nov after PR #5):
+Monthly R², leave-one-year-out 2012–2021 (119 months per country: Jan 2012 is left out because S-NPP data starts
+on 20 Jan 2012), archive data, cell-days (rerun 14 Nov):
 
 | Country | R² raw MODIS | **R² harmonized** | Median annual error | Median monthly r |
 | --- | --- | --- | --- | --- |
 | Sudan | 0.36 | **0.99** | 2.4 % | 1.00 |
-| Ethiopia | 0.21 | **0.97** | 3.3 % | 1.00 |
-| Iraq | 0.27 | **0.91** | 8.0 % | 0.98 |
-| Saudi Arabia | −12.6 | **−0.87** | 17.6 % | 0.48 |
+| Ethiopia | 0.21 | **0.99** | 3.3 % | 1.00 |
+| Iraq | 0.26 | **0.91** | 7.8 % | 0.98 |
+| Saudi Arabia | −13.7 | **−0.93** | 14.2 % | 0.48 |
 
 Saudi Arabia has few, scattered vegetation fires (about 3,300 VIIRS cell-days a year), so its monthly signal is noisy:
-single months and even yearly totals (18 % error) are off. It shows where the method reaches its limits.
+single months and even yearly totals (14 % error) are off. It shows where the method reaches its limits.
 Tables: `outputs/tables/harmonization_validation.csv` and `harmonization_validation_by_year.csv`.
 
 Slide figures: `notebooks/01_harmonization.ipynb` writes them to `outputs/figures/` (code in `syntra/figures.py`).

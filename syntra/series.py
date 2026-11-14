@@ -22,7 +22,9 @@ import pandas as pd
 from syntra import harmonize as hz
 
 SNPP, N20 = "N", "N20"
-MODIS_START, VIIRS_START = pd.Period("2000-11", "M"), pd.Period("2012-01", "M")
+# VIIRS S-NPP data in FIRMS starts on 20 Jan 2012, so its first FULL month is Feb 2012. Jan 2012 is filled
+# from MODIS x factor like the years before, and is left out of the MODIS -> VIIRS fit.
+MODIS_START, VIIRS_START = pd.Period("2000-11", "M"), pd.Period("2012-02", "M")
 
 
 def last_full_month(day):
@@ -164,7 +166,8 @@ def month_to_date(veg, info):
         return None
     v = veg[(veg.family == "VIIRS") & (veg.month == day.month) & (pd.to_datetime(veg.acq_date).dt.day <= day.day)]
     snpp = _cells_per_year(v[v.satellite == SNPP])
-    vals = {y: float(snpp.get(y, 0)) for y in range(2012, day.year)}
+    first = VIIRS_START.year + (1 if day.month < VIIRS_START.month else 0)   # S-NPP has no early Jan 2012
+    vals = {y: float(snpp.get(y, 0)) for y in range(first, day.year)}
     end, k = info.get("snpp_end"), info.get("k_n20")
     if end is not None and day > end and k is not None and np.isfinite(k):
         cur = float(_cells_per_year(v[(v.satellite == N20) & (v.year == day.year)]).sum()) * k

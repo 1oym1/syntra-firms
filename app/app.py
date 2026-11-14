@@ -115,7 +115,7 @@ def analyse(country, bbox):
     return series.area_series(area, d["info"], cs), series.month_to_date(area, d["info"])
 
 
-BANDS = {("latitude", 2): ["North", "South"], ("latitude", 3): ["North", "Central", "South"],
+BANDS = {("latitude", 1): ["All"], ("longitude", 1): ["All"], ("latitude", 2): ["North", "South"], ("latitude", 3): ["North", "Central", "South"],
          ("longitude", 2): ["West", "East"], ("longitude", 3): ["West", "Central", "East"]}
 
 
@@ -146,13 +146,16 @@ def regions_over_time(country, bbox, coord, n, step):
     kv = cs["k_viirs"].reindex(range(1, 13)).values[mon]
     kt = np.where(m.index < pd.Timestamp("2002-07-01"), cs["k_terra"].reindex(range(1, 13)).values[mon], 1.0)
     out = m.mul(kv * kt, axis=0)
-    viirs = m.index >= pd.Timestamp("2012-01-01")
+    viirs = m.index >= series.VIIRS_START.to_timestamp()   # first full S-NPP month (data from 20 Jan 2012)
     out[viirs] = sn[viirs]
     end, k = info.get("snpp_end"), info.get("k_n20")
     if end is not None and k is not None and np.isfinite(k):
         after = m.index > end
         out[after] = n20[after] * k
-    out = out.resample("W-MON", label="left", closed="left").sum() if step == "Week" else out.resample("MS").sum()
+    if step == "Week":
+        out = out.resample("W-MON", label="left", closed="left").sum()
+    elif step == "Month":
+        out = out.resample("MS").sum()
     out.columns = BANDS[(coord, n)]
     return out, edges
 
@@ -368,8 +371,8 @@ if mtd is not None and np.isfinite(mtd["value"]):
     st.caption(note + "Near-real-time data: provisional.")
 
 figs = {}
-tab_cal, tab_3d, tab_tr, tab_h, tab_map, tab_data, tab_m = st.tabs(
-    ["📅 Burning calendar", "🧊 3D view", "📈 Trend & the 2012 jump", "🛰️ Harmonization", "🗺️ Hotspot map",
+tab_cal, tab_risk, tab_3d, tab_tr, tab_h, tab_map, tab_data, tab_m = st.tabs(
+    ["📅 Burning calendar", "⚠️ Risk periods", "🧊 3D view", "📈 Trend & the 2012 jump", "🛰️ Harmonization", "🗺️ Hotspot map",
      "⬇️ Download", "📖 Method"])
 
 # ---------- calendar ----------
@@ -422,6 +425,131 @@ with tab_cal:
         src = h.loc[(h.year == sel.year) & (h.month == sel.month), "source"]
         if len(src):
             st.caption(f"Source of {sel.strftime('%b %Y')}: {src.iloc[0]}")
+
+# ---------- risk periods ----------
+with tab_risk:
+    st.markdown("**When is fire risk highest?** The calendar shows when fires happened. This tab shows when burning has "
+                "*usually* been intense and frequent, week by week of the year, from every year since 2001, and "
+                "whether the fire season is starting earlier or lasting longer.")
+    daily = regions_over_time(country, bbox, "latitude", 1, "Day")[0].iloc[:, 0]
+    day0 = info["complete_day"]
+    dd = daily[daily.index <= day0].to_frame("v")
+    dd["year"], dd["doy"] = dd.index.year, dd.index.dayofyear
+    dd["wk"] = np.minimum((dd.doy - 1) // 7, 51)
+    g = dd.groupby(["year", "wk"]).v.agg(["sum", "count"])
+    g = g[g["count"] >= 7]                                           # complete weeks only
+    wk = (g["sum"] * 7 / g["count"]).unstack()                       # per 7 days (the last week has 8-9 days)
+    full_years = [y for y in wk.index if 2001 <= y < day0.year]
+    base = wk.loc[full_years]
+    r1, r2 = st.columns([1, 1])
+    q = r1.select_slider("A week counts as 'high activity' above this percentile of all weeks", [50, 60, 70, 75, 80, 90],
+                         value=75)
+    yr_from = r2.slider("Years used", int(min(full_years)), int(max(full_years)),
+                        (int(min(full_years)), int(max(full_years))))
+    base = base.loc[yr_from[0]:yr_from[1]]
+    thr = float(np.nanpercentile(base.values, q))
+    freq = 100 * (base >= thr).mean()
+    med, p90 = base.median(), base.quantile(0.9)
+    cls = pd.cut(freq, [-1, 25, 50, 75, 101], labels=["Low", "Moderate", "High", "Extreme"])
+    RISK = {"Low": "#FEE391", "Moderate": "#FB9A29", "High": "#CC4C02", "Extreme": "#662506"}  # YlOrBr steps
+    ref = pd.Timestamp("2001-01-01")
+    lab = [(ref + pd.Timedelta(days=7 * w)).strftime("%d %b") for w in range(52)]
+
+    # highest-risk periods: runs of consecutive weeks in the top class present
+    order = ["Extreme", "High", "Moderate"]
+    top_cls = next((c for c in order if (cls == c).any()), None)
+    periods = []
+    if top_cls:
+        on = (cls == top_cls).values
+        runs, start = [], None
+        for w in range(52):
+            if on[w] and start is None:
+                start = w
+            if (not on[w] or w == 51) and start is not None:
+                runs.append([start, w if on[w] else w - 1]); start = None
+        if len(runs) > 1 and runs[0][0] == 0 and runs[-1][1] == 51:   # wraps over New Year
+            runs[0][0] = runs[-1][0] - 52; runs.pop()
+        for a, b in sorted(runs, key=lambda r: -freq.iloc[[w % 52 for w in range(r[0], r[1] + 1)]].mean()):
+            ws = [w % 52 for w in range(a, b + 1)]
+            end = ref + pd.Timedelta(days=7 * (b % 52) + 6)
+            periods.append(f"**{lab[a % 52]} – {end:%d %b}**: high activity in "
+                           f"{freq.iloc[ws].mean():.0f}% of years, typically {med.iloc[ws].mean():,.0f} fire cell-days "
+                           f"a week ({p90.iloc[ws].mean():,.0f} in a bad year)")
+    a1, a2 = st.columns([1, 2])
+    a1.markdown(f"<div class='card status' style='--c:{RISK.get(top_cls, '#999')}'><h4>Highest-risk period"
+                f"{'s' if len(periods) > 1 else ''}</h4><span class='badge'>{(top_cls or 'n/a').upper()}</span>"
+                f"<div class='sub' style='margin-top:.5rem'>Weeks where at least "
+                f"{ {'Extreme': 75, 'High': 50, 'Moderate': 25}.get(top_cls, 0)}% of years ({yr_from[0]}–{yr_from[1]}) "
+                f"had high activity (above {thr:,.0f} fire cell-days a week, the {q}th percentile).</div></div>",
+                unsafe_allow_html=True)
+    a2.markdown("\n".join(f"- {p}" for p in periods[:3]) or "No week reaches the moderate class.")
+
+    rb = go.Figure(go.Bar(x=lab, y=freq.values, marker_color=[RISK[c] for c in cls.astype(str)],
+                          customdata=np.c_[med.values, p90.values, cls.astype(str)],
+                          hovertemplate="Week of %{x}<br>High activity in <b>%{y:.0f}%</b> of years · %{customdata[2]}"
+                                        "<br>Typical %{customdata[0]:,.0f} · bad year %{customdata[1]:,.0f} "
+                                        "fire cell-days<extra></extra>"))
+    for name, y in (("Extreme", 75), ("High", 50), ("Moderate", 25)):
+        rb.add_hline(y=y, line_dash="dot", line_color="rgba(160,170,190,0.5)", annotation_text=name,
+                     annotation_position="right")
+    rb.update_layout(title="How often each week of the year has high fire activity", height=360,
+                     yaxis=dict(title="% of years", range=[0, 105]), xaxis=dict(title="", tickangle=-45, dtick=4),
+                     margin=dict(l=0, r=40, t=40, b=0), bargap=0.15)
+    st.plotly_chart(rb)
+    figs["Fire risk by week of the year"] = rb
+
+    # years x weeks: where each week ranks in the whole record (0-100)
+    pct = wk.stack().rank(pct=True).mul(100).unstack().reindex(columns=range(52))
+    hm = px.imshow(pct, color_continuous_scale="YlOrBr", aspect="auto", zmin=0, zmax=100,
+                   labels=dict(x="Week of the year", y="Year", color="percentile"))
+    hm.update_xaxes(tickvals=list(range(0, 52, 4)), ticktext=lab[::4])
+    hm.update_yaxes(dtick=1, autorange="reversed")
+    hm.update_traces(hovertemplate="%{y}, week of " + "%{x}<br>busier than %{z:.0f}% of all weeks<extra></extra>")
+    hm.update_layout(title="Every week since 2001, ranked against the whole record", height=40 + 22 * len(pct),
+                     margin=dict(l=0, r=0, t=40, b=0))
+    st.plotly_chart(hm)
+    figs["Weekly risk ranking"] = hm
+
+    # season start, end and length per fire year (a fire year starts at the quietest week, so a season
+    # that crosses New Year stays in one piece)
+    origin = int(med.values.argmin())
+    rows = []
+    for y in wk.index:
+        seq = pd.concat([wk.loc[y].iloc[origin:], wk.loc[y + 1].iloc[:origin] if y + 1 in wk.index
+                         else pd.Series(np.nan, index=range(origin))]) if origin else wk.loc[y]
+        seq = pd.Series(seq.values)
+        if seq.isna().any():
+            continue
+        hi_w = np.where(seq.values >= thr)[0]
+        if len(hi_w):
+            rows.append({"fire year": f"{y}/{str(y + 1)[2:]}" if origin else str(y), "y": y,
+                         "start": int(hi_w[0]), "end": int(hi_w[-1]), "high weeks": len(hi_w)})
+    if len(rows) >= 5:
+        sz = pd.DataFrame(rows)
+
+        def wlab(i):
+            return (ref + pd.Timedelta(days=7 * ((i + origin) % 52))).strftime("%d %b")
+
+        sf = go.Figure()
+        sf.add_bar(x=sz["fire year"], y=sz.end - sz.start + 1, base=sz.start, marker_color="#CC4C02",
+                   customdata=np.c_[[wlab(i) for i in sz.start], [wlab(i) for i in sz.end], sz["high weeks"]],
+                   hovertemplate="%{x}: first high week %{customdata[0]}, last %{customdata[1]}<br>"
+                                 "%{customdata[2]} high weeks<extra></extra>", name="Season (first to last high week)")
+        ticks = list(range(0, 52, 4))
+        sf.update_layout(title="Fire season each year: first to last high-activity week", height=380,
+                         yaxis=dict(title="", tickvals=ticks, ticktext=[wlab(i) for i in ticks], autorange="reversed"),
+                         margin=dict(l=0, r=0, t=40, b=0), showlegend=False)
+        st.plotly_chart(sf)
+        figs["Fire season length"] = sf
+        b_len, _ = np.polyfit(sz.y, sz["high weeks"], 1)
+        b_start, _ = np.polyfit(sz.y, sz.start, 1)
+        st.caption(f"Across {len(sz)} fire years: the number of high-activity weeks changes by {10 * b_len:+.1f} weeks "
+                   f"per decade, and the first high week moves {abs(7 * 10 * b_start):.0f} days per decade "
+                   f"{'earlier' if b_start < 0 else 'later'} (linear fits; years vary, so read these as directions). "
+                   + (f"Fire years start in the quietest week ({wlab(0)}), so a season that crosses New Year stays "
+                      "in one piece." if origin else ""))
+    st.caption("All values are harmonized fire cell-days (VIIRS units) per 7 days. Change the percentile and years "
+               "above to make 'high activity' stricter or looser.")
 
 # ---------- trend + 2012 jump ----------
 with tab_tr:

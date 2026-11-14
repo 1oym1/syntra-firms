@@ -1,5 +1,5 @@
 country,months,modis_cells_per_year,viirs_cells_per_year,modis_to_viirs_annual,r2_raw_modis,r2_harmonized,median_abs_annual_error_pct,median_monthly_mape_pct,median_monthly_r
-Sudan,120,15890,40636,2.557,0.36,0.988,2.4,11.6,0.998
-Ethiopia,120,21835,59814,2.739,0.213,0.967,3.3,14.6,0.996
-Iraq,120,2256,5908,2.618,0.267,0.905,8.0,15.8,0.977
-Saudi_Arabia,120,457,3324,7.273,-12.623,-0.868,17.6,22.8,0.475
+Sudan,119,15890,40636,2.557,0.359,0.993,2.4,11.6,0.998
+Ethiopia,119,21835,59814,2.739,0.213,0.986,3.3,14.0,0.996
+Iraq,119,2256,5908,2.618,0.262,0.905,7.8,15.8,0.977
+Saudi_Arabia,119,457,3324,7.273,-13.721,-0.931,14.2,22.4,0.475
