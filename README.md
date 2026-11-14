@@ -23,6 +23,14 @@ The last command downloads the FIRMS yearly files (Sudan, 2000 to 2025; change `
 
 Then open `notebooks/00_load_data.ipynb` and run all cells. The app runs with `streamlit run app/app.py`.
 
+## MODIS vs VIIRS on clean data (checklist step 3)
+
+`notebooks/02_modis_vs_viirs.ipynb` (code `syntra/compare.py`), Sudan, MODIS vs VIIRS S-NPP, 2012–2025:
+- **Resolution:** VIIRS has ×4.1 MODIS's hotspots but only ×1.9 its burned 0.1° cells, steady every year. Gridding halves the gap.
+- **Sensitivity:** on the same ~13:30 pass (Aqua vs S-NPP, same day, same 0.1° cell) VIIRS sees 71 % of MODIS's fire
+  cells, MODIS sees 22 % of VIIRS's. The extra VIIRS fires are small: 49 % of VIIRS hotspots are below 5 MW, 0.6 % of MODIS's.
+- **Season:** the cell gap is ×1.4 in November but ×6.8 in July (few, small wet-season fires), so the factor must be per month.
+
 ## Harmonization (phases 4 and 5)
 
 Code: `syntra/harmonize.py` (method in its docstring and `docs/MODIS_vs_VIIRS.md`).

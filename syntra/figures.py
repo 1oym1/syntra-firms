@@ -176,3 +176,83 @@ def years_series(by_year):
     s = pd.Series(by_year).astype(float)
     s.index = s.index.astype(int)
     return s.sort_index()
+
+
+# ---------------------------------------------------------------- Step 3: MODIS vs VIIRS (syntra.compare)
+def gap_by_year(yearly, country, path=None):
+    """VIIRS/MODIS ratio per year: counting hotspots vs counting burned 0.1° cells."""
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    ax.plot(yearly.index, yearly.hotspot_ratio, color=MODIS, lw=2.5, ls="--", marker="o", ms=6,
+            label="Counting hotspots")
+    ax.plot(yearly.index, yearly.cell_ratio, color=HARM, lw=2.5, marker="D", ms=6, label="Counting burned 0.1° cells")
+    for col, txt in (("hotspot_ratio", "hotspots"), ("cell_ratio", "burned cells")):
+        med = yearly[col].median()
+        ax.annotate(f"{txt}: ×{med:.1f}", (yearly.index[-1], yearly[col].iloc[-1]), xytext=(8, 0),
+                    textcoords="offset points", va="center", fontsize=11, fontweight="bold", color=INK)
+    ax.axhline(1, color=GREY, lw=1)
+    ax.text(yearly.index[0], 1.08, "same count (×1)", fontsize=10, color="#555555")
+    ax.set_ylim(0, float(yearly.hotspot_ratio.max()) * 1.2)
+    ax.set_xlim(yearly.index[0] - 0.5, yearly.index[-1] + 2.6)
+    ax.set_xticks(range(int(yearly.index[0]), int(yearly.index[-1]) + 1, 2))
+    ax.set_ylabel("VIIRS ÷ MODIS")
+    ax.set_title(f"{country.replace('_', ' ')}: VIIRS S-NPP vs MODIS, {yearly.index[0]}–{yearly.index[-1]}")
+    ax.legend(loc="lower left", ncol=2)
+    return _save(fig, path)
+
+
+def gap_by_month(by_month, country, path=None):
+    """VIIRS/MODIS ratio per calendar month (pooled over years): hotspots and burned cells."""
+    x = np.arange(12)
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    ax.bar(x - 0.2, by_month.hotspot_ratio.values, width=0.4, color=MODIS, edgecolor="white", hatch="//",
+           label="Counting hotspots")
+    ax.bar(x + 0.2, by_month.cell_ratio.values, width=0.4, color=HARM, edgecolor="white",
+           label="Counting burned 0.1° cells")
+    ax.axhline(1, color=GREY, lw=1)
+    ax.set_xticks(x, fc.MONTHS)
+    ax.set_ylabel("VIIRS ÷ MODIS")
+    ax.grid(axis="x", visible=False)
+    ax.set_title(f"{country.replace('_', ' ')}: the gap changes with the season")
+    ax.legend(loc="upper left")
+    return _save(fig, path)
+
+
+def same_pass(sp, country, path=None):
+    """Aqua vs Suomi NPP on the same ~13:30 pass: share of each one's fire cell-days the other also saw."""
+    fig, ax = plt.subplots(figsize=(10, 3.2))
+    rows = [("Aqua (MODIS) fire cells\nalso seen by S-NPP (VIIRS)", sp["share_of_aqua_seen_by_snpp"], sp["aqua_cell_days"]),
+            ("S-NPP (VIIRS) fire cells\nalso seen by Aqua (MODIS)", sp["share_of_snpp_seen_by_aqua"], sp["snpp_cell_days"])]
+    for i, (lab, share, n) in enumerate(rows[::-1]):
+        ax.barh(i, 1, color="#E6E6E6", height=0.55)
+        ax.barh(i, share, color=VIIRS if i == 1 else MODIS, height=0.55, hatch=None if i == 1 else "//",
+                edgecolor="white")
+        ax.text(share + 0.01, i, f"{share:.0%}", va="center", fontsize=13, fontweight="bold", color=INK)
+        ax.text(0.99, i, f"of {n:,} cell-days", va="center", ha="right", fontsize=10, color="#555555")
+    ax.set_yticks([0, 1], [r[0] for r in rows[::-1]])
+    ax.set_xlim(0, 1)
+    ax.set_xticks([])
+    ax.grid(False)
+    for s in ("bottom", "left"):
+        ax.spines[s].set_visible(False)
+    ax.set_title(f"{country.replace('_', ' ')}: same afternoon pass, same day, same 0.1° cell")
+    return _save(fig, path)
+
+
+def frp_hist(veg, country, path=None, years=(2012, 2025)):
+    """FRP per hotspot, MODIS vs VIIRS S-NPP (log scale): VIIRS adds many small fires."""
+    v = veg[(veg.year >= years[0]) & (veg.year <= years[1])]
+    m, n = v[v.family == "MODIS"].frp, v[v.satellite == "N"].frp
+    bins = np.logspace(-1, 3.5, 60)
+    fig, ax = plt.subplots(figsize=(10, 4.4))
+    ax.hist(n[n > 0], bins=bins, color=VIIRS, alpha=0.85, label=f"VIIRS S-NPP ({len(n):,} hotspots)")
+    ax.hist(m[m > 0], bins=bins, histtype="step", color=MODIS, lw=2.5, label=f"MODIS ({len(m):,} hotspots)")
+    ax.set_xscale("log")
+    ax.set_ylim(0, ax.get_ylim()[1] * 1.22)
+    ax.axvline(5, color=INK, lw=1, ls="--")
+    ax.text(60, ax.get_ylim()[1] * 0.45, f"Below 5 MW (dashed line):\n{(n < 5).mean():.0%} of VIIRS hotspots\n"
+            f"{(m < 5).mean():.1%} of MODIS hotspots", fontsize=11, color=INK)
+    ax.set_xlabel("Fire radiative power per hotspot (MW, log scale)")
+    ax.set_ylabel("hotspots")
+    ax.set_title(f"{country.replace('_', ' ')}: VIIRS also sees the small fires")
+    ax.legend(loc="upper left")
+    return _save(fig, path)
