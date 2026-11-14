@@ -21,7 +21,7 @@ from streamlit_folium import st_folium
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from syntra import fire_calendar as fc  # noqa: E402
 from syntra import harmonize as hz  # noqa: E402
-from syntra.data import load_fires  # noqa: E402
+from syntra.data import DEFAULT_COUNTRY, load_fires  # noqa: E402
 
 COUNTRIES = ["Sudan", "Ethiopia", "Iraq", "Saudi_Arabia", "Australia", "Zambia", "South_Sudan", "Mexico"]
 COLORS = {"MODIS": "#E69F00", "VIIRS_SNPP": "#56B4E9", "harmonized": "#009E73"}  # Okabe-Ito, colorblind-safe
@@ -55,7 +55,8 @@ def bbox_from_drawing(drawing):
 with st.sidebar:
     st.title("🔥 SYNTRA fire calendar")
     st.caption("MODIS + VIIRS hotspots harmonized into one record · NASA Space Apps 2026, Jeddah")
-    country = st.selectbox("Country", COUNTRIES, format_func=lambda c: c.replace("_", " "))
+    country = st.selectbox("Country", COUNTRIES, index=COUNTRIES.index(DEFAULT_COUNTRY) if DEFAULT_COUNTRY in COUNTRIES else 0,
+                           format_func=lambda c: c.replace("_", " "))
     other = st.text_input("…or another FIRMS country name", placeholder="e.g. Kazakhstan")
     country = other.strip().replace(" ", "_") or country
 

@@ -17,7 +17,7 @@ pip install -r requirements.txt
 python scripts/fetch_firms.py
 ```
 
-The last command downloads the FIRMS yearly files (Saudi Arabia, 2000 to 2025) into `data/raw/`. Data is not stored in git, so everyone runs it once.
+The last command downloads the FIRMS yearly files (Sudan, 2000 to 2025; change `DEFAULT_COUNTRY` in `syntra/data.py` for another country) into `data/raw/`. Data is not stored in git, so everyone runs it once.
 
 Then open `notebooks/00_load_data.ipynb` and run all cells. The app runs with `streamlit run app/app.py`.
 
@@ -67,7 +67,7 @@ syntra-firms/
 
 [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) active fire data: MODIS Collection 6.1 and VIIRS 375 m (Suomi NPP and NOAA-20). Column meanings: [FIRMS attribute definitions](https://www.earthdata.nasa.gov/data/tools/firms/active-fire-data-attributes-modis-viirs).
 
-New to the sensors? Read [docs/MODIS_vs_VIIRS.md](docs/MODIS_vs_VIIRS.md) (what MODIS and VIIRS are, how they differ, and our harmonization plan; English + Arabic, with a one-page [PDF](docs/MODIS_vs_VIIRS.pdf)).
+New to the sensors? Read [docs/MODIS_vs_VIIRS.md](docs/MODIS_vs_VIIRS.md) (what MODIS and VIIRS are, how they differ, and our harmonization plan; English + Arabic, with a one-page [PDF](docs/MODIS_vs_VIIRS.pdf)). Which fires we count and which we drop: [docs/FIRE_SOURCE.md](docs/FIRE_SOURCE.md).
 
 ## Working together
 

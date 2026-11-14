@@ -4,8 +4,8 @@ Notebooks, scripts and the app all import from here, so a fix made once
 reaches everyone.
 
     from syntra.data import fetch, load_fires
-    fetch("Saudi_Arabia", 2000, 2025)
-    fires = load_fires("Saudi_Arabia")
+    fetch("Sudan", 2000, 2025)
+    fires = load_fires("Sudan")
 """
 import pathlib
 from concurrent.futures import ThreadPoolExecutor
@@ -17,6 +17,9 @@ BASE_URL = "https://firms.modaps.eosdis.nasa.gov/data/country"
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 RAW_DIR = REPO_ROOT / "data" / "raw"
 PROCESSED_DIR = REPO_ROOT / "data" / "processed"
+
+# Area the team builds and tests on (see docs/DECISIONS.md). Change it here only.
+DEFAULT_COUNTRY = "Sudan"
 
 # FIRMS folder name -> label we use everywhere
 INSTRUMENTS = {
@@ -31,7 +34,7 @@ COLUMNS = ["sensor", "family", "satellite", "latitude", "longitude", "acq_date",
            "type", "version"]
 
 
-def fetch(country="Saudi_Arabia", start=2000, end=2025, download=True, instruments=None):
+def fetch(country=DEFAULT_COUNTRY, start=2000, end=2025, download=True, instruments=None):
     """Get the yearly CSVs into data/raw. Returns {instrument: [paths]}.
 
     Files already on disk are reused. With download=False nothing is fetched.
@@ -80,7 +83,7 @@ def _load_instrument(inst, paths):
     return df
 
 
-def load_fires(country="Saudi_Arabia", start=2000, end=2025, vegetation_only=True,
+def load_fires(country=DEFAULT_COUNTRY, start=2000, end=2025, vegetation_only=True,
                download=True, instruments=None):
     """One table for MODIS and VIIRS with the same column names.
 
