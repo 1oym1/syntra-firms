@@ -32,10 +32,44 @@ COUNTRIES = ["Sudan", "Ethiopia", "Iraq", "Saudi_Arabia", "Australia", "Zambia",
 COLORS = {"MODIS": "#E69F00", "VIIRS_SNPP": "#56B4E9", "VIIRS_NOAA20": "#CC79A7", "harmonized": "#009E73",
           "Static source": "#D55E00"}  # Okabe-Ito, colorblind-safe
 SENSOR = {"Terra": "MODIS", "Aqua": "MODIS", "N": "VIIRS_SNPP", "N20": "VIIRS_NOAA20"}
+SENSOR_LABEL = {"MODIS": "MODIS", "VIIRS_SNPP": "VIIRS S-NPP", "VIIRS_NOAA20": "VIIRS NOAA-20"}
 UNIT = "fire cell-days"
+RAMPS = {"Inferno": px.colors.sequential.Inferno, "Cividis": px.colors.sequential.Cividis,
+         "Viridis": px.colors.sequential.Viridis}
 MAP_COLS = ["latitude", "longitude", "acq_date", "acq_time", "satellite", "frp", "daynight", "type"]
 
 st.set_page_config(page_title="SYNTRA fire calendar", page_icon="🔥", layout="wide")
+
+# Look: dark theme in .streamlit/config.toml; cards below. Data colors stay Okabe-Ito (colorblind-safe).
+st.markdown("""<style>
+.block-container {padding-top: 1.4rem;}
+.hero {position: relative; overflow: hidden; border-radius: 18px; padding: 22px 26px 16px; margin-bottom: 14px;
+  background: radial-gradient(900px 260px at 0% -30%, rgba(242,140,40,.38), transparent 62%),
+              radial-gradient(700px 240px at 100% 130%, rgba(86,180,233,.22), transparent 60%),
+              linear-gradient(135deg, #1a2338 0%, #0d1424 100%);
+  border: 1px solid rgba(255,255,255,.09);}
+.hero .eyebrow {font-size: .74rem; letter-spacing: .09em; text-transform: uppercase; color: #F2A65A; font-weight: 600;}
+.hero h1 {font-size: 2.05rem; line-height: 1.15; margin: .25rem 0 .3rem; padding: 0; color: #fff;}
+.hero p {color: #c9d1e0; margin: 0 0 .8rem; font-size: .98rem;}
+.pill {display: inline-block; padding: 3px 11px; border-radius: 999px; margin: 0 6px 6px 0; font-size: .8rem;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13); color: #E6EAF2;}
+.pill.live::before {content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #3ddc84; margin-right: 6px; vertical-align: 1px; animation: pulse 1.8s infinite;}
+@keyframes pulse {0% {box-shadow: 0 0 0 0 rgba(61,220,132,.7);} 70% {box-shadow: 0 0 0 7px rgba(61,220,132,0);}
+  100% {box-shadow: 0 0 0 0 rgba(61,220,132,0);}}
+.card {background: rgba(127,127,127,.09); border: 1px solid rgba(127,127,127,.18); border-radius: 14px;
+  padding: 16px 20px; height: 100%;}
+.status {border-left: 6px solid var(--c);}
+.badge {display: inline-block; font-weight: 700; letter-spacing: .07em; font-size: .78rem; padding: 3px 10px;
+  border-radius: 6px; border: 1px solid var(--c);}
+.headline {font-size: 1.3rem; line-height: 1.35; margin: .55rem 0 .25rem;}
+.sub {opacity: .75; font-size: .88rem;}
+.card h4 {margin: 0 0 .4rem; padding: 0; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; opacity: .75;}
+.big {font-size: 1.6rem; font-weight: 700;}
+[data-testid="stMetric"] {background: rgba(127,127,127,.09); border: 1px solid rgba(127,127,127,.18);
+  border-radius: 14px; padding: 12px 16px;}
+[data-testid="stMetricLabel"] p {font-size: .82rem; opacity: .85;}
+</style>""", unsafe_allow_html=True)
 
 
 # ---------- data ----------
@@ -81,6 +115,48 @@ def analyse(country, bbox):
     return series.area_series(area, d["info"], cs), series.month_to_date(area, d["info"])
 
 
+BANDS = {("latitude", 2): ["North", "South"], ("latitude", 3): ["North", "Central", "South"],
+         ("longitude", 2): ["West", "East"], ("longitude", 3): ["West", "Central", "East"]}
+
+
+@st.cache_data(show_spinner=False, ttl=6 * 3600)
+def regions_over_time(country, bbox, coord, n, step):
+    """Harmonized fire cell-days per week (or month) for n equal-width bands of the area.
+
+    Same rules as the monthly series: VIIRS S-NPP from 2012 (NOAA-20 x k after S-NPP's last day),
+    MODIS x the country's monthly MODIS->VIIRS factor before (x the Terra factor before Aqua, Jul 2002)."""
+    d, cs = get_country(country), get_series(country)
+    info, v = d["info"], in_box(d["veg"], bbox)
+    lo, hi = float(v[coord].min()), float(v[coord].max())
+    edges = np.linspace(lo, hi, n + 1)
+    band = np.clip(np.digitize(v[coord].values, edges[1:-1]), 0, n - 1)
+    if coord == "latitude":
+        band = n - 1 - band                       # first band = north
+    v = v.assign(band=band)
+
+    def daily(rows):
+        return rows.drop_duplicates(["band", "acq_date", "cell_id"]).groupby(["acq_date", "band"]).size()
+
+    days = pd.date_range("2000-11-01", info["complete_day"], freq="D")
+    full = pd.MultiIndex.from_product([days, range(n)], names=["acq_date", "band"])
+    m = daily(v[v.family == "MODIS"]).reindex(full, fill_value=0).unstack()
+    sn = daily(v[v.satellite == "N"]).reindex(full, fill_value=0).unstack()
+    n20 = daily(v[v.satellite == "N20"]).reindex(full, fill_value=0).unstack()
+    mon = m.index.month.values - 1
+    kv = cs["k_viirs"].reindex(range(1, 13)).values[mon]
+    kt = np.where(m.index < pd.Timestamp("2002-07-01"), cs["k_terra"].reindex(range(1, 13)).values[mon], 1.0)
+    out = m.mul(kv * kt, axis=0)
+    viirs = m.index >= pd.Timestamp("2012-01-01")
+    out[viirs] = sn[viirs]
+    end, k = info.get("snpp_end"), info.get("k_n20")
+    if end is not None and k is not None and np.isfinite(k):
+        after = m.index > end
+        out[after] = n20[after] * k
+    out = out.resample("W-MON", label="left", closed="left").sum() if step == "Week" else out.resample("MS").sum()
+    out.columns = BANDS[(coord, n)]
+    return out, edges
+
+
 def column(tab, col):
     """Monthly Series (PeriodIndex); months a sensor did not fly are NaN, not 0."""
     s = series.as_series(tab, col)
@@ -96,6 +172,62 @@ def bbox_from_drawing(drawing):
     pts = np.array(drawing["geometry"]["coordinates"][0])  # [[lon, lat], ...]
     return (round(pts[:, 0].min(), 3), round(pts[:, 1].min(), 3),
             round(pts[:, 0].max(), 3), round(pts[:, 1].max(), 3))
+
+
+def ordinal(n):
+    return f"{n}{'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')}"
+
+
+def level(c):
+    """Plain-language status of a month vs the same month in earlier years: (label, icon, color).
+    Icon + word + color, so it never relies on color alone."""
+    a = c["anomaly_pct"]
+    if not np.isfinite(a):
+        return "No baseline yet", "⚪", "#999999"
+    if np.isfinite(c["p90"]) and c["value"] > c["p90"]:
+        return "Very high", "🔴", "#D55E00"
+    if a >= 20:
+        return "Above normal", "🟠", "#E69F00"
+    if a <= -20:
+        return "Below normal", "🔵", "#56B4E9"
+    return "Normal", "🟢", "#009E73"
+
+
+def year_to_date(s, month):
+    """Jan..month total of `month`'s year and the median of the same months in earlier complete years."""
+    cal = fc.calendar(s).iloc[:, :month.month]
+    full = cal.dropna()
+    cur = float(cal.loc[month.year].sum()) if month.year in cal.index else float("nan")
+    past = full[full.index < month.year].sum(axis=1)
+    return cur, float(past.median()) if len(past) else float("nan"), len(past)
+
+
+def annual_totals(s):
+    """Totals of full years only (12 months of data)."""
+    cal = fc.calendar(s).dropna()
+    return cal.sum(axis=1)
+
+
+def linear_trend(y):
+    """OLS slope per year, in % of the mean per decade, and the fit's R2 (for orientation only)."""
+    x = y.index.values.astype(float)
+    b, a = np.polyfit(x, y.values, 1)
+    fit = a + b * x
+    r2 = 1 - ((y.values - fit) ** 2).sum() / ((y.values - y.values.mean()) ** 2).sum()
+    return b, 100 * 10 * b / y.mean(), r2, pd.Series(fit, index=y.index)
+
+
+def report_html(title, blocks, figs):
+    """One HTML file: the summary text and the interactive charts (FR16)."""
+    parts = [f"<html><head><meta charset='utf-8'><title>{title}</title><style>body{{font-family:sans-serif;"
+             "max-width:1100px;margin:24px auto;padding:0 16px;color:#1b2333}h1{margin-bottom:4px}"
+             ".muted{color:#667}</style></head><body>", f"<h1>{title}</h1>"]
+    parts += blocks
+    for i, (name, f) in enumerate(figs.items()):
+        parts.append(f"<h2>{name}</h2>" + f.to_html(full_html=False, include_plotlyjs="cdn" if i == 0 else False))
+    parts.append("<p class='muted'>SYNTRA · NASA Space Apps 2026 · data: NASA FIRMS (MODIS C6.1, VIIRS 375 m).</p>"
+                 "</body></html>")
+    return "\n".join(parts).encode()
 
 
 # ---------- sidebar ----------
@@ -160,27 +292,65 @@ shown = column(h, {"Harmonized": "harmonized_cells", "Raw MODIS": "modis_cells",
 cmp = fc.month_vs_median(harm, sel)
 ho = cs["heldout"]
 
-# ---------- header + KPIs ----------
+# ---------- hero + status ----------
 place = country.replace("_", " ") + ("" if bbox is None else f" · box W{bbox[0]} S{bbox[1]} E{bbox[2]} N{bbox[3]}")
-st.header(f"Burning activity: {place}")
-st.caption("Unit: **fire cell-days**: each day, the number of 0.1° grid cells (about 11 km) with at least one "
-           "vegetation-fire detection, summed over the month, in VIIRS S-NPP units. One fire counts once per day "
-           "for both sensors, so it measures how much burning there was, not how many pixels saw it. "
-           "Source: NASA FIRMS.")
+live = (f'<span class="pill live">Live · FIRMS data through {info["complete_day"]:%d %b %Y}</span>' if info.get("key")
+        else f'<span class="pill">Archive · data through {info["complete_day"]:%d %b %Y}</span>')
+st.markdown(f"""<div class="hero">
+<div class="eyebrow">NASA Space Apps 2026 · Harmonization of MODIS and VIIRS hot spots</div>
+<h1>Burning activity: {place}</h1>
+<p>One consistent record of vegetation fires from 2000 to today, whichever satellite saw them.</p>
+{live}<span class="pill">MODIS Terra + Aqua · VIIRS S-NPP + NOAA-20</span>
+<span class="pill">Harmonization R² {ho['r2']:.2f} on held-out years (raw MODIS {ho['r2_raw_modis']:.2f})</span>
+</div>""", unsafe_allow_html=True)
 
+lab, icon, col = level(cmp)
+mon = sel.strftime("%B")
+nth = f"{ordinal(cmp['rank'])} highest of {cmp['n_years'] + 1} {mon}s since 2000" if cmp["rank"] else ""
+if np.isfinite(cmp["anomaly_pct"]):
+    word = "above" if cmp["anomaly_pct"] >= 0 else "below"
+    head = (f"{sel.strftime('%B %Y')}: <b>{cmp['value']:,.0f}</b> fire cell-days, "
+            f"<b>{abs(cmp['anomaly_pct']):.0f}% {word}</b> a typical {mon}")
+else:
+    head = f"{sel.strftime('%B %Y')}: <b>{cmp['value']:,.0f}</b> fire cell-days"
+nxt = sel + 1
+nh = harm[(harm.index.month == nxt.month) & (harm.index < nxt)].dropna()
+s1, s2 = st.columns([2, 1])
+s1.markdown(f"""<div class="card status" style="--c:{col}">
+<span class="badge">{icon} {lab.upper()}</span>
+<div class="headline">{head}</div>
+<div class="sub">{nth} · median {cmp['median']:,.0f} · 90th percentile {cmp['p90']:,.0f}</div>
+</div>""", unsafe_allow_html=True)
+if len(nh):
+    so_far = ""
+    if mtd is not None and info["complete_day"].to_period("M") == nxt and np.isfinite(mtd["anomaly_pct"]):
+        so_far = (f"<div class='sub'>So far (1–{mtd['through_day']} {nxt.strftime('%b')}): "
+                  f"{mtd['anomaly_pct']:+.0f}% vs the same days, {ordinal(mtd['rank'])} of {mtd['n_years'] + 1}</div>")
+    s2.markdown(f"""<div class="card"><h4>What {nxt.strftime('%B')} usually brings</h4>
+<div class="big">{nh.median():,.0f}</div>
+<div class="sub">typical range {nh.quantile(.1):,.0f}–{nh.quantile(.9):,.0f} ({len(nh)} years).
+Climatology, not a forecast.</div>{so_far}</div>""", unsafe_allow_html=True)
+
+st.write("")
+ytd, ytd_med, ytd_n = year_to_date(harm, sel)
+rec = harm.dropna()
 k1, k2, k3, k4 = st.columns(4)
 k1.metric(sel.strftime("%b %Y"), f"{cmp['value']:,.0f}",
           f"{cmp['anomaly_pct']:+.0f}% vs median" if np.isfinite(cmp["anomaly_pct"]) else None,
+          delta_color="inverse", help="Fire cell-days in the month, VIIRS S-NPP units")
+k2.metric(f"Jan–{sel.strftime('%b')} {sel.year} total", f"{ytd:,.0f}",
+          f"{100 * (ytd / ytd_med - 1):+.0f}% vs median of {ytd_n} years" if ytd_med > 0 else None,
           delta_color="inverse")
-k2.metric(f"Historical median ({sel.strftime('%B')})", f"{cmp['median']:,.0f}", f"{cmp['n_years']} years",
-          delta_color="off")
-k3.metric("Rank among same months", f"#{cmp['rank']} of {cmp['n_years'] + 1}" if cmp["rank"] else "n/a")
-k4.metric("Harmonization skill (R², held-out years)", f"{ho['r2']:.2f}", f"raw MODIS: {ho['r2_raw_modis']:.2f}",
-          delta_color="off")
-
-if np.isfinite(cmp["p90"]) and cmp["value"] > cmp["p90"]:
-    st.warning(f"⚠️ {sel.strftime('%B %Y')} is above the 90th percentile of all previous "
-               f"{sel.strftime('%B')}s: an unusually active month.")
+k3.metric(f"Busiest month on record: {rec.idxmax().strftime('%b %Y')}", f"{rec.max():,.0f}")
+top = fc.busiest_years(harm)
+k4.metric(f"Busiest full year: {top.index[0]}" if len(top) else "Busiest full year",
+          f"{top.iloc[0]:,.0f}" if len(top) else "n/a")
+with st.expander("What is a fire cell-day?"):
+    st.markdown("Each day, the map is cut into 0.1° squares (about 11 km). A square with at least one vegetation-fire "
+                "detection that day counts 1. A month's value is the sum over its days. One fire counts once per "
+                "day for both sensors, so the number measures how much burning there was, not how many pixels saw "
+                "it. Values are in VIIRS S-NPP units: older MODIS months are converted with monthly factors fitted "
+                "on 2012–2021, when both sensors flew. Source: NASA FIRMS.")
 
 if mtd is not None and np.isfinite(mtd["value"]):
     day = info["complete_day"]
@@ -197,8 +367,10 @@ if mtd is not None and np.isfinite(mtd["value"]):
                  f"{info['k_n20']:.3f} (S-NPP-equivalent). ")
     st.caption(note + "Near-real-time data: provisional.")
 
-tab_cal, tab_h, tab_map, tab_data, tab_m = st.tabs(
-    ["📅 Burning calendar", "🛰️ Harmonization", "🗺️ Hotspot map", "⬇️ Download", "📖 Method"])
+figs = {}
+tab_cal, tab_3d, tab_tr, tab_h, tab_map, tab_data, tab_m = st.tabs(
+    ["📅 Burning calendar", "🧊 3D view", "📈 Trend & the 2012 jump", "🛰️ Harmonization", "🗺️ Hotspot map",
+     "⬇️ Download", "📖 Method"])
 
 # ---------- calendar ----------
 with tab_cal:
@@ -216,28 +388,80 @@ with tab_cal:
                       y0=sel.year - 0.5, y1=sel.year + 0.5, line=dict(color="cyan", width=3))
     fig.update_layout(height=40 + 26 * len(cal), margin=dict(l=0, r=0, t=30, b=0))
     st.plotly_chart(fig)
+    figs[f"Burning calendar ({view.lower()})"] = fig
 
     c1, c2 = st.columns(2)
     with c1:
         same = harm[harm.index.month == sel.month].dropna()
         bar = go.Figure(go.Bar(x=same.index.year, y=same.values,
-                               marker_color=[COLORS["harmonized"] if p == sel else "#999" for p in same.index]))
+                               marker_color=[COLORS["harmonized"] if p == sel else "#8a94a6" for p in same.index]))
         bar.add_hline(y=cmp["median"], line_dash="dash", annotation_text="historical median")
-        bar.update_layout(title=f"Every {sel.strftime('%B')} since 2000", height=320,
+        bar.update_layout(title=f"Every {mon} since 2000", height=360,
                           margin=dict(l=0, r=0, t=40, b=0), yaxis_title=UNIT)
         st.plotly_chart(bar)
+        figs[f"Every {mon} since 2000"] = bar
     with c2:
         hist = harm[harm.index.year < sel.year]
-        st.markdown("**Fire season at a glance**")
+        clim = fc.calendar(hist).median()
+        this = fc.calendar(harm).loc[sel.year] if sel.year in fc.calendar(harm).index else None
+        clock = go.Figure()
+        clock.add_barpolar(r=clim.values, theta=fc.MONTHS, name="Typical year (median)",
+                           marker_color="rgba(160,170,190,0.45)", marker_line_width=0)
+        if this is not None:
+            r = list(this.values) + [this.values[0]]
+            clock.add_scatterpolar(r=r, theta=fc.MONTHS + [fc.MONTHS[0]], mode="lines+markers", name=str(sel.year),
+                                   line=dict(color=COLORS["harmonized"], width=2), marker_size=8)
+        clock.update_layout(title="Fire-season clock", height=360, margin=dict(l=30, r=30, t=40, b=10),
+                            polar=dict(angularaxis=dict(direction="clockwise", rotation=90)),
+                            legend=dict(orientation="h", y=-0.05))
+        st.plotly_chart(clock)
+        figs["Fire-season clock"] = clock
         if len(hist.dropna()):
-            st.markdown(f"- Peak months (median): **{', '.join(fc.peak_months(fc.calendar(hist)))}**")
-        top = fc.busiest_years(harm)
-        st.markdown("- Busiest full years: " + ", ".join(f"**{y}** ({v:,.0f})" for y, v in top.items()))
-        st.markdown(f"- {sel.strftime('%B %Y')}: **{cmp['value']:,.0f}** {UNIT} vs median "
-                    f"**{cmp['median']:,.0f}** ({cmp['anomaly_pct']:+.0f}%)")
+            st.caption(f"Peak months (median): **{', '.join(fc.peak_months(fc.calendar(hist)))}** · busiest full "
+                       "years: " + ", ".join(f"**{y}** ({v:,.0f})" for y, v in top.items()))
         src = h.loc[(h.year == sel.year) & (h.month == sel.month), "source"]
         if len(src):
-            st.markdown(f"- Source of {sel.strftime('%b %Y')}: {src.iloc[0]}")
+            st.caption(f"Source of {sel.strftime('%b %Y')}: {src.iloc[0]}")
+
+# ---------- trend + 2012 jump ----------
+with tab_tr:
+    ann = annual_totals(harm)
+    naive = pd.concat([annual_totals(column(h, "modis_cells")).loc[lambda s: s.index < 2012],
+                       annual_totals(column(h, "viirs_cells")).loc[lambda s: s.index >= 2012]])
+
+    def jump(s):
+        a, b = s.loc[2009:2011], s.loc[2012:2014]
+        return b.mean() / a.mean() if len(a) and len(b) and a.mean() > 0 else float("nan")
+
+    j_raw, j_h = jump(naive), jump(ann)
+    st.markdown(f"**The 2012 jump, removed.** Plotting raw counts (MODIS until 2011, VIIRS after) makes burning look "
+                f"like it jumped **×{j_raw:.1f}** in 2012, only because VIIRS started. After harmonization the "
+                f"step is **×{j_h:.2f}**: the change reflects fires, not satellites.")
+    jf = go.Figure()
+    jf.add_scatter(x=naive.index, y=naive.values, name="Raw: MODIS to 2011, then VIIRS", mode="lines+markers",
+                   line=dict(color="#8a94a6", dash="dot"))
+    jf.add_scatter(x=ann.index, y=ann.values, name="Harmonized (one record)", mode="lines+markers",
+                   line=dict(color=COLORS["harmonized"], width=3))
+    jf.add_vline(x=2011.5, line_dash="dash", line_color=COLORS["VIIRS_SNPP"],
+                 annotation_text="VIIRS starts (2012)", annotation_position="top left")
+    jf.update_layout(height=380, margin=dict(l=0, r=0, t=30, b=0), yaxis_title=f"{UNIT} / year",
+                     legend=dict(orientation="h", y=-0.15))
+    st.plotly_chart(jf)
+    figs["The 2012 jump, removed"] = jf
+
+    if len(ann) >= 5:
+        b, pct, r2t, fit = linear_trend(ann)
+        tf = go.Figure()
+        tf.add_bar(x=ann.index, y=ann.values, name="Harmonized total per year", marker_color=COLORS["harmonized"])
+        tf.add_scatter(x=fit.index, y=fit.values, name=f"Linear trend ({pct:+.0f}% per decade)",
+                       line=dict(color="#F0E442", dash="dash", width=2))
+        tf.update_layout(height=340, margin=dict(l=0, r=0, t=30, b=0), yaxis_title=f"{UNIT} / year",
+                         legend=dict(orientation="h", y=-0.15))
+        st.plotly_chart(tf)
+        figs["Long-term trend"] = tf
+        st.caption(f"Full years {ann.index.min()}–{ann.index.max()}. Linear fit: {b:+,.0f} {UNIT} per year "
+                   f"({pct:+.0f}% of the mean per decade), fit R² {r2t:.2f}. Years vary a lot, so read the trend "
+                   "as a direction, not a prediction.")
 
 # ---------- harmonization ----------
 with tab_h:
@@ -256,6 +480,7 @@ with tab_h:
     ts.update_layout(height=380, margin=dict(l=0, r=0, t=30, b=0), yaxis_title=f"{UNIT} / month",
                      legend=dict(orientation="h"))
     st.plotly_chart(ts)
+    figs["Raw MODIS, raw VIIRS and MODIS converted"] = ts
 
     val = cs["validation"]
     c1, c2 = st.columns(2)
@@ -273,6 +498,7 @@ with tab_h:
                          xaxis_title="observed VIIRS", yaxis_title="estimate",
                          margin=dict(l=0, r=0, t=40, b=0), legend=dict(orientation="h", y=-0.18, yanchor="top"))
         st.plotly_chart(sc)
+        figs["Validation: predicted vs observed"] = sc
     with c2:
         st.markdown(f"**Validation**: {ho['n_months']} months, {hz.OVERLAP[0]}–{hz.OVERLAP[1]}, each year "
                     f"predicted from MODIS by factors fitted on the other years. Monthly R² **{ho['r2']:.3f}** "
@@ -298,44 +524,182 @@ with tab_h:
 # ---------- hotspot map ----------
 with tab_map:
     pts_all = in_box(veg, bbox)
+    last = info["complete_day"].date()
     d0 = sel.to_timestamp().date()
-    d1 = min((sel + 1).to_timestamp().date() - pd.Timedelta(days=1), info["complete_day"].date())
-    rng = st.date_input("Date range", (d0, d1), min_value=veg.acq_date.min().date(),
-                        max_value=info["complete_day"].date())
-    pts = pts_all.iloc[0:0]
+    d1 = min((sel + 1).to_timestamp().date() - pd.Timedelta(days=1), last)
+    c1, c2, c3 = st.columns([1.3, 1.5, 1.2])
+    when = c1.segmented_control("View", ["Live: last 7 days", f"{sel.strftime('%b %Y')}", "Custom dates"],
+                                default=f"{sel.strftime('%b %Y')}") or f"{sel.strftime('%b %Y')}"
+    picked = c2.pills("Sensors (tap to turn on/off)", list(SENSOR_LABEL.values()), selection_mode="multi",
+                      default=list(SENSOR_LABEL.values()))
+    show_static = c3.toggle("Static sources (gas flares, industry)", value=False,
+                            help="Always-hot places removed by cleaning. Turn on to see what was filtered out.")
+    density = c3.toggle("Density view", value=False, help="Heat map of where fires cluster, instead of points.")
+    if when.startswith("Live"):
+        rng = (last - pd.Timedelta(days=6), last)
+    elif when == "Custom dates":
+        rng = st.date_input("Date range", (d0, d1), min_value=veg.acq_date.min().date(), max_value=last)
+    else:
+        rng = (d0, d1)
+    keep = [k for k, v in SENSOR_LABEL.items() if v in (picked or [])]
+    pts = pts_all.iloc[0:0].assign(sensor=pd.Series(dtype=str))
     if isinstance(rng, (tuple, list)) and len(rng) == 2:
         pts = pts_all[pts_all.acq_date.between(pd.Timestamp(rng[0]), pd.Timestamp(rng[1]))]
         pts = pts.assign(sensor=pts.satellite.map(SENSOR))
-        show_static = st.toggle("Show static sources (gas flares, refineries)", value=False)
-        st.caption(f"{len(pts):,} hotspots ({(pts.sensor == 'VIIRS_SNPP').sum():,} VIIRS S-NPP, "
-                   f"{(pts.sensor == 'VIIRS_NOAA20').sum():,} VIIRS NOAA-20, {(pts.sensor == 'MODIS').sum():,} MODIS). "
+        pts = pts[pts.sensor.isin(keep)]
+        if when.startswith("Live") and not info.get("key"):
+            st.caption("No FIRMS_MAP_KEY: \"live\" shows the last 7 days of the archive.")
+        n = pts.sensor.value_counts()
+        snpp_end = info.get("snpp_end")
+        if "VIIRS_SNPP" in keep and snpp_end is not None and pd.Timestamp(rng[1]) > snpp_end:
+            st.caption(f"Suomi NPP data ends {snpp_end:%d %b %Y}; after that VIIRS comes from NOAA-20.")
+        st.caption(f"**{rng[0]:%d %b %Y} → {rng[1]:%d %b %Y}** · {len(pts):,} vegetation-fire hotspots ("
+                   + ", ".join(f"{n.get(k, 0):,} {SENSOR_LABEL[k]}" for k in keep) + "). "
                    "Calendar and anomalies use vegetation fires only.")
         show = pts.sample(30000, random_state=0) if len(pts) > 30000 else pts
         show = show[["sensor", "acq_date", "latitude", "longitude", "frp"]]
         if show_static:
             stc = in_box(data["static"], bbox)
             stc = stc[stc.acq_date.between(pd.Timestamp(rng[0]), pd.Timestamp(rng[1]))]
+            stc = stc[stc.satellite.map(SENSOR).isin(keep)] if "satellite" in stc else stc
+            st.caption(f"Plus {len(stc):,} static-source hotspots (red): always-hot sites removed by cleaning, "
+                       "not counted as fires.")
             show = pd.concat([show, stc.assign(sensor="Static source")[show.columns]], ignore_index=True)
         if len(show):
-            mp = px.scatter_map(show, lat="latitude", lon="longitude", color="sensor", hover_data=["acq_date", "frp"],
-                                color_discrete_map=COLORS, height=560, map_style="carto-darkmatter",
-                                center=dict(lat=float(pts_all.latitude.median()), lon=float(pts_all.longitude.median())),
-                                zoom=4.3)
-            mp.update_traces(marker_size=5)
-            mp.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+            centre = dict(lat=float(pts_all.latitude.median()), lon=float(pts_all.longitude.median()))
+            if density:
+                mp = px.density_map(show[show.sensor != "Static source"], lat="latitude", lon="longitude",
+                                    radius=7, center=centre, zoom=4.3, height=560, map_style="carto-darkmatter",
+                                    color_continuous_scale="Inferno")
+                mp.update_coloraxes(showscale=False)
+                stx = show[show.sensor == "Static source"]
+                if len(stx):
+                    mp.add_scattermap(lat=stx.latitude, lon=stx.longitude, mode="markers", name="Static source",
+                                      marker=dict(color=COLORS["Static source"], size=7))
+            else:
+                mp = px.scatter_map(show, lat="latitude", lon="longitude", color="sensor",
+                                    hover_data=["acq_date", "frp"], color_discrete_map=COLORS, height=560,
+                                    map_style="carto-darkmatter", center=centre, zoom=4.3,
+                                    labels={"sensor": "Sensor"})
+                mp.update_traces(marker_size=5)
+                mp.for_each_trace(lambda t: t.update(name=SENSOR_LABEL.get(t.name, t.name)))
+            mp.update_layout(margin=dict(l=0, r=0, t=0, b=0), legend=dict(orientation="h", y=1.02, x=0))
             st.plotly_chart(mp)
         else:
-            st.info("No hotspots in this date range.")
+            st.info("No hotspots for these dates and sensors.")
+
+# ---------- 3D ----------
+with tab_3d:
+    st.markdown("**Fire landscape.** Every peak is a month of burning: years run front to back, months left to right. "
+                "Drag to rotate, scroll to zoom, hover for values. Switch to raw to see the cliff the satellites "
+                "made in 2012, and how harmonization flattens it.")
+    surf = st.radio("Surface", ["Harmonized", "Raw: MODIS to 2011, then VIIRS"], key="surf3d", horizontal=True)
+    if surf == "Harmonized":
+        s3 = harm
+    else:
+        mraw, vraw = column(h, "modis_cells"), column(h, "viirs_cells")
+        s3 = mraw.where(mraw.index.year < 2012, vraw)
+    cal3 = fc.calendar(s3)
+    yrs = cal3.index.values
+    land = go.Figure(go.Surface(
+        z=cal3.values, x=np.arange(1, 13), y=yrs, colorscale=RAMPS[ramp], cmin=0, cmax=float(np.nanmax(fc.calendar(harm).values)),
+        colorbar=dict(title=dict(text=UNIT, side="right"), thickness=12, len=0.6),
+        contours=dict(z=dict(show=True, usecolormap=True, project_z=True, highlightcolor="white")),
+        hovertemplate="%{y} · month %{x}<br><b>%{z:,.0f}</b> fire cell-days<extra></extra>",
+        lighting=dict(ambient=0.55, diffuse=0.8, specular=0.25, roughness=0.6)))
+    land.add_scatter3d(x=[0.6, 12.4], y=[2011.5, 2011.5], z=[0, 0], mode="lines+text", text=["", "VIIRS starts"],
+                       line=dict(color=COLORS["VIIRS_SNPP"], width=6, dash="dash"), textfont=dict(color="#E6EAF2"),
+                       hoverinfo="skip", showlegend=False)
+    if sel.year in cal3.index and np.isfinite(cal3.loc[sel.year].iloc[sel.month - 1]):
+        zv = float(cal3.loc[sel.year].iloc[sel.month - 1])
+        land.add_scatter3d(x=[sel.month], y=[sel.year], z=[zv], mode="markers+text",
+                           text=[f"{sel.strftime('%b %Y')}: {zv:,.0f}"], textposition="top center",
+                           marker=dict(size=7, color="cyan", symbol="diamond", line=dict(color="white", width=2)),
+                           textfont=dict(color="cyan", size=13), hoverinfo="skip", showlegend=False)
+    land.update_layout(
+        height=640, margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)",
+        scene=dict(xaxis=dict(title="", tickvals=list(range(1, 13)), ticktext=fc.MONTHS),
+                   yaxis=dict(title="", autorange="reversed"), zaxis=dict(title=UNIT, range=[0, None]),
+                   aspectratio=dict(x=1.2, y=1.7, z=0.65), camera=dict(eye=dict(x=1.9, y=-1.9, z=1.25))))
+    st.plotly_chart(land)
+    figs["3D fire landscape"] = land
+
+    st.markdown("**Regions over time (3D).** Harmonized fire activity per week for 2–3 parts of the area, side by "
+                "side. Every setting below is yours to change; drag to rotate.")
+    o1, o2, o3, o4 = st.columns(4)
+    split = o1.selectbox("Split the area", ["North → South", "West → East"])
+    nreg = o2.radio("Regions", [2, 3], index=1, horizontal=True)
+    step = o3.radio("Step", ["Week", "Month"], horizontal=True)
+    smooth = o4.toggle("Smooth (4-step mean)", value=False)
+    norm = o4.toggle("Compare shapes", value=False,
+                     help="Scale each region to its own peak (100 %), so a small region's trend is visible next to a big one.")
+    coord = "latitude" if split.startswith("North") else "longitude"
+    with st.spinner("Counting fires per region…"):
+        reg, edges = regions_over_time(country, bbox, coord, nreg, step)
+    y0, y1 = st.slider("Years", int(reg.index.year.min()), int(reg.index.year.max()),
+                       (max(int(reg.index.year.min()), 2012), int(reg.index.year.max())))
+    rg = reg[(reg.index.year >= y0) & (reg.index.year <= y1)]
+    if smooth:
+        rg = rg.rolling(4, min_periods=1).mean()
+    raw_rg = rg
+    if norm:
+        rg = 100 * rg / rg.max().replace(0, np.nan)
+    zunit = "% of the region's peak" if norm else f"fire cell-days / {step.lower()}"
+    xx = rg.index.year + (rg.index.dayofyear - 1) / 365.25
+    zmax = float(rg.values.max()) if rg.size else 1.0
+    rib = go.Figure()
+    for i, name in enumerate(rg.columns):
+        z = rg[name].values.astype(float)
+        lo_e, hi_e = sorted((edges[::-1] if coord == "latitude" else edges)[i:i + 2])
+        rng_txt = f"{lo_e:.1f}–{hi_e:.1f}° {'N' if coord == 'latitude' else 'E'}"
+        rib.add_surface(x=np.vstack([xx, xx]), y=np.vstack([np.full(len(z), i - 0.32), np.full(len(z), i + 0.32)]),
+                        z=np.vstack([z, z]), surfacecolor=np.vstack([z, z]), colorscale=RAMPS[ramp], cmin=0, cmax=zmax,
+                        showscale=i == 0, colorbar=dict(title=dict(text="% of peak" if norm else f"per {step.lower()}", side="right"),
+                                                        thickness=12, len=0.6),
+                        customdata=np.vstack([rg.index.strftime("%d %b %Y")] * 2),
+                        hovertemplate=f"<b>{name}</b> ({rng_txt})<br>%{{customdata}}<br>%{{z:,.0f}} {'% of peak' if norm else 'fire cell-days'}"
+                                      "<extra></extra>", name=name, showlegend=False)
+        rib.add_scatter3d(x=xx, y=np.full(len(z), i + 0.32), z=z, mode="lines", hoverinfo="skip",
+                          line=dict(color="rgba(255,255,255,0.55)", width=2), showlegend=False)
+    rib.update_layout(
+        height=600, margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)",
+        scene=dict(xaxis=dict(title="", dtick=2 if y1 - y0 > 8 else 1),
+                   yaxis=dict(title="", tickvals=list(range(len(rg.columns))), ticktext=list(rg.columns)),
+                   zaxis=dict(title=zunit),
+                   aspectratio=dict(x=2.2, y=1.0, z=0.7), camera=dict(eye=dict(x=-1.5, y=-1.9, z=1.0))))
+    st.plotly_chart(rib)
+    figs["Regions over time (3D)"] = rib
+    rg = raw_rg
+    yearly = rg.groupby(rg.index.year).sum()
+    pairs = list(zip(edges[:-1], edges[1:]))[::-1] if coord == "latitude" else list(zip(edges[:-1], edges[1:]))
+    summ = pd.DataFrame({"band": [f"{lo:.1f}–{hi:.1f}° {'N' if coord == 'latitude' else 'E'}" for lo, hi in pairs],
+                         "mean per year": yearly.mean().round(0).astype(int).values,
+                         "share of all fires": (100 * rg.sum() / rg.sum().sum()).round(1).astype(str).values + " %",
+                         f"busiest {step.lower()}": [rg[c].idxmax().strftime("%d %b %Y") for c in rg.columns]},
+                        index=rg.columns)
+    st.dataframe(summ)
+    st.caption("Bands are equal slices of the area's latitude or longitude range. Values use the same harmonization as "
+               "the calendar (VIIRS units), counted per day and summed per week or month.")
 
 # ---------- downloads ----------
 with tab_data:
     out = h.drop(columns=["ym"]).copy()
+    st.markdown("**Report**: summary, status and every chart in one interactive HTML file (opens in any browser).")
+    blocks = [f"<p class='muted'>{place} · data through {info['complete_day']:%d %b %Y} · unit: {UNIT} "
+              "(VIIRS S-NPP units)</p>",
+              f"<h2>{icon} {lab}</h2><p>{head}. {nth}; median {cmp['median']:,.0f}.</p>",
+              f"<p>Jan–{sel.strftime('%b')} {sel.year}: {ytd:,.0f} (median {ytd_med:,.0f}). Busiest month on record: "
+              f"{rec.max():,.0f} ({rec.idxmax().strftime('%b %Y')}). Harmonization: R² {ho['r2']:.3f} on held-out years "
+              f"(raw MODIS {ho['r2_raw_modis']:.3f}).</p>"]
+    st.download_button("📄 Download report (HTML)", report_html(f"SYNTRA fire report: {place}", blocks, figs),
+                       f"{country}_SYNTRA_report_{sel}.html", "text/html", type="primary")
+    st.markdown("**Data**")
     st.download_button("⬇️ Monthly harmonized series (CSV)", out.to_csv(index=False).encode(),
                        f"{country}_monthly_harmonized.csv", "text/csv")
     st.download_button("⬇️ Burning calendar, year × month (CSV)",
                        fc.calendar(harm).to_csv().encode(), f"{country}_calendar.csv", "text/csv")
     if len(pts):
-        st.download_button(f"⬇️ Hotspots {rng[0]} → {rng[1]} (CSV)",
+        st.download_button(f"⬇️ Hotspots {rng[0]} → {rng[1]}, sensors on the map (CSV)",
                            pts[MAP_COLS + ["sensor"]].to_csv(index=False).encode(),
                            f"{country}_hotspots_{rng[0]}_{rng[1]}.csv", "text/csv")
     st.dataframe(out.tail(36))

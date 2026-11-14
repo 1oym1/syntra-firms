@@ -5,6 +5,24 @@ Where the project stands. Newest first. Update it when something lands.
 
 
 
+## 2026-11-14, about 17:30 (Hisham): app redesign, 3D views, FR gaps closed
+
+- New look: dark theme (`.streamlit/config.toml`), hero header with live-data pill, plain-language status card
+  (🔴 Very high / 🟠 Above normal / 🟢 Normal / 🔵 Below normal, icon + word + color), "what next month usually
+  brings" card (climatology, not a forecast).
+- KPIs (FR14): month vs median, Jan–month total vs median, busiest month on record, busiest full year.
+- 🧊 3D view: rotatable "fire landscape" (years × months × fire cell-days; raw shows the 2012 cliff, harmonized
+  removes it) and "regions over time" (Yazeed's spec: fires per week over time for 2–3 regions; split N→S or W→E,
+  2/3 regions, week/month, years, smoothing, compare shapes are all settings).
+- 📈 Trend & the 2012 jump (FR12): raw stitched record jumps ×2.5 in 2012 (Sudan), harmonized ×0.99; linear trend
+  +6 %/decade (fit R² 0.06, so a direction only). Fire-season clock (polar) in the calendar tab.
+- Map (Hisham's list): live last 7 days / selected month / custom dates; MODIS, VIIRS S-NPP, VIIRS NOAA-20 on/off;
+  static sources on/off (shows what cleaning removed); density view.
+- Download (FR16): one interactive HTML report with the status text and every chart.
+- `.streamlit/secrets.toml` added to `.gitignore`.
+- Checked: browser at desktop and phone width; headless test of the default page. The headless test cannot drive
+  `st.pills` (a Streamlit testing limit), so the sensor toggles were checked by hand in the browser.
+
 ## 2026-11-14, about 16:30 (Hisham): main's PR #5 merged into PR #1, unit is now cell-days
 
 - PR #5 (Riyadh/it3x) changed `syntra/harmonize.py` to count **fire cell-days per month** (each 0.1° cell once per

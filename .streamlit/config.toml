@@ -1,0 +1,11 @@
+# SYNTRA app look (read by `streamlit run app/app.py` from the repo root)
+[theme]
+base = "dark"
+primaryColor = "#F28C28"            # ember orange: buttons, sliders, selected tab (UI only, not data)
+backgroundColor = "#0B1220"
+secondaryBackgroundColor = "#141D2F"
+textColor = "#E6EAF2"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"

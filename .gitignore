@@ -19,4 +19,5 @@ Thumbs.db
 
 # Secrets (FIRMS MAP_KEY etc.)
 .env
+.streamlit/secrets.toml
 data/external/
