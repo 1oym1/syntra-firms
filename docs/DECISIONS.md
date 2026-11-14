@@ -6,7 +6,9 @@ Short record of decisions the team has agreed on. Newest first.
 
 **Decision.** Cleaning keeps only points that fall inside the country's border (Natural Earth 1:10m, `syntra/clean.py` → `country_shape()`).
 
-**Why.** FIRMS country files are cut with a buffer around the border. In the 2025 MODIS file for Sudan, 339 of 50,143 clean points (0.7%) were outside Sudan: South Sudan 209, Central African Republic 60, Ethiopia 57, Chad 12, Eritrea 1. We work on Sudan only.
+**Why.** We work on Sudan only, and not every source is cut to the border:
+- The FIRMS **country files** are already Sudan-only. Checked on 2025 MODIS: all 50,143 clean points fall inside Sudan's detailed (1:10m) border. A coarse (1:50m) border wrongly put 339 of them in South Sudan, CAR, Ethiopia, Chad and Eritrea, but those points are only 0.6 km (median) and at most 5.9 km from the real border. So always use the 1:10m border for this check.
+- The **FIRMS API** (needed for 2026 data) returns a rectangle (bounding box), which does include South Sudan, Chad and others. The border clip removes them.
 
 ## 2026-11-14: Count vegetation fires only (`type = 0`)
 
