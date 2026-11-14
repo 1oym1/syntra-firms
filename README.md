@@ -21,6 +21,32 @@ The last command downloads the FIRMS yearly files (Saudi Arabia, 2000 to 2025) i
 
 Then open `notebooks/00_load_data.ipynb` and run all cells. The app runs with `streamlit run app/app.py`.
 
+## Harmonization (phases 4 and 5)
+
+Code: `syntra/harmonize.py`. Hotspots are snapped to a ~1 km grid and counted as unique fire-cells per day.
+On the 2012–2025 overlap we fit `VIIRS = a(month) + b × MODIS`, then convert MODIS 2000–2011 into
+VIIRS-equivalent units. Validation is leave-one-year-out: each year is predicted by a model that never saw it.
+
+```bash
+python scripts/validate_harmonization.py --countries Sudan Ethiopia Iraq Saudi_Arabia
+```
+
+| Country | R² raw MODIS | R² seasonal ratio | **R² our model** | Bias (model) |
+| --- | --- | --- | --- | --- |
+| Sudan | 0.31 | 0.99 | **0.99** | −0.1 % |
+| Ethiopia | 0.21 | 0.97 | **0.97** | 0.0 % |
+| Iraq | −0.27 | 0.71 | **0.88** | +0.2 % |
+| Saudi Arabia | −11.0 | −0.71 | **0.28** | +0.1 % |
+
+Saudi Arabia has few, scattered vegetation fires, so its monthly signal is noisy. It shows where the method
+reaches its limits. Full table: `outputs/tables/harmonization_validation.csv`.
+
+## App
+
+`streamlit run app/app.py`. Pick a country, then optionally draw a rectangle on the map or type lat/lon. The app
+shows the harmonized year × month burning calendar, the selected month vs its historical median, the
+validation, a hotspot map and CSV downloads. Data is downloaded from FIRMS on first use (about a minute).
+
 ## Folders
 
 ```
