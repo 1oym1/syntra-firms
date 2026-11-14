@@ -17,7 +17,7 @@ pip install -r requirements.txt
 python scripts/fetch_firms.py
 ```
 
-The last command downloads the FIRMS yearly files (Saudi Arabia, 2000 to 2025) into `data/raw/`. Data is not stored in git, so everyone runs it once.
+The last command downloads the FIRMS yearly files (Sudan, 2000 to 2025; change `DEFAULT_COUNTRY` in `syntra/data.py` for another country) into `data/raw/`. Data is not stored in git, so everyone runs it once.
 
 Then open `notebooks/00_load_data.ipynb` and run all cells. The app runs with `streamlit run app/app.py`.
 
