@@ -22,7 +22,9 @@ Where the project stands. Newest first. Update it when something lands.
 - **Faster load**: this year's FIRMS API data is cleaned once and cached on disk for 3 h
   (`data/processed/cache/nrt_<country>_<year>.parquet`, git-ignored with `data/`). Sudan: 44 s → 6 s; cold start
   of the whole app about 27 s. A country opened for the first time still downloads its yearly archive files
-  (1–3 min), so before the demo run `python scripts/warm_cache.py` (Sudan, Ethiopia, Saudi Arabia, Iraq).
+  (measured: Ethiopia 334 s, Iraq 246 s, Saudi Arabia 239 s), so before the demo run `python scripts/warm_cache.py`
+  (Sudan, Ethiopia, Saudi Arabia, Iraq; done 14 Nov). The archive stays on disk; after 3 h only this year's data is
+  fetched again (about 35 s).
 
 ## 2026-11-14, about 18:00 (Hisham): risk periods tab; January 2012 fix
 

@@ -254,7 +254,7 @@ with st.sidebar:
     country = other.strip().replace(" ", "_") or country
 
 with st.spinner(f"Loading {country.replace('_', ' ')} from NASA FIRMS… (about 30 s; a country opened for the "
-                "first time downloads ~60 yearly files, 1–3 min)"):
+                "first time downloads ~60 yearly files, 4–6 min)"):
     try:
         data = get_country(country)
         veg, info = data["veg"], data["info"]

@@ -5,7 +5,7 @@ Run from the repo root before a demo or after deploying:
     python scripts/warm_cache.py                       # Sudan, Ethiopia, Saudi Arabia, Iraq
     python scripts/warm_cache.py --countries Sudan Chad
 
-A new country needs ~60 yearly FIRMS files (1-3 min the first time). After that the archive is read from
+A new country needs ~60 yearly FIRMS files (about 4-6 min the first time; Ethiopia took 5.5 min). After that the archive is read from
 data/processed/ (cleaned parquet per file) and this year's FIRMS API data from data/processed/cache/ (kept
 3 hours), so a cold app start is ~30 s and later clicks are cached.
 """
