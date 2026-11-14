@@ -38,6 +38,7 @@ import argparse
 import numpy as np
 import pandas as pd
 
+from syntra.clean import month_span
 from syntra.data import DEFAULT_COUNTRY, PROCESSED_DIR
 
 TERRA_CAL = (2003, 2021)       # both MODIS satellites, before Terra's orbit drift
@@ -67,25 +68,20 @@ def monthly_cells(veg):
         "viirs_frp": v.groupby(["year", "month"])["frp"].sum(),
     }
     tab = pd.DataFrame(parts)
-    tab.index = tab.index.set_names(["year", "month"])
-    # Full month range so quiet months are zeros, not gaps
-    ym = tab.index.get_level_values("year").astype(int) * 100 + tab.index.get_level_values("month").astype(int)
-    first, last = ym.min(), ym.max()
-    months = pd.period_range(pd.Period(year=first // 100, month=first % 100, freq="M"),
-                             pd.Period(year=last // 100, month=last % 100, freq="M"), freq="M")
-    full = pd.MultiIndex.from_arrays([months.year, months.month], names=["year", "month"])
     tab.index = pd.MultiIndex.from_arrays([tab.index.get_level_values(0).astype(int),
                                            tab.index.get_level_values(1).astype(int)],
                                           names=["year", "month"])
+    # Every month each sensor covers (zeros for quiet months; see syntra.clean.month_span)
+    spans = {fam: month_span(veg, fam) for fam in ("MODIS", "VIIRS")}
+    months = spans["MODIS"].union(spans["VIIRS"])
+    full = pd.MultiIndex.from_arrays([months.year, months.month], names=["year", "month"])
     tab = tab.reindex(full).fillna(0).reset_index()
     tab["ym"] = tab.year * 100 + tab.month
     # Which sensors actually flew that month (zeros before launch are "no data", not "no fire")
-    has_modis = veg.family.eq("MODIS").any()
-    has_viirs = veg.family.eq("VIIRS").any()
-    m_first = int((m.year.astype(int) * 100 + m.month.astype(int)).min()) if has_modis else None
-    v_first = int((v.year.astype(int) * 100 + v.month.astype(int)).min()) if has_viirs else None
-    tab["modis_flying"] = (tab.ym >= m_first) if has_modis else False
-    tab["viirs_flying"] = (tab.ym >= v_first) if has_viirs else False
+    for fam, col in (("MODIS", "modis_flying"), ("VIIRS", "viirs_flying")):
+        span = spans[fam]
+        tab[col] = (tab.ym >= span[0].year * 100 + span[0].month) & (tab.ym <= span[-1].year * 100 + span[-1].month) \
+            if len(span) else False
     return tab
 
 
