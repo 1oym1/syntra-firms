@@ -1,0 +1,21 @@
+# Data is downloaded with scripts/fetch_firms.py, never committed
+data/raw/
+data/processed/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets (FIRMS MAP_KEY etc.)
+.env
