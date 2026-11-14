@@ -2,6 +2,12 @@
 
 Short record of decisions the team has agreed on. Newest first.
 
+## 2026-11-14: Keep only hotspots inside Sudan's border
+
+**Decision.** Cleaning keeps only points that fall inside the country's border (Natural Earth 1:10m, `syntra/clean.py` → `country_shape()`).
+
+**Why.** FIRMS country files are cut with a buffer around the border. In the 2025 MODIS file for Sudan, 339 of 50,143 clean points (0.7%) were outside Sudan: South Sudan 209, Central African Republic 60, Ethiopia 57, Chad 12, Eritrea 1. We work on Sudan only.
+
 ## 2026-11-14: Count vegetation fires only (`type = 0`)
 
 **Decision.** We keep only hotspots with `type = 0` ("presumed vegetation fire") and drop volcanoes (1), static land sources such as gas flares (2) and offshore sources (3). For 2026 NRT data, which has no `type` field, we drop hotspots that fall in a static-source mask built from the archive. Details: [FIRE_SOURCE.md](FIRE_SOURCE.md).
