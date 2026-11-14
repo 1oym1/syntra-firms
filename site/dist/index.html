@@ -257,13 +257,41 @@ td .barcell { display: inline-block; height: 6px; border-radius: 4px; background
 @keyframes burn { to { background-position: 300% 0; } }
 .crew { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; }
 @property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-.tm { flex: 1 1 280px; max-width: 370px; position: relative; border-radius: 22px; padding: 1.3px;
-  background: conic-gradient(from var(--a), rgba(255,138,42,.1), #ff5a1f 50deg, #ffc25c 80deg, rgba(255,138,42,.1) 140deg, rgba(255,138,42,.1));
-  animation: spin 7s linear infinite; opacity: 0; transform: translateY(34px) scale(.97);
+.tm { flex: 1 1 280px; max-width: 370px; position: relative; border-radius: 22px; cursor: pointer; outline: none; perspective: 1100px;
+  opacity: 0; transform: translateY(34px) scale(.97);
   transition: opacity .8s ease var(--d), transform .8s cubic-bezier(.2,.8,.2,1) var(--d), box-shadow .35s; }
 .tm.in { opacity: 1; transform: none; }
 .tm.done { transition: transform .2s ease-out, box-shadow .35s; }
-.tm:hover { animation-duration: 2.4s; box-shadow: 0 26px 70px -24px rgba(255,90,31,.6); }
+.tm:hover, .tm:focus-visible { box-shadow: 0 26px 70px -24px rgba(255,90,31,.6); }
+.tm:focus-visible .tm-card { box-shadow: 0 0 0 2px var(--ember-2); }
+.tm-card { position: relative; height: 100%; border-radius: 22px; padding: 1.3px; transform-style: preserve-3d;
+  background: conic-gradient(from var(--a), rgba(255,138,42,.1), #ff5a1f 50deg, #ffc25c 80deg, rgba(255,138,42,.1) 140deg, rgba(255,138,42,.1));
+  animation: spin 7s linear infinite; transition: transform .9s cubic-bezier(.34,1.45,.5,1); }
+.tm:hover .tm-card { animation-duration: 2.4s; }
+.tm.flipped .tm-card { transform: rotateY(180deg); }
+.tm-front, .tm-back { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.tm-in.tm-back { position: absolute; inset: 1.3px; height: auto; transform: rotateY(180deg); align-content: start;
+  background: radial-gradient(120% 90% at 100% 100%, rgba(255,90,31,.28), transparent 60%), linear-gradient(180deg, rgba(20,14,16,.98), rgba(9,8,14,.98)); }
+.tm-ghost { position: absolute; right: -8px; bottom: -34px; font: 900 8.5rem/1 var(--display); letter-spacing: -.04em; color: transparent;
+  -webkit-text-stroke: 1px rgba(255,138,42,.22); pointer-events: none; }
+.tm-hint { justify-self: end; font: 500 .64rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: rgba(151,163,189,.75); }
+.tm-back .tm-hint { position: absolute; right: 22px; bottom: 16px; }
+.tm-links { display: flex; flex-wrap: wrap; gap: 10px; position: relative; }
+.tm-link { display: inline-flex; align-items: center; gap: 9px; padding: 10px 15px; border-radius: 12px; font: 600 .82rem var(--mono); color: var(--ink); text-decoration: none;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,194,92,.35); transition: transform .2s, box-shadow .25s, background .25s, border-color .25s; }
+.tm-link svg { width: 18px; height: 18px; }
+.tm-link:hover, .tm-link:focus-visible { transform: translateY(-2px); background: linear-gradient(135deg, #ff5a1f, #ffb347); border-color: transparent; color: #1a0800;
+  box-shadow: 0 10px 30px -8px rgba(255,90,31,.8); outline: none; }
+.tm-link.off { opacity: .45; pointer-events: none; border-style: dashed; }
+.tm-link.li { width: 100%; justify-content: flex-start; padding: 13px 16px; font-size: .86rem; }
+.tm-link.li svg { width: 20px; height: 20px; color: #ffc25c; transition: color .25s; }
+.tm-link.li:hover svg, .tm-link.li:focus-visible svg { color: #1a0800; }
+.tm-link .arr { margin-left: auto; font-weight: 700; transition: transform .25s; }
+.tm-link:hover .arr { transform: translate(2px, -2px); }
+.tm-card::after { content: ""; position: absolute; inset: 0; border-radius: 22px; pointer-events: none; opacity: 0; transform: translateZ(2px);
+  background: linear-gradient(105deg, transparent 30%, rgba(255,220,150,.55) 46%, rgba(255,120,40,.35) 52%, transparent 66%); background-size: 250% 100%; }
+.tm.flare .tm-card::after { animation: flare .85s ease-out; }
+@keyframes flare { 0% { opacity: 0; background-position: 120% 0; } 25% { opacity: 1; } 100% { opacity: 0; background-position: -60% 0; } }
 @keyframes spin { to { --a: 360deg; } }
 .tm-in { position: relative; height: 100%; border-radius: 21px; padding: 20px 22px 24px; display: grid; gap: 16px; align-content: start; overflow: hidden;
   background: linear-gradient(180deg, rgba(15,21,38,.97), rgba(7,10,19,.97)); }
@@ -288,7 +316,7 @@ td .barcell { display: inline-block; height: 6px; border-radius: 4px; background
 .tm h3 { font: 800 1.28rem/1.15 var(--display); margin: 0; }
 .tm .role { margin-top: 6px; font: 600 .74rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
 .tm p { margin: 0; color: #c3cbe0; font-size: .93rem; }
-@media (prefers-reduced-motion: reduce) { .tm { animation: none; opacity: 1; transform: none; } .fire-text, .scope::before, .scope .orb, .scope .core, .tm-top .conf i { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tm { opacity: 1; transform: none; } .tm-card { animation: none; transition: none; } .tm.flare .tm-card::after { animation: none; } .fire-text, .scope::before, .scope .orb, .scope .core, .tm-top .conf i { animation: none; } }
 
 .credits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .credits .glass { padding: 22px; display: grid; gap: 8px; align-content: start; }
@@ -502,35 +530,95 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       <p>Five people, one record: from raw NASA satellite files to the page you are reading.</p>
     </div>
     <div class="crew">
-    <article class="tm" style="--d:0ms;--c:var(--modis)"><div class="tm-in">
-      <div class="tm-top"><span>Hotspot <b>01</b></span><span class="conf"><i></i>Conf · high</span></div>
-      <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">HA</span></div>
-        <div><h3>Hisham Alawi Albaiti</h3><div class="role fire-text">UI/UX design · front-end</div></div></div>
-      <p>Interface, interaction design and the story site you are scrolling now.</p>
+    <article class="tm" style="--d:0ms;--c:var(--modis)" tabindex="0" role="button" aria-pressed="false" aria-label="Hisham Alawi Albaiti, UI/UX design · front-end. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>01</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">HA</span></div>
+          <div><h3>Hisham Alawi Albaiti</h3><div class="role fire-text">UI/UX design · front-end</div></div></div>
+        <p>Interface, interaction design and the story site you are scrolling now.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <span class="tm-ghost" aria-hidden="true">HA</span>
+        <div class="tm-top"><span>Hotspot <b>01</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div><h3>Hisham Alawi Albaiti</h3><div class="role fire-text">UI/UX design · front-end</div></div>
+        <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/hishamalbaiti/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>Connect on LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
     </div></article>
-    <article class="tm" style="--d:110ms;--c:var(--n20)"><div class="tm-in">
-      <div class="tm-top"><span>Hotspot <b>02</b></span><span class="conf"><i></i>Conf · high</span></div>
-      <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">OM</span></div>
-        <div><h3>Obai Yousef Merdad</h3><div class="role fire-text">Backend engineering</div></div></div>
-      <p>The server side: the processing pipeline and the services behind the app.</p>
+    <article class="tm" style="--d:110ms;--c:var(--n20)" tabindex="0" role="button" aria-pressed="false" aria-label="Obai Yousef Merdad, Backend engineering. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>02</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">OM</span></div>
+          <div><h3>Obai Yousef Merdad</h3><div class="role fire-text">Backend engineering</div></div></div>
+        <p>The server side: the processing pipeline and the services behind the app.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <span class="tm-ghost" aria-hidden="true">OM</span>
+        <div class="tm-top"><span>Hotspot <b>02</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div><h3>Obai Yousef Merdad</h3><div class="role fire-text">Backend engineering</div></div>
+        <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/obai-merdad/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>Connect on LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
     </div></article>
-    <article class="tm" style="--d:220ms;--c:var(--n21)"><div class="tm-in">
-      <div class="tm-top"><span>Hotspot <b>03</b></span><span class="conf"><i></i>Conf · high</span></div>
-      <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">AQ</span></div>
-        <div><h3>Ahmad Salah Qadah</h3><div class="role fire-text">Data acquisition · NASA FIRMS</div></div></div>
-      <p>Collecting the MODIS and VIIRS hotspot archives and the near-real-time feed.</p>
+    <article class="tm" style="--d:220ms;--c:var(--n21)" tabindex="0" role="button" aria-pressed="false" aria-label="Ahmad Salah Qadah, Data acquisition · NASA FIRMS. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>03</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">AQ</span></div>
+          <div><h3>Ahmad Salah Qadah</h3><div class="role fire-text">Data acquisition · NASA FIRMS</div></div></div>
+        <p>Collecting the MODIS and VIIRS hotspot archives and the near-real-time feed.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <span class="tm-ghost" aria-hidden="true">AQ</span>
+        <div class="tm-top"><span>Hotspot <b>03</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div><h3>Ahmad Salah Qadah</h3><div class="role fire-text">Data acquisition · NASA FIRMS</div></div>
+        <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/ahmedqadah/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>Connect on LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
     </div></article>
-    <article class="tm" style="--d:330ms;--c:var(--viirs)"><div class="tm-in">
-      <div class="tm-top"><span>Hotspot <b>04</b></span><span class="conf"><i></i>Conf · high</span></div>
-      <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">YY</span></div>
-        <div><h3>Yazid Firas Yasin</h3><div class="role fire-text">Data analysis · modeling</div></div></div>
-      <p>The harmonization model, its validation and the fire statistics.</p>
+    <article class="tm" style="--d:330ms;--c:var(--viirs)" tabindex="0" role="button" aria-pressed="false" aria-label="Yazid Firas Yasin, Data analysis · modeling. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>04</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">YY</span></div>
+          <div><h3>Yazid Firas Yasin</h3><div class="role fire-text">Data analysis · modeling</div></div></div>
+        <p>The harmonization model, its validation and the fire statistics.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <span class="tm-ghost" aria-hidden="true">YY</span>
+        <div class="tm-top"><span>Hotspot <b>04</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div><h3>Yazid Firas Yasin</h3><div class="role fire-text">Data analysis · modeling</div></div>
+        <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/yazeed-y-ab77a71b4/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>Connect on LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
     </div></article>
-    <article class="tm" style="--d:440ms;--c:var(--harm)"><div class="tm-in">
-      <div class="tm-top"><span>Hotspot <b>05</b></span><span class="conf"><i></i>Conf · high</span></div>
-      <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">RB</span></div>
-        <div><h3>Riyadh Khalid Barnawi</h3><div class="role fire-text">System architecture</div></div></div>
-      <p>How the pieces fit together: data, model, app and site.</p>
+    <article class="tm" style="--d:440ms;--c:var(--harm)" tabindex="0" role="button" aria-pressed="false" aria-label="Riyadh Khalid Barnawi, System architecture. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>05</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core">RB</span></div>
+          <div><h3>Riyadh Khalid Barnawi</h3><div class="role fire-text">System architecture</div></div></div>
+        <p>How the pieces fit together: data, model, app and site.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <span class="tm-ghost" aria-hidden="true">RB</span>
+        <div class="tm-top"><span>Hotspot <b>05</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div><h3>Riyadh Khalid Barnawi</h3><div class="role fire-text">System architecture</div></div>
+        <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/riyadh-barnawi-4748b43b4/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>Connect on LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
     </div></article>
     </div>
   </div>
@@ -1219,6 +1307,27 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       });
       t.addEventListener("pointerleave", function () { t.style.transform = ""; });
     });
+    // flip to the profile side; links are set from data-href (empty = "coming soon")
+    cards.forEach(function (t) {
+      var back = t.querySelector(".tm-back"), links = [].slice.call(back.querySelectorAll(".tm-link"));
+      links.forEach(function (a) {
+        var u = a.getAttribute("data-href");
+        if (u) a.href = u; else { a.classList.add("off"); a.querySelector("span").textContent += " · soon"; a.setAttribute("aria-disabled", "true"); }
+        a.addEventListener("click", function (e) { e.stopPropagation(); });
+        a.addEventListener("keydown", function (e) { e.stopPropagation(); });
+      });
+      function flip(e) {
+        var on = !t.classList.contains("flipped");
+        t.classList.toggle("flipped", on); t.setAttribute("aria-pressed", on);
+        back.setAttribute("aria-hidden", !on); links.forEach(function (a) { a.tabIndex = on && a.href ? 0 : -1; });
+        t.classList.remove("flare"); void t.offsetWidth; t.classList.add("flare");
+        var r = t.getBoundingClientRect(), s0 = sec.getBoundingClientRect();
+        var x = e && e.clientX ? e.clientX : r.left + r.width / 2, y = e && e.clientY ? e.clientY : r.top + r.height / 2;
+        burst(x - s0.left, y - s0.top);
+      }
+      t.addEventListener("click", flip);
+      t.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(null); } });
+    });
     var cv = document.getElementById("embers"), ctx = cv.getContext("2d"), P = [], W = 0, H = 0, on = false, raf = 0;
     var COLS = ["255,138,42", "255,138,42", "255,194,92", "255,90,31"];
     function spawn(p, anywhere) {
@@ -1240,7 +1349,23 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, 6.2832); ctx.fill();
       });
     }
-    function frame(t) { raf = 0; if (!on) return; draw(t); raf = requestAnimationFrame(frame); }
+    var S2 = [];   // sparks from a card flip
+    function burst(x, y) {
+      if (reduce) return;
+      for (var i = 0; i < 46; i++) { var a = Math.random() * 6.2832, v = 1.5 + Math.random() * 5.5;
+        S2.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.5, r: .8 + Math.random() * 1.8, life: 1, c: COLS[(Math.random() * COLS.length) | 0] }); }
+      if (!raf) raf = requestAnimationFrame(frame);
+    }
+    function sparks() {
+      S2 = S2.filter(function (p) { return p.life > 0; });
+      S2.forEach(function (p) {
+        p.x += p.vx; p.y += p.vy; p.vx *= .95; p.vy = p.vy * .95 - .04; p.life -= .022;
+        var R = p.r * 3.5, g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, R);
+        g.addColorStop(0, "rgba(255,240,200," + p.life.toFixed(3) + ")"); g.addColorStop(.4, "rgba(" + p.c + "," + (p.life * .7).toFixed(3) + ")"); g.addColorStop(1, "rgba(" + p.c + ",0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, 6.2832); ctx.fill();
+      });
+    }
+    function frame(t) { raf = 0; if (!on && !S2.length) return; draw(t); sparks(); raf = requestAnimationFrame(frame); }
     size(); draw(0);
     addEventListener("resize", function () { size(); if (reduce) draw(0); });
     if (!reduce) new IntersectionObserver(function (es) { on = es[0].isIntersecting; if (on && !raf) raf = requestAnimationFrame(frame); }).observe(sec);
