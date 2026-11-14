@@ -93,7 +93,8 @@ def clean_all(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, o
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = []
     for inst in instruments(raw_dir):
-        for path in sorted((raw_dir / inst).glob(f"{inst}_*_{country}.csv")):
+        # Exactly a 4-digit year: "*" would also match "2025_South" and mix South Sudan into Sudan
+        for path in sorted((raw_dir / inst).glob(f"{inst}_[0-9][0-9][0-9][0-9]_{country}.csv")):
             out = out_dir / f"clean_{path.stem}.parquet"
             if overwrite or not out.exists():
                 clean_file(path, inst).to_parquet(out, index=False)
