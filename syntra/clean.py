@@ -32,6 +32,8 @@ Outputs in data/processed/:
     clean_vegetation_<country>.csv          all years, vegetation fires only
     static_mask_<country>.csv               ~1 km cells to drop from NRT data
     monthly_<country>.csv                   input for harmonization (Step 4)
+    static_sources_<country>.csv            every static hotspot (volcano, gas flare/industry, offshore)
+    static_monthly_<country>.csv            static sources per sensor and month, e.g. for a map layer
 """
 import argparse
 import pathlib
@@ -226,6 +228,27 @@ def monthly_table(veg):
     return pd.concat(full).reset_index()
 
 
+STATIC_LABELS = {1: "volcano", 2: "static_land", 3: "offshore"}
+
+
+def static_sources(fires):
+    """Static hotspots (always hot, not fires) with a readable class. Kept apart, never harmonized."""
+    st = fires[fires.is_static].copy()
+    st["source_class"] = st["type"].map(STATIC_LABELS).fillna("static_mask")   # NRT rows found by the mask
+    return st.reset_index(drop=True)
+
+
+def static_monthly(st):
+    """Static sources per sensor family and month: hotspots and active ~1 km site-days."""
+    if st.empty:
+        return pd.DataFrame(columns=["family", "year", "month", "hotspots", "site_days"])
+    st = st.assign(site=cell_id(st.latitude, st.longitude, MASK_DEG))
+    g = st.groupby(["family", "year", "month"], observed=True)
+    return pd.DataFrame({"hotspots": g.size(),
+                         "site_days": st.drop_duplicates(["family", "acq_date", "site"])
+                                        .groupby(["family", "year", "month"], observed=True).size()}).reset_index()
+
+
 def check(fires, veg, monthly):
     """Print a short quality report."""
     report = {
@@ -257,6 +280,10 @@ def run(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, overwri
     mask.to_csv(out_dir / f"static_mask_{country}.csv", index=False)
     monthly.to_csv(out_dir / f"monthly_{country}.csv", index=False)
     veg.to_csv(out_dir / f"clean_vegetation_{country}.csv", index=False)
+    st = static_sources(fires)
+    st.to_csv(out_dir / f"static_sources_{country}.csv", index=False)
+    static_monthly(st).to_csv(out_dir / f"static_monthly_{country}.csv", index=False)
+    print("Static sources:", st["source_class"].value_counts().to_dict())
     print(f"\nAll clean rows: {len(fires):,} | vegetation: {len(veg):,} | "
           f"static: {int(fires.is_static.sum()):,}\n")
     check(fires, veg, monthly)
