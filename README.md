@@ -16,6 +16,7 @@ cd syntra-firms
 pip install -r requirements.txt
 python scripts/fetch_firms.py
 python -m syntra.clean          # Step 3: clean the data (see syntra/clean.py)
+python -m syntra.nrt            # Step 3 for 2026: FIRMS API (needs FIRMS_MAP_KEY in .env), same cleaning
 python -m syntra.harmonize      # Steps 4-5: one MODIS+VIIRS series, 2000 to today, with validation
 ```
 
