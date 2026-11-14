@@ -5,7 +5,7 @@
 <meta name="description" content="Team SYNTRA, NASA Space Apps 2026: MODIS and VIIRS fire hotspots harmonized into one record for Sudan, 2000 to today.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: a night pass over Sudan. Full-bleed WebGL globe, a pinned 3D fire landscape driven by scroll,
    then tools. One ember accent; sensor colors are Okabe-Ito (colorblind-safe) and appear only on data. */
@@ -23,7 +23,7 @@
   --n20: #cc79a7;
   --n21: #f0e442;
   --harm: #2fd4a0;
-  --display: "Syne", "Space Grotesk", system-ui, sans-serif;
+  --display: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --body: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   color-scheme: dark;
@@ -37,7 +37,8 @@ a { color: inherit; }
 :focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; border-radius: 6px; }
 .wrap { max-width: 1200px; margin: 0 auto; padding-block: 0;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.02em; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.035em; font-weight: 800; }
+.ic { width: 1em; height: 1em; flex: none; }
 p { margin: 0; }
 .eyebrow { font: 500 .72rem/1.4 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--ember); }
 .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -54,10 +55,10 @@ p { margin: 0; }
 /* nav */
 nav.top { position: fixed; top: 0; left: 0; right: 0; z-index: 50; padding-top: env(safe-area-inset-top, 0px); }
 nav.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; }
-.logo { font: 800 1.05rem var(--display); letter-spacing: .14em; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo { font: 800 1.05rem var(--display); letter-spacing: .08em; display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .logo i { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 14px var(--ember); }
 .navlinks { display: flex; gap: 6px; align-items: center; padding: 6px; }
-.navlinks a { text-decoration: none; font-size: .86rem; color: var(--dim); padding: 7px 12px; border-radius: 10px; }
+.navlinks a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: .86rem; color: var(--dim); padding: 7px 12px; border-radius: 10px; }
 .navlinks a:hover { color: var(--ink); background: rgba(255,255,255,.06); }
 .navlinks a.cta { color: #1b0d00; background: var(--ember); font-weight: 600; }
 @media (max-width: 760px) { .navlinks a:not(.cta) { display: none; } }
@@ -71,7 +72,7 @@ nav.top .wrap { display: flex; align-items: center; justify-content: space-betwe
   background: linear-gradient(90deg, rgba(5,7,13,.92) 0%, rgba(5,7,13,.55) 38%, transparent 62%),
               linear-gradient(0deg, var(--void) 0%, transparent 22%); }
 .hero .wrap { width: 100%; padding-block: 120px 80px; display: grid; gap: 26px; }
-.hero h1 { font-size: clamp(2.6rem, 6.6vw, 5.4rem); line-height: .95; font-weight: 800; max-width: 11ch; }
+.hero h1 { font-size: clamp(2.6rem, 6.6vw, 5.6rem); line-height: .98; font-weight: 800; max-width: 11ch; }
 .hero .lede { font-size: clamp(1.02rem, 1.6vw, 1.2rem); color: #c9d2e6; max-width: 46ch; }
 .hud { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; font: 500 .78rem var(--mono);
@@ -95,7 +96,7 @@ nav.top .wrap { display: flex; align-items: center; justify-content: space-betwe
 .ticker .track { display: flex; gap: 48px; width: max-content; padding-block: 14px; animation: slide 46s linear infinite;
   font: 500 .82rem var(--mono); color: var(--dim); white-space: nowrap; }
 .ticker b { color: var(--ink); font-weight: 500; }
-.ticker span::before { content: "◆"; color: var(--ember); margin-right: 14px; font-size: .6rem; vertical-align: 2px; }
+.ticker span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ember); margin-right: 14px; vertical-align: 2px; }
 @keyframes slide { to { transform: translateX(-50%); } }
 
 section { position: relative; z-index: 2; }
@@ -153,6 +154,7 @@ section { position: relative; z-index: 2; }
 .monthpick button[aria-pressed="true"] { background: var(--ember); color: #1b0d00; border-color: var(--ember); }
 .yearout { font: 800 2.6rem/1 var(--display); }
 .verdict { padding: 26px; display: grid; gap: 14px; border-left: 4px solid var(--c, var(--ember)); }
+.vdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 8px; vertical-align: 1px; }
 .vbadge { justify-self: start; font: 600 .76rem var(--mono); letter-spacing: .12em; padding: 5px 11px; border-radius: 8px; color: var(--c); border: 1px solid var(--c); }
 .vnum { font: 800 clamp(2.6rem, 6vw, 4.2rem)/1 var(--display); }
 .vrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -185,7 +187,7 @@ section { position: relative; z-index: 2; }
 .tile .tag { font: 500 .68rem var(--mono); letter-spacing: .14em; color: var(--ember); text-transform: uppercase; }
 .tile h3 { font-size: 1.3rem; }
 .tile p { color: #c3cbe0; font-size: .92rem; max-width: 46ch; }
-.tile .art { position: absolute; top: 18px; right: 18px; font: 800 3.4rem/1 var(--display); opacity: .14; }
+.tile .art { position: absolute; top: 20px; right: 20px; width: 44px; height: 44px; color: var(--ember); opacity: .55; }
 @media (max-width: 900px) { .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tile, .tile.w3, .tile.w4 { grid-column: span 2; } }
 @media (min-width: 560px) and (max-width: 900px) { .tile { grid-column: span 1; } }
 
@@ -213,7 +215,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   <a class="logo" href="#top"><i></i>SYNTRA</a>
   <div class="navlinks glass">
     <a href="#seam">The seam</a><a href="#check">Check a month</a><a href="#risk">Risk clock</a><a href="#app">App</a>
-    <a class="cta app-link" href="#app">Open the app ↗</a>
+    <a class="cta app-link" href="#app">Open the app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
   </div>
 </div></nav>
 
@@ -232,8 +234,8 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       <button type="button" class="chip" data-layer="VIIRS_NOAA21" aria-pressed="true"><i style="background:var(--n21)"></i>NOAA-21</button>
     </div>
     <div class="btns">
-      <a class="btn hot app-link" href="#app">Open the live app ↗</a>
-      <a class="btn" href="#seam">See the 2012 seam ↓</a>
+      <a class="btn hot app-link" href="#app">Open the live app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a class="btn" href="#seam">See the 2012 seam <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M4 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </div>
     <div class="hint">Drag the globe to spin it · tap a layer to switch it off</div>
   </div>
@@ -333,14 +335,14 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     <p>Draw any area of Sudan on the map. Every view runs on the same harmonized record.</p>
   </div>
   <div class="bento" id="bento">
-    <div class="tile glass w4"><span class="art">!</span><span class="tag">Status</span><h3>This month, in plain words</h3><p>Very high, above normal, normal or below normal, with the rule that decided it and what next month usually brings.</p></div>
-    <div class="tile glass"><span class="art">●</span><span class="tag">Live</span><h3>Live map</h3><p>Last 7 days, five satellites, static sources apart.</p></div>
-    <div class="tile glass"><span class="art">▦</span><span class="tag">Calendar</span><h3>Burning calendar</h3><p>Every month since 2000 in one heatmap.</p></div>
-    <div class="tile glass"><span class="art">◐</span><span class="tag">Risk</span><h3>Risk periods</h3><p>Which weeks burn most often, and how long each season lasted.</p></div>
-    <div class="tile glass w3"><span class="art">▲</span><span class="tag">3D</span><h3>Regions over time</h3><p>Weekly fires for 2–3 regions, split north to south or west to east, all settings yours.</p></div>
-    <div class="tile glass w3"><span class="art">↓</span><span class="tag">Export</span><h3>Report and data</h3><p>One interactive HTML report with every chart, plus CSVs of the series, calendar and hotspots.</p></div>
+    <div class="tile glass w4"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></g></svg><span class="tag">Status</span><h3>This month, in plain words</h3><p>Very high, above normal, normal or below normal, with the rule that decided it and what next month usually brings.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5" opacity=".5"/></g></svg><span class="tag">Live</span><h3>Live map</h3><p>Last 7 days, five satellites, static sources apart.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16M15 4v16M3 14.5h18"/></g></svg><span class="tag">Calendar</span><h3>Burning calendar</h3><p>Every month since 2000 in one heatmap.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 12V6.5M12 12l4 2.5"/></g></svg><span class="tag">Risk</span><h3>Risk periods</h3><p>Which weeks burn most often, and how long each season lasted.</p></div>
+    <div class="tile glass w3"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M9 20V6M14 20v-8M19 20V9"/></g></svg><span class="tag">3D</span><h3>Regions over time</h3><p>Weekly fires for 2–3 regions, split north to south or west to east, all settings yours.</p></div>
+    <div class="tile glass w3"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></g></svg><span class="tag">Export</span><h3>Report and data</h3><p>One interactive HTML report with every chart, plus CSVs of the series, calendar and hotspots.</p></div>
   </div>
-  <div class="btns" style="margin-top:22px"><a class="btn hot app-link" href="#app">Open the live app ↗</a><span class="hint" id="soon" style="align-self:center">Live link added at deployment</span></div>
+  <div class="btns" style="margin-top:22px"><a class="btn hot app-link" href="#app">Open the live app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a><span class="hint" id="soon" style="align-self:center">Live link added at deployment</span></div>
 </section>
 
 <section class="wrap sec" aria-labelledby="test-h">
@@ -411,7 +413,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   (function () {
     var s = D.live_by_sensor || {};
     var items = [
-      "<b>LIVE</b> " + fmt(D.live_total || 0) + " hotspots over Sudan, " + (D.live_from || "") + " → " + (D.live_to || ""),
+      "<b>LIVE</b> " + fmt(D.live_total || 0) + " hotspots over Sudan, " + (D.live_from || "") + " to " + (D.live_to || ""),
       "NOAA-20 <b>" + fmt(s.VIIRS_NOAA20 || 0) + "</b> · NOAA-21 <b>" + fmt(s.VIIRS_NOAA21 || 0) + "</b> · MODIS <b>" + fmt(s.MODIS || 0) + "</b>",
       "October 2026 <b>+56%</b> vs a typical October · 2nd of 26",
       "Held-out R² <b>" + (D.heldout_r2 || 0.993) + "</b> · raw MODIS " + (D.raw_r2 || 0.36),
@@ -423,7 +425,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     document.getElementById("ticker").innerHTML = html + html;
     document.getElementById("live-chip").textContent = "Live · " + fmt(D.live_total || 0) + " in 7 days";
     document.getElementById("readout").innerHTML = "SUDAN · 15.6° N 30.2° E<br>FIRMS data through <b>" + (D.data_to || "") + "</b><br>live window <b>" +
-      (D.live_from || "") + " → " + (D.live_to || "") + "</b><br>grid 0.1° · VIIRS S-NPP units";
+      (D.live_from || "") + " to " + (D.live_to || "") + "</b><br>grid 0.1° · VIIRS S-NPP units";
     document.getElementById("foot").textContent = "Data: NASA FIRMS through " + (D.data_to || "") + " · colors: Okabe-Ito, colorblind-safe";
   })();
 
@@ -701,7 +703,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     var yr = document.getElementById("yr"), yo = document.getElementById("yrout"), mp = document.getElementById("mp"), out = document.getElementById("verdict");
     var sel = { y: 2026, m: 10 };
     var LV = { "Very high": "#ff6b3d", "Above normal": "#e69f00", "Normal": "#2fd4a0", "Below normal": "#56b4e9" };
-    var ICON = { "Very high": "▲▲", "Above normal": "▲", "Normal": "●", "Below normal": "▼" };
+    
     function pct(sorted, q) { var p = (sorted.length - 1) * q, lo = Math.floor(p), hi = Math.ceil(p); return sorted[lo] + (sorted[hi] - sorted[lo]) * (p - lo); }
     MON.forEach(function (n, i) {
       var b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.m = i + 1;
@@ -725,7 +727,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       var lv = v > p90 ? "Very high" : an >= 20 ? "Above normal" : an <= -20 ? "Below normal" : "Normal";
       out.style.setProperty("--c", LV[lv]);
       var ord = function (n) { var t = n % 100; return n + ((t > 10 && t < 14) ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th")); };
-      out.innerHTML = "<span class='vbadge'>" + ICON[lv] + " " + lv.toUpperCase() + "</span>" +
+      out.innerHTML = "<span class='vbadge'><i class='vdot'></i>" + lv.toUpperCase() + "</span>" +
         "<div><span class='vnum mono'>" + fmt(v) + "</span> <span class='dim'>fire cell-days in " + name + "</span></div>" +
         "<div class='vrow'><div><small>vs median</small><b>" + (an >= 0 ? "+" : "") + an.toFixed(0) + "%</b></div><div><small>rank</small><b>" + ord(rank) + " of " + (hist.length + 1) + "</b></div><div><small>90th pct</small><b>" + fmt(p90) + "</b></div></div>" +
         "<div id='spark'></div>";
