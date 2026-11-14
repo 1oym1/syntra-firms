@@ -13,8 +13,10 @@ or from the repo root:
 
 What it does (details in docs/FIRE_SOURCE.md):
 1. Reads only the columns we need, with small dtypes, and keeps ONLY hotspots
-   inside the country's border. FIRMS country files are cut with a buffer, so
-   the Sudan file also holds points in South Sudan, Chad, Ethiopia, etc.
+   inside the country's border (Natural Earth 1:10m). The FIRMS country files
+   already match the border, but FIRMS API data is a rectangle that includes
+   neighbours (South Sudan, Chad, ...), so the clip guarantees one country.
+   Use the 1:10m border: the coarse 1:50m one misplaces points near borders.
 2. FLAGS static sources (type 1 volcano, 2 static land source such as gas flares,
    3 offshore) in an `is_static` column. They are kept for the map toggle and the
    static-source analysis, but every harmonization and calendar step uses
