@@ -168,13 +168,30 @@ def harmonize_area(veg_area, k_terra, k_viirs):
 
 # ---------------------------------------------------------------- run everything
 def run(veg=None, country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
-    """Full Steps 4-5. Returns (series, factors, validation) and writes the outputs."""
+    """Full Steps 4-5. Returns (series, factors, validation) and writes the outputs.
+
+    Without `veg` it reads the cleaned archive and, if present, the current year from
+    syntra.nrt, so the series runs from 2000 to the latest day FIRMS has.
+    """
+    last_day = None
     if veg is None:
-        path = out_dir / f"clean_vegetation_{country}.csv"
-        veg = pd.read_csv(path, usecols=["family", "satellite", "year", "month", "cell_id", "frp"])
+        cols = ["family", "satellite", "year", "month", "cell_id", "frp"]
+        veg = pd.read_csv(out_dir / f"clean_vegetation_{country}.csv", usecols=cols)
+        # Current year from the FIRMS API (python -m syntra.nrt), cleaned with the same rules
+        nrt = sorted(out_dir.glob(f"clean_vegetation_nrt_[0-9][0-9][0-9][0-9]_{country}.csv"))
+        if nrt:
+            new = pd.concat([pd.read_csv(p, usecols=cols + ["acq_date"]) for p in nrt], ignore_index=True)
+            new = new[new.year > veg.year.max()]          # never count a year twice
+            last_day = pd.to_datetime(new.acq_date).max()
+            veg = pd.concat([veg, new[cols]], ignore_index=True)
+            print(f"Added {len(new):,} vegetation fires from the FIRMS API, data to {last_day:%d %b %Y}")
     tab = monthly_cells(veg)
     tab, k_terra, k_terra_all = modis_consistent(tab)
     series, k_viirs, k_viirs_all = harmonize(tab)
+    if last_day is not None and last_day < last_day + pd.offsets.MonthEnd(0):
+        # The newest month is not over: compare it with the same days of earlier years, not whole months
+        partial = series.ym == last_day.year * 100 + last_day.month
+        series.loc[partial, "flag"] = f"partial month: data to {last_day:%d %b %Y}"
     val = validate(series)
 
     factors = pd.DataFrame({"month": range(1, 13),
