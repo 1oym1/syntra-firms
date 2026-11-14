@@ -66,6 +66,18 @@ def cell_id(lat, lon, deg):
 def clean_file(path, inst):
     """Clean one yearly FIRMS CSV. `inst` is 'modis', 'viirs-snpp' or 'viirs-jpss1'."""
     df = pd.read_csv(path, usecols=COLS, dtype=DTYPES)
+    return clean_frame(df, inst, path.name)
+
+
+def clean_frame(df, inst, name=""):
+    """Same cleaning for a table already in memory (yearly files and 2026 API data).
+
+    2026 near-real-time rows have no `type`: they get type -1 here and `apply_static_mask` decides.
+    """
+    df = df[[c for c in COLS if c in df]].copy()
+    if "type" not in df:
+        df["type"] = -1
+    df["type"] = df["type"].fillna(-1).astype("int8")
     n0 = len(df)
     # Static sources are flagged, not dropped
     df["is_static"] = df["type"].isin([1, 2, 3])
@@ -84,15 +96,20 @@ def clean_file(path, inst):
     df["family"] = "MODIS" if inst == "modis" else "VIIRS"
     df["satellite"] = df["satellite"].astype(str)
     df = df.drop(columns=["confidence"])
-    print(f"{path.name:36} {n0:>9,} -> {len(df):>9,} rows | static {int(df.is_static.sum()):,}")
+    if name:
+        print(f"{name:36} {n0:>9,} -> {len(df):>9,} rows | static {int(df.is_static.sum()):,}")
     return df.reset_index(drop=True)
 
 
-def clean_all(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, overwrite=False):
-    """Clean every raw file for `country`. Returns all clean rows (static ones flagged)."""
+def clean_all(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, overwrite=False, insts=None):
+    """Clean every raw file for `country`. Returns all clean rows (static ones flagged).
+
+    insts: optional list such as ["modis", "viirs-snpp", "viirs-jpss1"]. The app loads NOAA-20 too, only to
+    calibrate it against S-NPP for 2026; the two VIIRS satellites are never added together.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = []
-    for inst in instruments(raw_dir):
+    for inst in (insts or instruments(raw_dir)):
         for path in sorted((raw_dir / inst).glob(f"{inst}_*_{country}.csv")):
             out = out_dir / f"clean_{path.stem}.parquet"
             if overwrite or not out.exists():
@@ -118,9 +135,15 @@ def static_mask(fires):
 
 
 def apply_static_mask(df, mask):
-    """For NRT data (no `type` field): flag hotspots that fall in a static-source cell."""
+    """Flag hotspots that fall in a static-source cell (keeps flags that are already set).
+
+    Use it on 2026 NRT data (no `type` field) AND on the archive, so both are cleaned the same way.
+    Tested by building the mask from 2000-2024 and applying it to 2025: in Saudi Arabia 26% of type-0
+    hotspots fall in static cells (flares FIRMS did not label), in Sudan 0.16%.
+    """
     df = df.copy()
-    df["is_static"] = np.isin(cell_id(df.latitude, df.longitude, MASK_DEG), mask.mask_cell.values)
+    in_mask = np.isin(cell_id(df.latitude, df.longitude, MASK_DEG), mask.mask_cell.values)
+    df["is_static"] = (df["is_static"] if "is_static" in df else False) | in_mask
     return df
 
 

@@ -2,6 +2,37 @@
 
 Where the project stands. Newest first. Update it when something lands.
 
+## 2026-11-14, about 13:00 (Hisham): 2026 data + one cleaning step for everything (PR #1)
+
+**2026 is in the app.** Data now runs to yesterday (13 Nov 2026), not Dec 2025.
+
+- `syntra/recent.py` downloads 2026 from the FIRMS area API (MAP_KEY in `.env`, never committed) for MODIS,
+  VIIRS S-NPP and VIIRS NOAA-20, keeps only hotspots inside the country, and cleans them with **`syntra/clean.py`**
+  (the teammate's Step 3), exactly like the archive.
+- `syntra/pipeline.py` is the whole chain for one country: fetch, clean, 2026, static mask, fire-cells.
+  The app uses it.
+- **Static-source mask on every year, not only 2026.** Tested: mask built from 2000–2024, applied to 2025.
+  In Saudi Arabia 26 % of type-0 hotspots fall in static cells (flares FIRMS did not label); Sudan 0.16 %.
+  Masking only 2026 would make 2026 look lower than history. A 1-cell margin around the mask was tested and
+  rejected (doubles wrongly dropped vegetation fires).
+- **S-NPP runs to 2 Nov 2026** (FIRMS availability list), so Jan–Oct 2026 is observed S-NPP. After that the app
+  uses **NOAA-20 × 0.995**: 102 months both flew, held-out R² 0.996, bias 0.0 %.
+- **MODIS Terra-only months (Nov 2000–Jun 2002)** scaled to Terra + Aqua (Riyadh's notebook, Part 4), now on our
+  ~1 km fire-cell unit: factor about 2 per month, held-out R² 0.996.
+- **"This month so far"**: Nov 1–13, 2026 compared with Nov 1–13 of every earlier year.
+- Map: toggle to show static sources (Riyadh's Part 5a). Calendar and anomalies always use vegetation fires only.
+
+**Sudan results (provisional, near-real-time):**
+- **October 2026 = 20,993 fire-cells, highest October in 26 years (+77 % vs median 11,892)**, above the 90th
+  percentile. Both VIIRS satellites agree (S-NPP 20,993, NOAA-20 20,617); MODIS is up 43 % on Oct 2025; the jump
+  is in 16–31 Oct. Present it as an anomaly to check, not a confirmed record; possible causes are
+  [TO CONFIRM].
+- November 1–13, 2026: 14,460, −6 % vs median, #15 of 27 (normal).
+- MODIS → VIIRS held-out R² is now 0.98 over 2012–2026 (178 months).
+
+**Still to do:** review + merge PR #1; Streamlit Cloud deploy (put `FIRMS_MAP_KEY` in the app's secrets);
+`notebooks/01_harmonization.ipynb` and slide figures; 7 slides + 30 s video + project page.
+
 ## 2026-11-14, about 12:00 (Hisham): harmonization + app, PR #1
 
 **Team decision: Sudan is the main study area. We build on it first and may add a second country later (Ethiopia is ready); Saudi Arabia is the comparison case**. See `docs/DECISIONS.md`.

@@ -27,6 +27,7 @@ INSTRUMENTS = {
     "viirs-snpp": "VIIRS_SNPP",
     "viirs-jpss1": "VIIRS_NOAA20",
 }
+FIRST_YEAR = {"modis": 2000, "viirs-snpp": 2012, "viirs-jpss1": 2018}  # first yearly file on FIRMS
 
 COLUMNS = ["sensor", "family", "satellite", "latitude", "longitude", "acq_date",
            "acq_datetime_utc", "year", "month", "daynight", "confidence_class",
@@ -44,7 +45,11 @@ def fetch(country=DEFAULT_COUNTRY, start=2000, end=2025, download=True, instrume
         name = f"{inst}_{year}_{country}.csv"
         path = RAW_DIR / inst / name
         if not path.exists() and download:
-            r = requests.get(f"{BASE_URL}/{inst}/{year}/{name}", timeout=300)
+            try:
+                r = requests.get(f"{BASE_URL}/{inst}/{year}/{name}", timeout=300)
+            except requests.RequestException as e:  # FIRMS busy: keep going with what is on disk
+                print(f"could not download {name}: {e.__class__.__name__}")
+                return None
             if r.status_code == 200:  # otherwise this sensor has no file that year
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(r.content)
@@ -52,7 +57,7 @@ def fetch(country=DEFAULT_COUNTRY, start=2000, end=2025, download=True, instrume
 
     # FIRMS is slow per file but fine with several at once: ~1 min for a country instead of ~30.
     insts = list(instruments or INSTRUMENTS)
-    jobs = [(inst, year) for inst in insts for year in range(start, end + 1)]
+    jobs = [(inst, year) for inst in insts for year in range(max(start, FIRST_YEAR[inst]), end + 1)]
     with ThreadPoolExecutor(max_workers=8) as pool:
         paths = list(pool.map(lambda j: get(*j), jobs))
     files = {inst: [] for inst in insts}

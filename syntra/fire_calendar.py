@@ -33,6 +33,23 @@ def month_vs_median(series, month):
     }
 
 
+def month_to_date(daily, day):
+    """'This month so far': days 1..day of the current month vs the same days in every earlier year.
+
+    daily: daily VIIRS-equivalent series (harmonize.daily_reference); day: last complete day (Timestamp).
+    """
+    cur = day.to_period("M")
+    d = daily[(daily.index.month == day.month) & (daily.index.day <= day.day)]
+    s = d.groupby(d.index.year).sum()
+    s.index = pd.PeriodIndex([pd.Period(f"{y}-{day.month:02d}", "M") for y in s.index])
+    first_full = daily.index.min().to_period("M") + (0 if daily.index.min().day == 1 else 1)
+    s = s[s.index >= first_full]
+    out = month_vs_median(s, cur)
+    out["through_day"] = day.day
+    out["by_year"] = s
+    return out
+
+
 def peak_months(cal, top=3):
     return list(cal.median().sort_values(ascending=False).head(top).index)
 

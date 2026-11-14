@@ -46,7 +46,17 @@ reaches its limits. Full table: `outputs/tables/harmonization_validation.csv`.
 
 `streamlit run app/app.py`. Pick a country, then optionally draw a rectangle on the map or type lat/lon. The app
 shows the harmonized year × month burning calendar, the selected month vs its historical median, the
-validation, a hotspot map and CSV downloads. Data is downloaded from FIRMS on first use (about a minute).
+validation, a hotspot map and CSV downloads. Data is downloaded from FIRMS on first use (a few minutes).
+
+**2026 data** comes from the FIRMS API and needs a free MAP_KEY: copy `.env.example` to `.env` and fill in
+`FIRMS_MAP_KEY` (never commit `.env`). On Streamlit Cloud put the same line in the app's Secrets. Without a key the
+app still works on the archive (to Dec 2025). The whole chain (fetch → `syntra/clean.py` → 2026 → static mask →
+fire-cells) is `syntra/pipeline.py`:
+
+```python
+from syntra.pipeline import load_country
+d = load_country("Sudan")   # d["cells"], d["static"], d["info"]
+```
 
 ## Folders
 
