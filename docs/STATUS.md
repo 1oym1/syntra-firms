@@ -4,7 +4,7 @@ Where the project stands. Newest first. Update it when something lands.
 
 ## 2026-11-14, about 12:00 (Hisham): harmonization + app, PR #1
 
-**Team decision: Sudan is the main study area** (backup Ethiopia; Saudi Arabia as the comparison case). See `docs/DECISIONS.md`.
+**Team decision: Sudan is the main study area. We build on it first and may add a second country later (Ethiopia is ready); Saudi Arabia is the comparison case**. See `docs/DECISIONS.md`.
 
 **Pull request:** [#1 Harmonization (phases 4-5) + full Streamlit app](https://github.com/1oym1/syntra-firms/pull/1). Needs a review and a merge.
 

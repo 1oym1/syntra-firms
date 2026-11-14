@@ -15,7 +15,9 @@ Saudi Arabia stays as a comparison case that shows the limits of the method. Agr
 - Saudi Arabia has few, scattered vegetation fires (most raw hotspots are gas flares and other static sources), so its
   conversion is weak (R² 0.28). Showing it honestly strengthens the Validity criterion.
 
-**Backup.** Ethiopia (R² 0.97), if Sudan causes a problem.
+**Next.** We build everything on Sudan first. We may add a second country later. Ethiopia is ready
+(already validated, R² 0.97), and it is also the backup if Sudan causes a problem. The app already accepts
+any FIRMS country, so adding one needs no code change, only its figures for the slides.
 
 ## 2026-11-14: The app is built with Streamlit
 
