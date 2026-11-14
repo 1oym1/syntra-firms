@@ -12,7 +12,11 @@ or from the repo root:
     python -m syntra.clean --country Sudan
 
 What it does (details in docs/FIRE_SOURCE.md):
-1. Reads only the columns we need, with small dtypes.
+1. Reads only the columns we need, with small dtypes, and keeps ONLY hotspots
+   inside the country's border (Natural Earth 1:10m). The FIRMS country files
+   already match the border, but FIRMS API data is a rectangle that includes
+   neighbours (South Sudan, Chad, ...), so the clip guarantees one country.
+   Use the 1:10m border: the coarse 1:50m one misplaces points near borders.
 2. FLAGS static sources (type 1 volcano, 2 static land source such as gas flares,
    3 offshore) in an `is_static` column. They are kept for the map toggle and the
    static-source analysis, but every harmonization and calendar step uses
@@ -24,21 +28,24 @@ What it does (details in docs/FIRE_SOURCE.md):
 7. Builds a monthly table per sensor: hotspots, burned grid cells, FRP sum.
 
 Outputs in data/processed/:
-    clean_<inst>_<year>_<country>.parquet   one per raw file
+    clean_v<N>_<inst>_<year>_<country>.parquet   one per raw file (N = CLEAN_VERSION)
     clean_vegetation_<country>.csv          all years, vegetation fires only
     static_mask_<country>.csv               ~1 km cells to drop from NRT data
     monthly_<country>.csv                   input for harmonization (Step 4)
 """
 import argparse
+import pathlib
 
 import numpy as np
 import pandas as pd
+import requests
 
-from syntra.data import DEFAULT_COUNTRY, PROCESSED_DIR, RAW_DIR
+from syntra.data import DEFAULT_COUNTRY, PROCESSED_DIR, RAW_DIR, REPO_ROOT
 
 GRID_DEG = 0.1      # harmonization grid (about 11 km)
 MASK_DEG = 0.01     # static-source mask grid (about 1 km)
 MODIS_CONF = 30     # MODIS >= 30  <=>  VIIRS n/h
+CLEAN_VERSION = 2   # bump when the cleaning rules change, so old outputs are not reused
 PERSISTENT_DAYS = 183   # a ~1 km cell with fire on more days than this in one year is a static source
 
 COLS = ["latitude", "longitude", "acq_date", "acq_time", "satellite", "confidence",
@@ -47,13 +54,58 @@ DTYPES = {"latitude": "float32", "longitude": "float32", "acq_time": "int16", "f
           "satellite": "category", "daynight": "category", "type": "int8"}
 DUP_KEYS = ["latitude", "longitude", "acq_date", "acq_time", "satellite"]
 
+# Country borders: Natural Earth 1:10m (public domain), downloaded once into data/external/
+BORDERS_URL = "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip"
+BORDERS_FILE = REPO_ROOT / "data" / "external" / "ne_10m_admin_0_countries.zip"
+# FIRMS file name -> Natural Earth ISO code, where the names differ or are ambiguous
+ISO3 = {"Sudan": "SDN", "South_Sudan": "SSD", "Saudi_Arabia": "SAU", "Democratic_Republic_of_the_Congo": "COD",
+        "Republic_of_the_Congo": "COG", "United_States": "USA", "Lao_PDR": "LAO", "Swaziland": "SWZ"}
 
-def instruments(raw_dir=RAW_DIR):
-    """MODIS plus ONE VIIRS series: Suomi NPP when present, otherwise NOAA-20.
+
+def country_shape(country=DEFAULT_COUNTRY, borders_file=BORDERS_FILE):
+    """Border polygon of `country` (FIRMS spelling, e.g. 'Sudan', 'South_Sudan')."""
+    import geopandas as gpd
+    borders_file = pathlib.Path(borders_file)
+    if not borders_file.exists():
+        borders_file.parent.mkdir(parents=True, exist_ok=True)
+        r = requests.get(BORDERS_URL, timeout=300)
+        r.raise_for_status()
+        borders_file.write_bytes(r.content)
+    world = gpd.read_file(borders_file).to_crs(4326)
+    iso = ISO3.get(country)
+    if iso:
+        sel = world[(world["ADM0_A3"] == iso) | (world["ISO_A3"] == iso)]
+    else:
+        name = country.replace("_", " ").lower()
+        sel = world[world["ADMIN"].str.lower().eq(name) | world["NAME"].str.lower().eq(name)
+                    | world["NAME_LONG"].str.lower().eq(name)]
+    if sel.empty:
+        raise ValueError(f"No border found for '{country}'. Add it to ISO3 in syntra/clean.py.")
+    return sel.geometry.union_all()
+
+
+def inside(df, shape):
+    """True for rows whose point lies inside `shape`."""
+    import shapely
+    return shapely.contains_xy(shape, df["longitude"].to_numpy(), df["latitude"].to_numpy())
+
+
+def raw_files(inst, country=DEFAULT_COUNTRY, raw_dir=RAW_DIR):
+    """Yearly files of exactly this country, e.g. modis_2025_Sudan.csv.
+
+    The year must be 4 digits: a plain "*" would also match modis_2025_South_Sudan.csv
+    when looking for Sudan (or Equatorial_Guinea when looking for Guinea).
+    """
+    return sorted((raw_dir / inst).glob(f"{inst}_[0-9][0-9][0-9][0-9]_{country}.csv"))
+
+
+def instruments(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR):
+    """MODIS plus ONE VIIRS series: Suomi NPP when this country has its files, otherwise NOAA-20.
 
     Never add both VIIRS satellites together: that doubles the counts from 2018.
+    Checks the country's files, not just the folder, which can hold other countries.
     """
-    return ["modis"] + (["viirs-snpp"] if (raw_dir / "viirs-snpp").exists() else ["viirs-jpss1"])
+    return ["modis"] + (["viirs-snpp"] if raw_files("viirs-snpp", country, raw_dir) else ["viirs-jpss1"])
 
 
 def cell_id(lat, lon, deg):
@@ -63,10 +115,17 @@ def cell_id(lat, lon, deg):
     return row * 100_000 + col
 
 
-def clean_file(path, inst):
-    """Clean one yearly FIRMS CSV. `inst` is 'modis', 'viirs-snpp' or 'viirs-jpss1'."""
+def clean_file(path, inst, shape):
+    """Clean one yearly FIRMS CSV. `inst` is 'modis', 'viirs-snpp' or 'viirs-jpss1'.
+
+    `shape` is the country border from country_shape(): points outside it are dropped.
+    """
     df = pd.read_csv(path, usecols=COLS, dtype=DTYPES)
     n0 = len(df)
+    df = df.dropna(subset=["latitude", "longitude", "acq_date"])
+    keep = inside(df, shape)
+    n_out = int((~keep).sum())
+    df = df[keep]
     # Static sources are flagged, not dropped
     df["is_static"] = df["type"].isin([1, 2, 3])
     # Same confidence rule for both sensors (static points are kept for the map and the mask)
@@ -75,7 +134,6 @@ def clean_file(path, inst):
     else:
         ok = df["confidence"].isin(["n", "h"])
     df = df[ok | df["is_static"]]
-    df = df.dropna(subset=["latitude", "longitude", "acq_date"])
     df = df.drop_duplicates(DUP_KEYS)
     df["acq_date"] = pd.to_datetime(df["acq_date"])
     df["year"] = df["acq_date"].dt.year.astype("int16")
@@ -84,20 +142,22 @@ def clean_file(path, inst):
     df["family"] = "MODIS" if inst == "modis" else "VIIRS"
     df["satellite"] = df["satellite"].astype(str)
     df = df.drop(columns=["confidence"])
-    print(f"{path.name:36} {n0:>9,} -> {len(df):>9,} rows | static {int(df.is_static.sum()):,}")
+    print(f"{path.name:36} {n0:>9,} -> {len(df):>9,} rows | outside border {n_out:,} "
+          f"| static {int(df.is_static.sum()):,}")
     return df.reset_index(drop=True)
 
 
-def clean_all(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, overwrite=False):
+def clean_all(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, overwrite=False,
+              shape=None):
     """Clean every raw file for `country`. Returns all clean rows (static ones flagged)."""
     out_dir.mkdir(parents=True, exist_ok=True)
+    shape = country_shape(country) if shape is None else shape
     paths = []
-    for inst in instruments(raw_dir):
-        # Exactly a 4-digit year: "*" would also match "2025_South" and mix South Sudan into Sudan
-        for path in sorted((raw_dir / inst).glob(f"{inst}_[0-9][0-9][0-9][0-9]_{country}.csv")):
-            out = out_dir / f"clean_{path.stem}.parquet"
+    for inst in instruments(country, raw_dir):
+        for path in raw_files(inst, country, raw_dir):
+            out = out_dir / f"clean_v{CLEAN_VERSION}_{path.stem}.parquet"
             if overwrite or not out.exists():
-                clean_file(path, inst).to_parquet(out, index=False)
+                clean_file(path, inst, shape).to_parquet(out, index=False)
             paths.append(out)
     if not paths:
         raise FileNotFoundError(f"No raw files for {country} in {raw_dir}. "
@@ -126,11 +186,25 @@ def apply_static_mask(df, mask):
 
 
 def monthly_table(veg):
-    """Per sensor and month: hotspots, burned 0.1 degree cells, FRP sum."""
-    return (veg.groupby(["family", "year", "month"], observed=True)
-               .agg(hotspots=("frp", "size"), burned_cells=("cell_id", "nunique"),
-                    frp_sum=("frp", "sum"))
-               .reset_index())
+    """Per sensor and month: hotspots, burned 0.1 degree cells, FRP sum.
+
+    A month with no fires gets a row of zeros (between the sensor's first and last
+    month). Without it, quiet months such as Sudan's rainy season or most months in
+    Saudi Arabia would simply be missing, and a monthly median would skip them.
+    """
+    tab = (veg.groupby(["family", "year", "month"], observed=True)
+              .agg(hotspots=("frp", "size"), burned_cells=("cell_id", "nunique"),
+                   frp_sum=("frp", "sum"))
+              .reset_index())
+    full = []
+    for fam, g in tab.groupby("family"):
+        first, last = (pd.Period(year=int(y), month=int(m), freq="M")
+                       for y, m in (g.iloc[0][["year", "month"]], g.iloc[-1][["year", "month"]]))
+        months = pd.period_range(first, last, freq="M")
+        idx = pd.MultiIndex.from_arrays([[fam] * len(months), months.year, months.month],
+                                        names=["family", "year", "month"])
+        full.append(g.set_index(["family", "year", "month"]).reindex(idx, fill_value=0))
+    return pd.concat(full).reset_index()
 
 
 def check(fires, veg, monthly):
@@ -155,9 +229,9 @@ def check(fires, veg, monthly):
     return report
 
 
-def run(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, overwrite=False):
+def run(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, overwrite=False, shape=None):
     """Full Step 3. Returns (fires, veg, monthly, mask) and writes the outputs."""
-    fires = clean_all(country, raw_dir, out_dir, overwrite)
+    fires = clean_all(country, raw_dir, out_dir, overwrite, shape)
     veg = fires[~fires.is_static].reset_index(drop=True)
     mask = static_mask(fires)
     monthly = monthly_table(veg)
