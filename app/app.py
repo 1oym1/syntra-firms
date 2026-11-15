@@ -510,6 +510,7 @@ with tab_alert:
             amap.update_layout(map=dict(style="carto-darkmatter", center=dict(lat=13.8, lon=30.2), zoom=4.3),
                                height=470, margin=dict(l=0, r=0, t=0, b=0))
             st.plotly_chart(amap, key="alert_map")
+            st.markdown("<div style='height:40px'></div>", unsafe_allow_html=True)   # room for the map credits
             st.caption("🟧 above normal for this area · 🟥 surge: above 99% of past days · 🟪 fires where they are rare · "
                        "grey: fires today, within normal. Hover a square for its numbers.")
         if acall["areas"]:
