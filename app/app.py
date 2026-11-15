@@ -25,7 +25,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from syntra import fire_calendar as fc  # noqa: E402
 from syntra import harmonize as hz  # noqa: E402
 from syntra import series  # noqa: E402
-from syntra import apppack, datapack, live  # noqa: E402
+from syntra import alert, apppack, datapack, live  # noqa: E402
 from syntra.pipeline import load_country  # noqa: E402
 
 COUNTRY = "Sudan"   # team decision (PR #6): Sudan only
@@ -117,6 +117,22 @@ def get_live(days=7):
 def get_series(country):
     d = get_country(country)
     return series.country_series(d["veg"], d["info"])
+
+
+@st.cache_data(show_spinner=False, ttl=1800)
+def get_alert_points():
+    """Last 2 days of FIRMS near-real-time for the early warning (alert.call keeps the 24 h before the newest pass)."""
+    return live.live_points(days=2, sensors=list(live.LIVE_SOURCES), include_static=True, country=COUNTRY)
+
+
+@st.cache_data(show_spinner=False, ttl=6 * 3600)
+def get_weather():
+    return alert.weather()
+
+
+@st.cache_resource(show_spinner=False)
+def get_baseline():
+    return alert.load_baseline()
 
 
 @st.cache_data(show_spinner=False, ttl=6 * 3600)
@@ -423,9 +439,109 @@ if mtd is not None and np.isfinite(mtd["value"]):
     st.caption(note + "Near-real-time data: provisional.")
 
 figs = {}
-tab_cal, tab_risk, tab_3d, tab_tr, tab_h, tab_map, tab_data, tab_m = st.tabs(
-    ["📅 Burning calendar", "⚠️ Risk periods", "🧊 3D view", "📈 Trend & the 2012 jump", "🛰️ Harmonization", "🗺️ Hotspot map",
-     "⬇️ Download", "📖 Method"])
+ABASE = get_baseline()
+try:  # the early warning and the drift check need the live feed; the rest of the app does not
+    with st.spinner("Reading the live NASA FIRMS feed and NASA POWER weather…"):
+        alert_pts = get_alert_points()
+        try:
+            alert_wx = get_weather()
+        except Exception:  # noqa: BLE001
+            alert_wx = None
+    acall = alert.call(alert_pts, ABASE, alert_wx)
+except Exception as e:  # noqa: BLE001
+    alert_pts, acall, alert_err = None, None, e
+tab_cal, tab_alert, tab_risk, tab_3d, tab_tr, tab_h, tab_map, tab_data, tab_m = st.tabs(
+    ["📅 Burning calendar", "🚨 Early warning", "⚠️ Risk periods", "🧊 3D view", "📈 Trend & the 2012 jump", "🛰️ Harmonization",
+     "🗺️ Hotspot map", "⬇️ Download", "📖 Method"])
+
+# ---------- early warning ----------
+with tab_alert:
+    st.markdown("**Which of today's fires are not normal?** A fire count alone does not tell anyone what to do. "
+                "Today is compared with every past day of the same month since 2000 in the harmonized record, area by "
+                "area, together with the weather and the kind of fires seen. The answer is one call: expected seasonal "
+                "burning, or something to act on.")
+    if bbox is not None:
+        st.caption("The early warning always covers the whole country; the area of interest does not apply here.")
+    if acall is None:
+        st.warning("The live NASA FIRMS feed is not reachable right now, and the early warning needs it. "
+                   "The rest of the app works from the archive.")
+    else:
+        LVC = ["#009E73", "#E69F00", "#F28C28", "#D55E00"]
+        ICON = {"ok": "🟢", "mid": "🟠", "hi": "🔴", "na": "⚪"}
+        c1, c2 = st.columns([1.2, 1])
+        with c2:
+            scale = "".join(f"<span style='flex:1;height:6px;border-radius:3px;background:{LVC[i] if i <= acall['level'] else 'rgba(127,127,127,.25)'}'></span>"
+                            for i in range(4))
+            sname = SENSOR_LABEL[acall["sensor"]]
+            newest = f"{acall['newest']:%H:%M UTC %d %b}" if acall["newest"] is not None else "n/a"
+            st.markdown(f"<div class='card status' style='--c:{LVC[acall['level']]}'><h4>Today's call</h4>"
+                        f"<div class='big' style='color:{LVC[acall['level']]}'>{acall['name']}</div>"
+                        f"<div style='display:flex;gap:4px;margin:.5rem 0'>{scale}</div>"
+                        f"<p style='margin:.2rem 0 .3rem'>{acall['advice']}</p>"
+                        f"<div class='sub'>{sname}, 24 h to the newest pass "
+                        f"{newest}</div></div>", unsafe_allow_html=True)
+            for name, val, det, stt, tag in acall["factors"]:
+                st.markdown(f"{ICON[stt]} **{name}: {tag}**  \n{val}  \n<span class='sub'>{det}</span>",
+                            unsafe_allow_html=True)
+        with c1:
+            KC = {"surge": "#D55E00", "rare": "#CC79A7", "above": "#E69F00", None: "#8da2c8"}
+            G = ABASE["grid"]
+            mon = pd.Timestamp(2001, acall["month"], 1).strftime("%b")
+            cells = sorted(acall["cells"], key=lambda c: c["kind"] is not None)
+            gj = {"type": "FeatureCollection", "features": [
+                {"type": "Feature", "id": k, "geometry": {"type": "Polygon", "coordinates": [[
+                    [c["gx"] * G, c["gy"] * G], [(c["gx"] + 1) * G, c["gy"] * G], [(c["gx"] + 1) * G, (c["gy"] + 1) * G],
+                    [c["gx"] * G, (c["gy"] + 1) * G], [c["gx"] * G, c["gy"] * G]]]}} for k, c in enumerate(cells)]}
+            KZ = {None: 0, "above": 1, "surge": 2, "rare": 3}
+            tips = [f"<b>{alert.near(c['lon'], c['lat'])}</b><br>{c['n']} detection{'s' if c['n'] != 1 else ''} in 24 h"
+                    f"{' · <b>' + alert.KIND[c['kind']] + '</b>' if c['kind'] else ' · within normal'}<br>"
+                    f"normal {mon} day: {c['mean']:.1f} · fires on {c['share'] * 100:.0f}% of days" for c in cells]
+            amap = go.Figure(go.Choroplethmap(
+                geojson=gj, locations=list(range(len(cells))), z=[KZ[c["kind"]] for c in cells], zmin=0, zmax=3,
+                colorscale=[[0, KC[None]], [.25, KC[None]], [.25, KC["above"]], [.5, KC["above"]], [.5, KC["surge"]],
+                            [.75, KC["surge"]], [.75, KC["rare"]], [1, KC["rare"]]],
+                marker_opacity=[.85 if c["kind"] else .4 for c in cells], marker_line_width=.5, marker_line_color="#05070d",
+                showscale=False, text=tips, hovertemplate="%{text}<extra></extra>"))
+            top6 = acall["areas"][:6]
+            if top6:
+                amap.add_trace(go.Scattermap(lat=[c["lat"] for c in top6], lon=[c["lon"] for c in top6], mode="markers+text",
+                                             text=[str(i + 1) for i in range(len(top6))], textfont=dict(color="#05070d", size=12),
+                                             marker=dict(size=19, color=[KC[c["kind"]] for c in top6]), hoverinfo="skip", showlegend=False))
+            amap.update_layout(map=dict(style="carto-darkmatter", center=dict(lat=13.8, lon=30.2), zoom=4.3),
+                               height=470, margin=dict(l=0, r=0, t=0, b=0))
+            st.plotly_chart(amap, key="alert_map")
+            st.caption("🟧 above normal for this area · 🟥 surge: above 99% of past days · 🟪 fires where they are rare · "
+                       "grey: fires today, within normal. Hover a square for its numbers.")
+        if acall["areas"]:
+            st.markdown("**Areas to check first**")
+            cols = st.columns(3)
+            for i, c in enumerate(acall["areas"][:6]):
+                mon = pd.Timestamp(2001, acall["month"], 1).strftime("%b")
+                vs = (f"{c['n']} detections today, {c['n'] / c['mean']:.1f}× a normal {mon} day ({c['mean']:.1f})"
+                      if c["mean"] >= .5 else f"{c['n']} detections today; this area has fires on only "
+                      f"{c['share'] * 100:.0f}% of {mon} days")
+                cols[i % 3].markdown(f"<div class='card' style='border-left:5px solid {KC[c['kind']]}'><h4>#{i + 1} · "
+                                     f"{alert.KIND[c['kind']]}</h4><b>{alert.near(c['lon'], c['lat'])}</b><br>{vs}<br>"
+                                     f"<a href='https://www.google.com/maps/@{c['lat']:.2f},{c['lon']:.2f},10z/data=!3m1!1e3' "
+                                     f"target='_blank'>{c['lat']:.2f}° N, {c['lon']:.2f}° E · satellite view ↗</a></div>",
+                                     unsafe_allow_html=True)
+        else:
+            st.success("No area is above its normal for this month right now.")
+        with st.expander("How the call is made"):
+            st.markdown(
+                f"- **Fire count:** today's VIIRS detections against every past day of this month since {ABASE['from'][:4]} "
+                "(VIIRS from 2012; MODIS before that put into VIIRS units with one factor per month). 75th, 90th and "
+                "97th percentiles score 1, 2 and 3.\n"
+                f"- **Areas:** {ABASE['grid']}° squares (about 55 km). Above normal: at least 5 detections and more than on "
+                "95% of past days of this month in that square; surge: more than 99%; fire where it is rare: at least 3 "
+                "detections where fires occur on under 5% of days.\n"
+                "- **Fire type:** more intense when the median fire power is over 1.5× normal or the night share is over "
+                "twice normal (and over 35%).\n"
+                "- **Weather:** NASA POWER, mean of 4 fire-belt points (Darfur, South Kordofan, White Nile, Blue Nile), "
+                "last 3 days against their 2001–2025 average for the same days. POWER arrives a few days late.\n"
+                "- **Call:** score 7+ Severe, 5+ Warning, 2+ Watch, else expected seasonal burning.\n\n"
+                "The same rules and the same baseline file (`site/alerts.js`) run on the story site, so both always "
+                "make the same call. This supports a decision; it does not replace people on the ground.")
 
 # ---------- calendar ----------
 with tab_cal:
@@ -706,6 +822,44 @@ with tab_h:
                      legend=dict(orientation="h", title=None))
     st.plotly_chart(fb)
 
+    st.subheader("Continuity monitor")
+    st.markdown("Satellites retire. Every handover can break a fire record, as the 2012 switch did. SYNTRA keeps the "
+                "whole record in VIIRS S-NPP units, fits each handover on the years both satellites flew, tests it on "
+                "years it never saw and keeps checking it against the live feed.")
+    vn = get_n20_check(country)
+    bs = acall["by_sensor"] if acall else {}
+    r21 = bs["VIIRS_NOAA20"] / bs["VIIRS_NOAA21"] if bs.get("VIIRS_NOAA20") and bs.get("VIIRS_NOAA21") else None
+    b1, b2, b3, b4 = st.columns(4)
+    b1.metric("Terra → Terra + Aqua", f"×{cs['k_terra_all']:.2f}",
+              help="One annual factor fills Nov 2000 – Jun 2002, the months before Aqua joined Terra.")
+    b2.metric("MODIS → VIIRS", f"R² {ho['r2']:.3f}",
+              help=f"12 monthly factors ({cs['k_viirs'].min():.2f}–{cs['k_viirs'].max():.2f}), fitted on "
+                   f"{hz.OVERLAP[0]}–{hz.OVERLAP[1]}. Raw MODIS scores {ho['r2_raw_modis']:.2f} on the same "
+                   f"{ho['n_months']} held-out months.")
+    if vn:
+        b3.metric("NOAA-20 → S-NPP", f"×{vn['k']:.3f}",
+                  help=f"R² {vn['r2']:.3f} on {vn['n_months']} months both flew. Takes over after S-NPP data ends "
+                       f"({info['snpp_end']:%d %b %Y}).")
+    b4.metric("NOAA-21 → NOAA-20 (standby)", f"×{r21:.2f}" if r21 else "n/a",
+              help="Today's NOAA-20 / NOAA-21 ratio from the live feed. Ready to carry the record if NOAA-20 stops.")
+    if alert_pts is not None:
+        dr = alert.drift(alert_pts, ABASE)
+        mon = pd.Timestamp.now(tz="UTC").strftime("%B")
+        if dr["checked"]:
+            lo, mid, hi_, ndays = dr["band"]
+            st.markdown(f"{'🟢' if dr['in_band'] else '🔴'} **Live drift check:** VIIRS ÷ MODIS in the last 24 h = "
+                        f"**{dr['ratio']:.2f}** ({dr['viirs']:,} ÷ {dr['modis']:,}); the normal {mon} range is "
+                        f"{lo}–{hi_} (10th–90th percentile of {ndays:,} days since 2012). "
+                        + ("The sensors still agree as they did on past days, so the conversion holds." if dr["in_band"]
+                           else "Outside the usual range: one day can be noise; several in a row mean a satellite "
+                                "is drifting and the factor needs refitting."))
+        else:
+            st.markdown("⚪ **Live drift check:** too few MODIS fires today for a fair check (it needs at least 20).")
+    st.info("**MODIS is retiring.** NASA plans to stop collecting Terra MODIS science data around January 2027, and "
+            "Aqua's end date is under review ([NASA LAADS DAAC, MODIS to VIIRS transition]"
+            "(https://ladsweb.modaps.eosdis.nasa.gov/learn/modis-to-viirs-transition)). Because 2000–2011 is already in "
+            "VIIRS units, this record carries on unchanged on NOAA-20 and NOAA-21.")
+
 # ---------- hotspot map ----------
 with tab_map:
     pts_all = in_box(veg, bbox)
@@ -907,6 +1061,24 @@ with tab_data:
 
 # ---------- method ----------
 with tab_m:
+    with st.expander("Who SYNTRA serves", expanded=False):
+        st.markdown(
+            "One consistent fire record answers different questions for different people. ✅ = in this app today.\n\n"
+            "- **Agriculture and food security** (Ministry of Agriculture, FAO, WFP): most of Sudan's fires are crop "
+            "leftovers burned after harvest, so the record is also a farming calendar. ✅ Burning calendar, risk periods, "
+            "fire type in the early warning.\n"
+            "- **Public health** (Ministry of Health, WHO): the October–December peak puts smoke over towns. ✅ High-fire "
+            "weeks, humidity and wind against normal.\n"
+            "- **Civil defence and disaster response:** one call a day with the areas to check first. ✅ Early warning, "
+            "live NASA FIRMS map.\n"
+            "- **Environment and protected areas:** fire where land rarely burns stands out, e.g. Dinder National Park. "
+            "✅ \"Fire where it is rare\" in the early warning.\n"
+            "- **Humanitarian agencies:** fires that break the usual pattern show where to look first, as a reason to "
+            "check, never a claim about cause. ✅ Areas to check, with a satellite view link.\n"
+            "- **Research and climate:** one series from 2000, so a trend is real, not the 2012 satellite switch. ✅ Trend "
+            "tab, download.\n"
+            "- **NASA:** a fire record that stays unbroken through the MODIS retirement, built on NASA FIRMS and NASA "
+            "POWER. ✅ Continuity monitor in the Harmonization tab.")
     doc = hz.__doc__
     st.markdown("**Harmonization (Steps 4–5, `syntra/harmonize.py`)**\n\n"
                 + doc[doc.index("1. Gridding"):doc.index("Outputs in")])

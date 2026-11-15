@@ -123,6 +123,10 @@ app = apppack.as_country(datapack.load("Sudan"))
 cs = series.country_series(app["veg"], app["info"])
 n20 = series.validate_n20(app["veg"], app["info"]["snpp_end"])
 ho = cs["heldout"]
+from syntra import analysis as an
+_pk = datapack.load("Sudan")
+_rw = an.risk_periods(an.daily_series(_pk["celldays"], _pk["factors"]))["weeks"]   # same as the site's risk clock
+risk_weeks = [[r.week_start, round(float(r.share_of_years_pct)), r["class"]] for _, r in _rw.iterrows()]
 
 out = {
     "grid": G, "from": str(all_days[0].date()), "to": str(last_full.date()),
@@ -130,7 +134,7 @@ out = {
     "k_modis_to_viirs": {m: round(k_mv[m], 3) for m in range(1, 13)},
     "k_terra_to_modis": {m: round(k_ta[m], 3) for m in range(1, 13)},
     "national": national, "cells": cells, "ratio": ratio, "character": character,
-    "weather": weather, "weather_points": PTS,
+    "weather": weather, "weather_points": PTS, "risk_weeks": risk_weeks,
     "k_cells_modis_to_viirs": {int(m): round(float(k), 3) for m, k in cs["k_viirs"].items()},
     "bridges": {
         "terra_aqua": {"k": round(float(cs["k_terra_all"]), 3)},
