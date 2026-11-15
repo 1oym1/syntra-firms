@@ -65,19 +65,24 @@ export default async () => {
       return [sensor, clean(await r.text(), sensor)];
     } catch (e) { throw { sensor, message: `${sensor}: ${e && e.message || e}` }; }
   }));
-  const points = [], by_sensor = {}, errors = [], missing = [];
+  const all = [], by_sensor = {}, errors = [], missing = [];
   let newest = "";
   for (const g of got) {
     if (g.status === "rejected") { errors.push(String(g.reason && g.reason.message || g.reason)); missing.push(g.reason && g.reason.sensor); continue; }
     const [sensor, res] = g.value;
-    by_sensor[sensor] = res.points.length;
-    points.push(...res.points);
+    by_sensor[sensor] = 0;
+    all.push(...res.points);
     if (res.newest > newest) newest = res.newest;
   }
+  // FIRMS "24h" files can still hold passes up to ~34 h old; keep the 24 h before the newest pass
+  const cut = newest ? Math.round(Date.parse(newest) / 6e4) - 24 * 60 : -Infinity;
+  const points = all.filter((p) => p[3] > cut);
+  const dropped_older_than_24h = all.length - points.length;
+  for (const p of points) by_sensor[p[2]] += 1;
   const body = {
     source: "NASA FIRMS active fire data, last 24 h (MODIS C6.1, VIIRS NOAA-20 and NOAA-21 C2, NRT)",
     window: "24h", fetched_utc: new Date().toISOString(), newest_pass_utc: newest || null,
-    total: points.length, by_sensor, missing, errors, points,
+    total: points.length, by_sensor, dropped_older_than_24h, missing, errors, points,
   };
   const ok = errors.length < Object.keys(FILES).length;
   return new Response(JSON.stringify(body), {

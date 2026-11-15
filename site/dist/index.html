@@ -70,6 +70,18 @@ footer .mk { width: 18px; height: 21px; vertical-align: -4px; margin-right: 8px;
 .navlinks a:hover { color: var(--ink); background: rgba(255,255,255,.06); }
 .navlinks a.cta { color: #1b0d00; background: var(--ember); font-weight: 600; }
 @media (max-width: 760px) { .navlinks a:not(.cta) { display: none; } }
+section[id]:not(#seam) { scroll-margin-top: 84px; }
+.mbtn { display: none; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--rim);
+  background: rgba(255,255,255,.04); color: var(--ink); font: 500 .86rem var(--body); cursor: pointer; }
+.mbtn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
+.mnav { background: rgba(10,15,28,.96); position: fixed; z-index: 49; left: 12px; right: 12px; top: calc(70px + env(safe-area-inset-top, 0px)); padding: 8px; display: grid; gap: 2px; }
+.mnav[hidden] { display: none; }
+.mnav a { display: flex; align-items: center; min-height: 46px; padding: 0 14px; border-radius: 10px; text-decoration: none; color: var(--ink); font-size: 1rem; }
+.mnav a:active, .mnav a:hover { background: rgba(255,255,255,.07); }
+.mnav a.livenav::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4d4d; margin-right: 10px; }
+@media (max-width: 760px) { .mbtn { display: inline-flex; } .navlinks a.cta { white-space: nowrap; } }
+@media (max-width: 420px) { .mlab { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } .mbtn { padding: 0 10px; } }
+@media (pointer: coarse) { .ctrl input[type=range] { height: 36px; } }
 
 /* hero */
 .hero { position: relative; min-height: 100svh; display: grid; align-items: center; overflow: hidden; isolation: isolate; }
@@ -246,7 +258,7 @@ section { position: relative; z-index: 2; }
 .factors .k { font: 500 .7rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
 .factors .v { color: #dfe4ef; }
 .factors .v small { display: block; color: var(--dim); font-size: .8rem; margin-top: 2px; }
-.tag { font: 600 .66rem var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+.tag { font: 600 .7rem var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
 .tag.ok { color: var(--harm); } .tag.mid { color: var(--ember-2); } .tag.hi { color: #ff6b4a; } .tag.na { color: var(--dim); }
 .areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 18px; }
 .area { padding: 16px 18px; display: grid; gap: 6px; }
@@ -459,9 +471,11 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   <a class="logo" href="#top" aria-label="SYNTRA home"><svg aria-hidden="true"><use href="#mk"/></svg>SYNTRA</a>
   <div class="navlinks glass">
     <a class="livenav" href="#live">Live now</a><a href="#alert">Alerts</a><a href="#seam">The seam</a><a href="#check">Check a month</a><a href="#risk">Risk clock</a><a href="#team">Team</a><a href="#app">App</a>
+    <button type="button" class="mbtn" id="mbtn" aria-expanded="false" aria-controls="mnav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="mlab">Menu</span></button>
     <a class="cta app-link" href="#app">Open the app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
   </div>
 </div></nav>
+<div class="mnav glass" id="mnav" hidden></div>
 
 <header class="hero" id="top">
   <div id="globe" aria-hidden="true"></div>
@@ -504,7 +518,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     <h2 id="live-h">Sudan right now</h2>
     <p>Every fire hotspot NASA's satellites picked up over Sudan in the last 24 hours, cleaned the same way as the 26-year record
       (inside the border, confident detections only, gas flares and other fixed heat sources removed). It refreshes every 30 minutes.
-      Hover a dot for its details.</p>
+      Hover or tap a dot for its details.</p>
   </div>
   <div class="livewrap">
     <div class="livemap glass">
@@ -924,7 +938,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       document.querySelectorAll('a[href^="#"]').forEach(function (a) {
         a.addEventListener("click", function (e) {
           var id = a.getAttribute("href"), el = id.length > 1 && document.querySelector(id);
-          if (el) { e.preventDefault(); lenis.scrollTo(el, { duration: 1.4 }); }
+          if (el) { e.preventDefault(); lenis.scrollTo(el, { duration: 1.4, offset: el.id === "seam" ? 0 : -84 }); }
         });
       });
     } catch (e) { lenis = null; }
@@ -1026,16 +1040,20 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       key.appendChild(b);
     });
     var belt = document.createElement("span"); belt.className = "belt"; belt.innerHTML = "<i></i>usual fire belt 2016–25"; key.appendChild(belt);
-    cv.addEventListener("pointermove", function (e) {
-      var r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, best = null, bd = 100;
+    function pick(e) {
+      var r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, best = null, bd = e.pointerType === "mouse" ? 100 : 400;
       LS.vis.forEach(function (v) { var d = (v[0] - x) * (v[0] - x) + (v[1] - y) * (v[1] - y); if (d < bd) { bd = d; best = v; } });
       if (best !== LS.hover) { LS.hover = best; drawLMap(); }
       if (!best) { hideTip(); return; }
       var p = best[2];
       showTip(e.clientX, e.clientY, "<b>" + SNL[p[2]] + "</b>" + (p[3] ? "<br>pass " + hhmm(isoOf(p[3])) : "") +
         (p[4] != null ? "<br>fire power " + p[4] + " MW" : "") + "<br>" + p[1].toFixed(2) + "° N, " + p[0].toFixed(2) + "° E");
-    });
-    cv.addEventListener("pointerleave", function () { hideTip(); if (LS.hover) { LS.hover = null; drawLMap(); } });
+    }
+    cv.addEventListener("pointermove", function (e) { if (e.pointerType === "mouse") pick(e); });
+    cv.addEventListener("pointerdown", function (e) { if (e.pointerType !== "mouse") pick(e); });
+    cv.addEventListener("pointerleave", function (e) { if (e.pointerType !== "mouse") return; hideTip(); if (LS.hover) { LS.hover = null; drawLMap(); } });
+    document.addEventListener("pointerdown", function (e) { if (e.target !== cv && LS.hover) { hideTip(); LS.hover = null; drawLMap(); } });
+    addEventListener("scroll", function () { if (LS.hover && coarse) { hideTip(); LS.hover = null; drawLMap(); } }, { passive: true });
     addEventListener("resize", drawLMap);
   })();
   function renderLive() {
@@ -1892,6 +1910,23 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     }).catch(function () { WX = false; }).then(function () { if (LIVE) render(); });
   }
   pull(); setInterval(pull, 30 * 60 * 1000);
+})();
+</script>
+<script>
+/* phone menu: the same links as the desktop nav */
+(function () {
+  var btn = document.getElementById("mbtn"), box = document.getElementById("mnav"); if (!btn || !box) return;
+  [].forEach.call(document.querySelectorAll(".navlinks a:not(.cta)"), function (a) { var c = a.cloneNode(true); box.appendChild(c); });
+  [["#continuity", "Continuity monitor"], ["#serve", "Who SYNTRA serves"]].forEach(function (l) {
+    if (!document.querySelector(l[0])) return; var a = document.createElement("a"); a.href = l[0]; a.textContent = l[1];
+    box.insertBefore(a, box.querySelector('a[href="#team"]'));
+  });
+  function set(open) { box.hidden = !open; btn.setAttribute("aria-expanded", open); }
+  btn.addEventListener("click", function (e) { e.stopPropagation(); set(box.hidden); if (!box.hidden) box.querySelector("a").focus(); });
+  box.addEventListener("click", function (e) { if (e.target.closest("a")) set(false); });
+  document.addEventListener("click", function (e) { if (!box.hidden && !box.contains(e.target)) set(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !box.hidden) { set(false); btn.focus(); } });
+  addEventListener("resize", function () { if (innerWidth > 760) set(false); });
 })();
 </script>
 
