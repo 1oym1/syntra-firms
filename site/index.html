@@ -341,14 +341,14 @@ td .barcell { display: inline-block; height: 6px; border-radius: 4px; background
 @property --p { syntax: "<percentage>"; inherits: true; initial-value: -25%; }
 .scope .core.ph { inset: 12px; overflow: hidden; color: transparent; --p: -25%; transition: --p 1.15s cubic-bezier(.45,.05,.25,1);
   background: radial-gradient(circle at 50% 62%, #3a1406, #0b0710 74%); }
-.scope:hover .core.ph, .tm:focus-visible .core.ph, .tm.lit .core.ph { --p: 125%; }
+.tm:hover .core.ph, .tm:focus-visible .core.ph, .tm.lit .core.ph { --p: 125%; }
 .core.ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .ph-smoke { filter: grayscale(1) sepia(1) saturate(5) hue-rotate(-22deg) brightness(.48) contrast(1.25) blur(2.4px); transform: scale(1.1); opacity: .85; }
 .ph-heat { filter: url(#thermal); mix-blend-mode: screen; }
 .ph-clear { -webkit-mask-image: linear-gradient(to top, #000 var(--p), transparent calc(var(--p) + 22%)); mask-image: linear-gradient(to top, #000 var(--p), transparent calc(var(--p) + 22%)); }
 .ph-fire { position: absolute; inset: 0; border-radius: 50%; mix-blend-mode: screen; pointer-events: none;
   background: linear-gradient(to top, transparent calc(var(--p) - 2%), rgba(255,90,31,.9) calc(var(--p) + 4%), rgba(255,222,150,.95) calc(var(--p) + 10%), rgba(255,138,42,.55) calc(var(--p) + 16%), transparent calc(var(--p) + 25%)); }
-.scope:hover::before { animation-duration: 5s; border-color: rgba(255,194,92,.7); }
+.tm:hover .scope::before { animation-duration: 5s; border-color: rgba(255,194,92,.7); }
 @keyframes spin2 { to { transform: rotate(360deg); } }
 @keyframes flicker { 0%, 100% { box-shadow: 0 0 18px 2px rgba(255,106,26,.55), 0 0 44px 8px rgba(255,90,31,.18); } 50% { box-shadow: 0 0 26px 5px rgba(255,138,42,.7), 0 0 60px 14px rgba(255,90,31,.26); } }
 .tm h3 { font: 800 1.28rem/1.15 var(--display); margin: 0; }
