@@ -286,6 +286,28 @@ section { position: relative; z-index: 2; }
 .bandlab { display: flex; justify-content: space-between; font: 400 .72rem var(--mono); color: var(--dim); }
 @media (max-width: 760px) { .ctrow { grid-template-columns: minmax(0, 1fr); } }
 
+
+/* who SYNTRA serves */
+.serve { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
+.sv { padding: 22px 20px 18px; display: grid; gap: 12px; align-content: start; transition: border-color .25s, transform .25s; }
+.sv:hover { border-color: rgba(255,138,42,.4); transform: translateY(-2px); }
+.sv-h { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; align-items: center; }
+.sv-h svg { width: 40px; height: 40px; padding: 8px; border-radius: 12px; background: rgba(255,138,42,.1); border: 1px solid rgba(255,138,42,.25);
+  fill: none; stroke: var(--ember); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sv h3 { font-size: 1.08rem; line-height: 1.2; letter-spacing: -.02em; }
+.sv-h span { font: 400 .72rem var(--mono); color: var(--dim); }
+.sv p { margin: 0; color: #c3cbe0; font-size: .92rem; }
+.sv ul { list-style: none; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--rim); display: grid; gap: 7px; }
+.sv li { font-size: .85rem; color: var(--dim); padding-left: 20px; position: relative; }
+.sv li::before { content: ""; position: absolute; left: 2px; top: .5em; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--dim); }
+.sv li.on { color: #dfe4ef; }
+.sv li.on::before { background: var(--harm); border-color: var(--harm); box-shadow: 0 0 8px rgba(47,212,160,.6); }
+.sv li a { color: inherit; text-decoration: none; }
+.sv li a:hover { color: var(--ember-2); text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .sv { transition: none; } .sv:hover { transform: none; } }
+.area a, .sv li a { display: inline-block; padding-block: 6px; margin-block: -6px; }
+@media (pointer: coarse) { .area a, .sv li a { padding-block: 12px; margin-block: -12px; } }
+
 /* bento */
 .bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; perspective: 1200px; }
 .tile { grid-column: span 2; padding: 24px; min-height: 190px; display: grid; gap: 8px; align-content: end; position: relative; overflow: hidden;
@@ -675,6 +697,73 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
         <tr><td>Saudi Arabia</td><td class="n">−13.7</td><td class="n">−0.93<span class="barcell" style="width:0"></span></td><td class="n">14.2%</td></tr>
       </tbody>
     </table>
+  </div>
+</section>
+
+<section class="wrap sec" id="serve" aria-labelledby="serve-h">
+  <div class="sec-head">
+    <div class="eyebrow">Who SYNTRA serves</div>
+    <h2 id="serve-h">One fire record, <span class="grad">many decisions</span></h2>
+    <p>The same consistent record answers different questions for different people. Green items are on this page today;
+      the rest are what we build next.</p>
+  </div>
+  <div class="serve">
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9m0 0c0-3 2-5 5-5 0 3-2 5-5 5Zm0 4c0-3-2-5-5-5 0 3 2 5 5 5Zm0 4c0-2.5 2-4.5 4.5-4.5 0 2.5-2 4.5-4.5 4.5Z"/></svg>
+        <div><h3>Agriculture and food security</h3><span>Ministry of Agriculture · FAO · WFP</span></div></div>
+      <p>Most of Sudan's fires are crop leftovers burned after harvest, so the record is also a farming calendar seen from space.
+        A late start points to a late harvest; a farm area that stops burning is a sign of land-use change worth checking.</p>
+      <ul><li class="on"><a href="#alert">Fire type: farm burning or something more intense</a></li><li class="on"><a href="#risk">Risk clock: when the burning season peaks</a></li><li>Map of farm areas missing their usual fires this season</li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.7-7 10-7 10Z"/><path d="M8.5 11.5h2l1-2 1.5 4 1-2h1.5"/></svg>
+        <div><h3>Public health</h3><span>Ministry of Health · WHO</span></div></div>
+      <p>The October to December peak puts smoke over towns and cities. Knowing the weeks and the areas lets health teams
+        prepare clinics for more breathing-related cases.</p>
+      <ul><li class="on"><a href="#risk">The high-fire weeks of the year</a></li><li class="on"><a href="#alert">Humidity and wind against normal</a></li><li>Smoke weeks for the largest cities</li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.4 3.4 8.2 8 9 4.6-.8 8-4.6 8-9V6l-8-3Z"/><path d="M12 8v5m0 3h.01"/></svg>
+        <div><h3>Civil defence and disaster response</h3><span>Civil defence · disaster management</span></div></div>
+      <p>One call a day, made from the satellites, the 26-year baseline and the weather: expected seasonal burning, or a
+        short list of areas to check first.</p>
+      <ul><li class="on"><a href="#alert">Early warning with the areas to check</a></li><li class="on"><a href="#live">Live NASA FIRMS feed, every 30 minutes</a></li><li>Daily bulletin in Arabic, ready to forward</li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 6 12h3l-4 6h14l-4-6h3l-6-9Z"/><path d="M12 18v3"/></svg>
+        <div><h3>Environment and protected areas</h3><span>Environment and forestry bodies</span></div></div>
+      <p>A fire where land rarely burns means something. The baseline tells routine burning from the unusual, area by
+        area, which matters most in reserves such as Dinder National Park.</p>
+      <ul><li class="on"><a href="#alert">Fires where they are rare</a></li><li>How often each area burns: every year, rarely, or only recently</li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>
+        <div><h3>Humanitarian agencies</h3><span>UN and relief organisations</span></div></div>
+      <p>Fires that break the usual pattern show where to look first. SYNTRA flags them as a reason to check, never as a
+        claim about what caused them.</p>
+      <ul><li class="on"><a href="#alert">Areas to check, with a satellite view link</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>
+        <div><h3>Research and climate</h3><span>Universities · climate studies</span></div></div>
+      <p>One consistent series from 2000 means a trend is real, not the 2012 satellite switch. Questions like "is the fire
+        season starting earlier?" become answerable.</p>
+      <ul><li class="on"><a href="#check">Any month since 2000, in one set of units</a></li><li>Open dataset with a DOI, method and validation included</li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>
+        <div><h3>Every country with a fire season</h3><span>Beyond Sudan</span></div></div>
+      <p>The method is not tied to Sudan: on held-out months it scores R² 0.986 in Ethiopia and 0.905 in Iraq. Where real
+        fires are too few, as in Saudi Arabia, it says so instead of guessing.</p>
+      <ul><li class="on"><a href="#test-h">Tested on four countries</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/></svg>
+        <div><h3>NASA</h3><span>Earth science and applied sciences</span></div></div>
+      <p>Terra MODIS is due to stop collecting science data around January 2027. SYNTRA shows a fire record can stay
+        unbroken through that switch, built on NASA FIRMS and NASA POWER, for agriculture, disasters and health.</p>
+      <ul><li class="on"><a href="#continuity">Continuity monitor and live drift check</a></li><li>NOAA-21 ready as the next handover</li></ul>
+    </article>
   </div>
 </section>
 
@@ -1623,10 +1712,10 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       c.globalAlpha = t.kind ? .95 : .8; c.fillRect(q[0] + 1, q[1] + 1, G * sx - 2, G * sy - 2); c.globalAlpha = 1;
     });
     flagged.forEach(function (t, i) {
-      if (i >= 6) return; var q = px((t.gx + .5) * G, (t.gy + .5) * G);
-      c.fillStyle = "#05070d"; c.beginPath(); c.arc(q[0], q[1], 9, 0, 6.2832); c.fill();
+      if (i >= 6) return; var q = px((t.gx + .5) * G, (t.gy + .5) * G), rr = Math.max(6, Math.min(9, Math.min(G * sx, G * sy) / 2 - .5));
+      c.fillStyle = "#05070d"; c.beginPath(); c.arc(q[0], q[1], rr, 0, 6.2832); c.fill();
       c.strokeStyle = t.col; c.lineWidth = 2; c.stroke();
-      c.fillStyle = "#eef1f8"; c.font = "700 10px JetBrains Mono, monospace"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(i + 1, q[0], q[1] + .5);
+      c.fillStyle = "#eef1f8"; c.font = "700 " + (rr < 8 ? 8 : 10) + "px JetBrains Mono, monospace"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(i + 1, q[0], q[1] + .5);
     });
     c.textAlign = "start"; c.textBaseline = "alphabetic";
   }
@@ -1638,6 +1727,13 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     var ok = LIVE && Array.isArray(LIVE.points);
     var factors = [], score = 0;
     flagged = []; cellsToday = [];
+    var RW = D.risk && D.risk.weeks;
+    if (RW && RW.length) {
+      var wk = RW[Math.min(RW.length - 1, Math.floor((doy(now.toISOString().slice(0, 10)) - 1) / 7))];
+      factors.push(["Season", "Week of " + wk[0] + ": a high-fire week in " + wk[1] + "% of years" +
+        "<small>" + (wk[1] >= 50 ? "Peak burning season, so many fires are expected. The rows below say whether today is unusual even for this season." : "Outside the main burning season, so even a modest rise stands out.") + "</small>",
+        "na", wk[2] + " season"]);
+    }
     if (ok) {
       var miss = LIVE.missing || [], sensor = (LIVE.by_sensor.VIIRS_NOAA20 > 0 && miss.indexOf("VIIRS_NOAA20") < 0) ? "VIIRS_NOAA20" : "VIIRS_NOAA21";
       var pts = LIVE.points.filter(function (p) { return p[2] === sensor; });
