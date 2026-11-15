@@ -1065,6 +1065,8 @@ with tab_m:
     with st.expander("Who SYNTRA serves", expanded=False):
         st.markdown(
             "One consistent fire record answers different questions for different people. ✅ = in this app today.\n\n"
+            "- **NASA:** a fire record that stays unbroken through the MODIS retirement, built on NASA FIRMS and NASA "
+            "POWER. ✅ Continuity monitor in the Harmonization tab.\n"
             "- **Agriculture and food security** (Ministry of Agriculture, FAO, WFP): most of Sudan's fires are crop "
             "leftovers burned after harvest, so the record is also a farming calendar. ✅ Burning calendar, risk periods, "
             "fire type in the early warning.\n"
@@ -1077,9 +1079,7 @@ with tab_m:
             "- **Humanitarian agencies:** fires that break the usual pattern show where to look first, as a reason to "
             "check, never a claim about cause. ✅ Areas to check, with a satellite view link.\n"
             "- **Research and climate:** one series from 2000, so a trend is real, not the 2012 satellite switch. ✅ Trend "
-            "tab, download.\n"
-            "- **NASA:** a fire record that stays unbroken through the MODIS retirement, built on NASA FIRMS and NASA "
-            "POWER. ✅ Continuity monitor in the Harmonization tab.")
+            "tab, download.")
     doc = hz.__doc__
     st.markdown("**Harmonization (Steps 4–5, `syntra/harmonize.py`)**\n\n"
                 + doc[doc.index("1. Gridding"):doc.index("Outputs in")])
