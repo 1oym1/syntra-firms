@@ -602,7 +602,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
     <div class="pcard glass"><span class="k">DOWNLOAD</span><span class="n mono" data-count="4462802">4,462,802</span><p>clean hotspots, 2000–2026, from the FIRMS archive and the near-real-time API.</p></div>
     <div class="pcard glass"><span class="k">CLEAN</span><span class="n mono" data-count="45464">45,464</span><p>always-hot sites set aside: gas flares, industry and other static heat sources.</p></div>
     <div class="pcard glass"><span class="k">HARMONIZE</span><span class="n mono">0.1°</span><p>fire cell-days: each grid cell counts once a day, then MODIS is converted month by month.</p></div>
-    <div class="pcard glass"><span class="k">VALIDATE</span><span class="n mono">R² 0.993</span><p>leave-one-year-out on 119 months. NOAA-20 × 0.986 takes over where Suomi NPP data ends.</p></div>
+    <div class="pcard glass"><span class="k">VALIDATE</span><span class="n mono">R² 0.993</span><p>leave-one-year-out on 119 months. NOAA-20 × 0.992 takes over where Suomi NPP data ends.</p></div>
   </div>
 </section>
 
@@ -871,7 +871,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       "October 2026 <b>+56%</b> vs a typical October · 2nd of 26",
       "Held-out R² <b>" + (D.heldout_r2 || 0.993) + "</b> · raw MODIS " + (D.raw_r2 || 0.36),
       "Extreme fire weeks <b>22 Oct – 23 Dec</b> · 97% of years",
-      "Suomi NPP data ends 2 Nov 2026 · NOAA-20 × 0.986 takes over",
+      "Suomi NPP data ends 2 Nov 2026 · NOAA-20 × 0.992 takes over",
       "4.46 M hotspots · 26 years · one unit: fire cell-days"
     ];
     var html = items.map(function (t) { return "<span>" + t + "</span>"; }).join("");
