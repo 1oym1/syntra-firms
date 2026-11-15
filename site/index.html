@@ -172,7 +172,7 @@ section { position: relative; z-index: 2; }
 .legend3d { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 400 .74rem var(--mono); color: var(--dim); margin-top: 6px; }
 .legend3d i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .tip3d { position: fixed; z-index: 70; pointer-events: none; padding: 9px 12px; font: 400 .76rem/1.5 var(--mono); border-radius: 10px;
-  background: rgba(10,15,28,.92); border: 1px solid var(--rim); white-space: nowrap; transform: translate(14px, -50%); }
+  background: rgba(10,15,28,.92); border: 1px solid var(--rim); width: max-content; max-width: min(340px, calc(100vw - 24px)); white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 860px) { .steps-rail { grid-template-columns: minmax(0, 1fr); } .sstep:not(.on) { display: none; } .meter { min-width: 0; } }
 
 /* pipeline counters */
@@ -971,7 +971,13 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
       });
     } catch (e) { lenis = null; }
   }
-  function showTip(x, y, html) { tip.hidden = false; tip.style.left = x + "px"; tip.style.top = y + "px"; tip.innerHTML = html; }
+  function showTip(x, y, html) {   // beside the cursor, flipped to the left near the edge and kept inside the window
+    tip.hidden = false; tip.innerHTML = html;
+    var w = tip.offsetWidth, h = tip.offsetHeight, W = document.documentElement.clientWidth, H = innerHeight, L = x + 14;
+    if (L + w > W - 8) L = x - 14 - w;
+    L = Math.max(8, Math.min(L, W - w - 8));
+    tip.style.left = L + "px"; tip.style.top = Math.max(8, Math.min(y - h / 2, H - h - 8)) + "px";
+  }
   function hideTip() { tip.hidden = true; }
   window.syTip = { show: showTip, hide: hideTip };
   addEventListener("scroll", hideTip, { passive: true });
