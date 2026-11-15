@@ -1,5 +1,5 @@
 """Makes site/dist/: a standalone copy of the story page for any static host (Netlify, GitHub Pages).
-site/index.html is written for claude.ai artifacts (no <html> wrapper); this adds the doctype and wrapper.
+site/index.html has no <html> wrapper; this adds the doctype and wrapper.
     python site/build/build_dist.py
 """
 import pathlib, shutil

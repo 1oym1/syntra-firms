@@ -41,7 +41,3 @@ Two people editing the same `.ipynb` at once causes merge conflicts that are har
 ## Data
 
 Never commit the `data/` folder. Run `python scripts/fetch_firms.py` to get it. If you make a processed file others need, commit the code that makes it, not the file.
-
-## Shared memory
-
-Plans, questions and decisions go in the team's Claude Doc (Messages + Session log), the same way code goes here.
