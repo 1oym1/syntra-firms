@@ -123,9 +123,22 @@ def clean_file(path, inst, shape):
     `shape` is the country border from country_shape(): points outside it are dropped.
     """
     df = pd.read_csv(path, usecols=COLS, dtype=DTYPES)
+    return clean_frame(df, inst, shape, path.name)
+
+
+def clean_frame(df, inst, shape=None, name=""):
+    """Same cleaning for a table already in memory (yearly files and 2026 API data).
+
+    2026 near-real-time rows have no `type`: they get type -1 here and `apply_static_mask` decides.
+    shape=None skips the border clip.
+    """
+    df = df[[c for c in COLS if c in df]].copy()
+    if "type" not in df:
+        df["type"] = -1
+    df["type"] = df["type"].fillna(-1).astype("int8")
     n0 = len(df)
     df = df.dropna(subset=["latitude", "longitude", "acq_date"])
-    keep = inside(df, shape)
+    keep = inside(df, shape) if shape is not None else np.ones(len(df), bool)
     n_out = int((~keep).sum())
     df = df[keep]
     # Static sources are flagged, not dropped
@@ -144,18 +157,23 @@ def clean_file(path, inst, shape):
     df["family"] = "MODIS" if inst == "modis" else "VIIRS"
     df["satellite"] = df["satellite"].astype(str)
     df = df.drop(columns=["confidence"])
-    print(f"{path.name:36} {n0:>9,} -> {len(df):>9,} rows | outside border {n_out:,} "
-          f"| static {int(df.is_static.sum()):,}")
+    if name:
+        print(f"{name:36} {n0:>9,} -> {len(df):>9,} rows | outside border {n_out:,} "
+              f"| static {int(df.is_static.sum()):,}")
     return df.reset_index(drop=True)
 
 
 def clean_all(country=DEFAULT_COUNTRY, raw_dir=RAW_DIR, out_dir=PROCESSED_DIR, overwrite=False,
-              shape=None):
-    """Clean every raw file for `country`. Returns all clean rows (static ones flagged)."""
+              shape=None, insts=None):
+    """Clean every raw file for `country`. Returns all clean rows (static ones flagged).
+
+    insts: optional list such as ["modis", "viirs-snpp", "viirs-jpss1"]. The app loads NOAA-20 too, only to
+    calibrate it against S-NPP for 2026; the two VIIRS satellites are never added together.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     shape = country_shape(country) if shape is None else shape
     paths = []
-    for inst in instruments(country, raw_dir):
+    for inst in (insts or instruments(country, raw_dir)):
         for path in raw_files(inst, country, raw_dir):
             out = out_dir / f"clean_v{CLEAN_VERSION}_{path.stem}.parquet"
             if overwrite or not out.exists():
@@ -181,14 +199,22 @@ def static_mask(fires):
 
 
 def apply_static_mask(df, mask):
-    """For NRT data (no `type` field): flag hotspots that fall in a static-source cell."""
+    """Flag hotspots that fall in a static-source cell (keeps flags that are already set).
+
+    Use it on 2026 NRT data (no `type` field) AND on the archive, so both are cleaned the same way.
+    Tested by building the mask from 2000-2024 and applying it to 2025: in Saudi Arabia 26% of type-0
+    hotspots fall in static cells (flares FIRMS did not label), in Sudan 0.16%.
+    """
     df = df.copy()
-    df["is_static"] = np.isin(cell_id(df.latitude, df.longitude, MASK_DEG), mask.mask_cell.values)
+    in_mask = np.isin(cell_id(df.latitude, df.longitude, MASK_DEG), mask.mask_cell.values)
+    df["is_static"] = (df["is_static"] if "is_static" in df else False) | in_mask
     return df
 
 
-# First month each sensor family has data (Terra MODIS: Nov 2000; Suomi NPP VIIRS: Jan 2012)
-SENSOR_START = {"MODIS": (2000, 11), "VIIRS": (2012, 1)}
+# First FULL month each sensor family has data. Terra MODIS: Nov 2000. Suomi NPP VIIRS data in FIRMS starts on
+# 20 Jan 2012, so Jan 2012 is a part month: VIIRS counts from Feb 2012, and Jan 2012 is MODIS x factor like the
+# years before (counting it as a full VIIRS month undercounts it by ~60 % in Sudan and biases the fit).
+SENSOR_START = {"MODIS": (2000, 11), "VIIRS": (2012, 2)}
 
 
 def month_span(veg, family):

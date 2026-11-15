@@ -1,0 +1,2055 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SYNTRA Fire Record</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1600'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ffc25c'/%3E%3Cstop offset='1' stop-color='%23ff8a2a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1600' height='1600' rx='300' fill='%2305070d'/%3E%3Cpath d='M1145 350H690a211 211 0 0 0 0 422h240a211 211 0 0 1 0 422H470' fill='none' stroke='url(%23g)' stroke-width='145'/%3E%3Ccircle cx='1145' cy='350' r='152.5' fill='%2305070d' stroke='%23ffc25c' stroke-width='45'/%3E%3Ccircle cx='470' cy='1187' r='152.5' fill='%2305070d' stroke='%23ff8a2a' stroke-width='45'/%3E%3Ccircle cx='805' cy='762' r='33' fill='%2305070d'/%3E%3C/svg%3E">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Team SYNTRA, NASA Space Apps 2026: MODIS and VIIRS fire hotspots harmonized into one record for Sudan, 2000 to today.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a night pass over Sudan. Full-bleed WebGL globe, a pinned 3D fire landscape driven by scroll,
+   then tools. One ember accent; sensor colors are Okabe-Ito (colorblind-safe) and appear only on data. */
+:root {
+  --void: #05070d;
+  --deep: #0a0f1c;
+  --glass: rgba(18, 26, 46, .62);
+  --rim: rgba(148, 170, 220, .16);
+  --ink: #eef1f8;
+  --dim: #97a3bd;
+  --ember: #ff8a2a;
+  --ember-2: #ffc25c;
+  --modis: #e69f00;
+  --viirs: #56b4e9;
+  --n20: #cc79a7;
+  --n21: #f0e442;
+  --harm: #2fd4a0;
+  --display: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+html.lenis, html.lenis body { height: auto; scroll-behavior: auto; }
+.lenis.lenis-stopped { overflow: hidden; }
+body { margin: 0; background: var(--void); color: var(--ink); font: 400 16px/1.6 var(--body); overflow-x: hidden; }
+body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60; opacity: .07; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1200px; margin: 0 auto; padding-block: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.035em; font-weight: 800; }
+.ic { width: 1em; height: 1em; flex: none; }
+p { margin: 0; }
+.eyebrow { font: 500 .72rem/1.4 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--ember); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.dim { color: var(--dim); }
+.glass { background: var(--glass); border: 1px solid var(--rim); backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%); border-radius: 18px; }
+.grad { background: linear-gradient(100deg, var(--ember-2), var(--ember) 45%, #ff5d3a); -webkit-background-clip: text;
+  background-clip: text; color: transparent; padding: 0 .09em .04em 0; margin-right: -.09em;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+/* cursor glow */
+.glow { position: fixed; width: 560px; height: 560px; left: 0; top: 0; pointer-events: none; z-index: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,138,42,.10), transparent 62%); transform: translate(-50%, -50%); }
+
+/* nav */
+nav.top { position: fixed; top: 0; left: 0; right: 0; z-index: 50; padding-top: env(safe-area-inset-top, 0px); }
+nav.top::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: linear-gradient(rgba(5,7,13,.94), rgba(5,7,13,.72)); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rim); }
+nav.top.scrolled::before { opacity: 1; }
+nav.top .wrap { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; }
+.logo { font: 800 1.05rem var(--display); letter-spacing: .08em; display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo svg { width: 26px; height: 30px; filter: drop-shadow(0 0 10px rgba(255,138,42,.45)); transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+.logo:hover svg { transform: rotate(-8deg) scale(1.08); }
+footer .mk { width: 18px; height: 21px; vertical-align: -4px; margin-right: 8px; }
+.navlinks { display: flex; gap: 6px; align-items: center; padding: 6px; }
+.navlinks a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: .86rem; color: var(--dim); padding: 7px 12px; border-radius: 10px; }
+.navlinks a:hover { color: var(--ink); background: rgba(255,255,255,.06); }
+.navlinks a.cta { color: #1b0d00; background: var(--ember); font-weight: 600; }
+@media (max-width: 760px) { .navlinks a:not(.cta) { display: none; } }
+section[id]:not(#seam) { scroll-margin-top: 84px; }
+.mbtn { display: none; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--rim);
+  background: rgba(255,255,255,.04); color: var(--ink); font: 500 .86rem var(--body); cursor: pointer; }
+.mbtn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
+.mnav { background: rgba(10,15,28,.96); position: fixed; z-index: 49; left: 12px; right: 12px; top: calc(70px + env(safe-area-inset-top, 0px)); padding: 8px; display: grid; gap: 2px; }
+.mnav[hidden] { display: none; }
+.mnav a { display: flex; align-items: center; min-height: 46px; padding: 0 14px; border-radius: 10px; text-decoration: none; color: var(--ink); font-size: 1rem; }
+.mnav a:active, .mnav a:hover { background: rgba(255,255,255,.07); }
+.mnav a.livenav::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4d4d; margin-right: 10px; }
+@media (max-width: 760px) { .mbtn { display: inline-flex; } .navlinks a.cta { white-space: nowrap; } }
+@media (max-width: 420px) { .mlab { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } .mbtn { padding: 0 10px; } }
+@media (pointer: coarse) { .ctrl input[type=range] { height: 36px; } }
+
+/* hero */
+.hero { position: relative; min-height: 100svh; display: grid; align-items: center; overflow: hidden; isolation: isolate; }
+#globe { position: absolute; inset: 0; z-index: -1; }
+@media (min-width: 901px) { #globe { left: 40%; } .hero .wrap > * { max-width: 600px; } }
+#globe canvas { display: block; width: 100%; height: 100%; }
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(5,7,13,.92) 0%, rgba(5,7,13,.55) 38%, transparent 62%),
+              linear-gradient(0deg, var(--void) 0%, transparent 22%); }
+.hero .wrap { width: 100%; padding-block: 120px 80px; display: grid; gap: 26px; pointer-events: none; }
+.hero .wrap a, .hero .wrap button { pointer-events: auto; }
+#globe canvas { cursor: grab; } #globe canvas:active { cursor: grabbing; }
+.gdock { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 28px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.gctl { display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 14px; }
+.gctl button { width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--ink); cursor: pointer; }
+.gctl button:hover { background: rgba(255,255,255,.08); } .gctl button:active { transform: scale(.94); }
+.gctl svg { width: 16px; height: 16px; }
+.gctl .zs { font: 400 .7rem var(--mono); color: var(--dim); padding: 0 8px 0 6px; min-width: 9.5em; transition: color .2s; }
+#globe.engaged ~ .gdock .zs { color: var(--ember-2); }
+@media (max-width: 900px) { .gctl .zs { display: none; } .gdock { bottom: 18px; } }
+.hero h1 { font-size: clamp(2.6rem, 6.6vw, 5.6rem); line-height: .98; font-weight: 800; max-width: 11ch; }
+.hero .lede { font-size: clamp(1.02rem, 1.6vw, 1.2rem); color: #c9d2e6; max-width: 46ch; }
+.hud { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; font: 500 .78rem var(--mono);
+  background: rgba(10,15,28,.7); border: 1px solid var(--rim); color: var(--ink); cursor: pointer; user-select: none; }
+.chip[aria-pressed="false"] { opacity: .45; }
+.chip i { width: 9px; height: 9px; border-radius: 50%; }
+.chip.live i { background: #ff4d4d; box-shadow: 0 0 0 0 rgba(255,77,77,.7); animation: ping 1.6s infinite; }
+@keyframes ping { 70% { box-shadow: 0 0 0 9px rgba(255,77,77,0); } 100% { box-shadow: 0 0 0 0 rgba(255,77,77,0); } }
+.btns { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 22px; border-radius: 14px; font-weight: 600; text-decoration: none;
+  border: 1px solid var(--rim); background: rgba(255,255,255,.04); transition: transform .2s, background .2s; }
+.btn:hover { transform: translateY(-2px); background: rgba(255,255,255,.08); }
+.btn.hot { background: linear-gradient(100deg, var(--ember-2), var(--ember)); color: #1b0d00; border: 0; box-shadow: 0 10px 40px -10px rgba(255,138,42,.7); }
+.hint { font: 400 .74rem var(--mono); color: var(--dim); }
+.readout { padding: 14px 16px; font: 400 .74rem/1.7 var(--mono); color: var(--dim); }
+.readout b { color: var(--ink); font-weight: 500; }
+@media (max-width: 900px) { .readout { display: none; } .hero::before { background: linear-gradient(0deg, var(--void) 8%, rgba(5,7,13,.55) 60%, rgba(5,7,13,.3)); } }
+
+/* ticker */
+.ticker { border-block: 1px solid var(--rim); background: var(--deep); overflow: hidden; position: relative; z-index: 2; }
+.ticker .track { display: flex; gap: 48px; width: max-content; padding-block: 14px; animation: slide 46s linear infinite;
+  font: 500 .82rem var(--mono); color: var(--dim); white-space: nowrap; }
+.ticker b { color: var(--ink); font-weight: 500; }
+.ticker span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ember); margin-right: 14px; vertical-align: 2px; }
+@keyframes slide { to { transform: translateX(-50%); } }
+@keyframes rise { from { transform: translateY(26px); opacity: 0; filter: blur(6px); } to { transform: none; opacity: 1; filter: none; } }
+.hero .wrap > * { animation: rise .8s cubic-bezier(.2,.7,.2,1) both; }
+.hero .wrap > *:nth-child(2) { animation-delay: .12s; } .hero .wrap > *:nth-child(3) { animation-delay: .24s; }
+.hero .wrap > *:nth-child(4) { animation-delay: .36s; } .hero .wrap > *:nth-child(5) { animation-delay: .44s; } .hero .wrap > *:nth-child(6) { animation-delay: .5s; }
+/* finale */
+.finale { padding-block: 120px 40px; text-align: center; display: grid; gap: 18px; justify-items: center; }
+.finale .huge { font: 800 clamp(3.2rem, 11vw, 9rem)/.9 var(--display); letter-spacing: -.05em; display: flex; flex-wrap: wrap; gap: .1em .3em; justify-content: center; align-items: baseline; }
+.finale .from { color: #3b4a6b; text-decoration: line-through; text-decoration-thickness: .06em; }
+.finale .to { background: linear-gradient(100deg, var(--ember-2), var(--ember) 40%, var(--harm)); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 .08em; margin: 0 -.08em; }
+.finale .arrow { color: var(--dim); font-weight: 500; font-size: .5em; letter-spacing: .02em; }
+.finale p { color: #c3cbe0; max-width: 52ch; font-size: 1.08rem; }
+
+section { position: relative; z-index: 2; }
+.sec { padding-block: 110px 40px; }
+.sec-head { display: grid; gap: 14px; margin-bottom: 40px; max-width: 760px; }
+.sec-head h2 { font-size: clamp(2rem, 4.8vw, 3.6rem); line-height: 1; font-weight: 800; }
+.sec-head p { color: #c3cbe0; font-size: 1.05rem; max-width: 60ch; }
+
+/* pinned 3D landscape */
+.story { height: 420vh; position: relative; }
+.pin { position: sticky; top: 0; height: 100svh; overflow: hidden; display: grid; }
+#land { position: absolute; inset: 0; }
+#land canvas { display: block; width: 100%; height: 100%; }
+.story-ui { position: relative; pointer-events: none; display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+.story-ui .wrap { width: 100%; }
+.story-top { padding-top: 96px; display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+.story-top h2 { font-size: clamp(1.7rem, 3.6vw, 2.8rem); line-height: 1.02; font-weight: 800; max-width: 15ch; }
+.meter { pointer-events: auto; padding: 14px 16px; display: grid; gap: 8px; min-width: 240px; }
+.meter .big { font: 800 2.4rem/1 var(--display); }
+.meter .bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; }
+.meter .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--modis), var(--harm)); }
+.seg { display: inline-flex; padding: 4px; gap: 4px; border-radius: 12px; background: rgba(10,15,28,.75); border: 1px solid var(--rim); }
+.seg button { font: 500 .8rem var(--body); color: var(--dim); background: none; border: 0; padding: 7px 11px; border-radius: 9px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: rgba(255,255,255,.1); color: var(--ink); }
+.steps-rail { align-self: end; padding-bottom: 34px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sstep { padding: 14px 16px; opacity: .38; transform: translateY(6px); transition: opacity .35s, transform .35s, border-color .35s; }
+.sstep.on { opacity: 1; transform: none; border-color: rgba(255,138,42,.55); }
+.sstep .k { font: 500 .7rem var(--mono); color: var(--ember); letter-spacing: .12em; }
+.sstep h3 { font-size: 1.02rem; margin: 4px 0 4px; }
+.sstep p { font-size: .86rem; color: #c3cbe0; }
+.legend3d { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 400 .74rem var(--mono); color: var(--dim); margin-top: 6px; }
+.legend3d i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.tip3d { position: fixed; z-index: 70; pointer-events: none; padding: 9px 12px; font: 400 .76rem/1.5 var(--mono); border-radius: 10px;
+  background: rgba(10,15,28,.92); border: 1px solid var(--rim); white-space: nowrap; transform: translate(14px, -50%); }
+@media (max-width: 860px) { .steps-rail { grid-template-columns: minmax(0, 1fr); } .sstep:not(.on) { display: none; } .meter { min-width: 0; } }
+
+/* pipeline counters */
+.pipe { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.pcard { padding: 24px 20px; display: grid; gap: 10px; align-content: start; position: relative; overflow: hidden; }
+.pcard .n { font: 800 clamp(1.9rem, 3.4vw, 2.6rem)/1 var(--display); }
+.pcard .k { font: 500 .7rem var(--mono); letter-spacing: .14em; color: var(--ember); }
+.pcard p { color: #c3cbe0; font-size: .92rem; }
+.pcard::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--ember), transparent); opacity: .6; }
+@media (max-width: 900px) { .pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .pipe { grid-template-columns: minmax(0, 1fr); } }
+
+/* month checker */
+.checker { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 18px; }
+.ctrl { padding: 24px; display: grid; gap: 18px; align-content: start; }
+.ctrl label { font: 500 .72rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); display: grid; gap: 8px; }
+.ctrl input[type=range] { width: 100%; accent-color: var(--ember); }
+.monthpick { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.monthpick button { font: 500 .8rem var(--mono); padding: 8px 0; border-radius: 9px; border: 1px solid var(--rim); background: rgba(255,255,255,.03); color: var(--dim); cursor: pointer; }
+.monthpick button:disabled { opacity: .28; cursor: not-allowed; }
+.monthpick button[aria-pressed="true"] { background: var(--ember); color: #1b0d00; border-color: var(--ember); }
+.yearout { font: 800 2.6rem/1 var(--display); }
+.verdict { padding: 26px; display: grid; gap: 14px; border-left: 4px solid var(--c, var(--ember)); }
+.vdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 8px; vertical-align: 1px; }
+.vbadge { justify-self: start; font: 600 .76rem var(--mono); letter-spacing: .12em; padding: 5px 11px; border-radius: 8px; color: var(--c); border: 1px solid var(--c); }
+.vnum { font: 800 clamp(2.6rem, 6vw, 4.2rem)/1 var(--display); }
+.vrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.vrow div { display: grid; gap: 2px; }
+.vrow small { font: 500 .68rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.vrow b { font: 500 1.05rem var(--mono); }
+#spark svg { width: 100%; height: auto; display: block; }
+#spark text { fill: var(--dim); font: 400 10px var(--mono); }
+@media (max-width: 860px) { .checker { grid-template-columns: minmax(0, 1fr); } }
+
+/* risk clock */
+.riskwrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 30px; align-items: center; }
+#clock svg { width: 100%; max-width: 560px; height: auto; display: block; margin: 0 auto; overflow: visible; }
+#clock text { font-family: var(--mono); pointer-events: none; }
+#clock svg:focus { outline: none; }
+#clock svg:focus-visible { outline: 2px solid var(--ember-2); outline-offset: 6px; border-radius: 50%; }
+#clock .hit { cursor: pointer; }
+#clock .wk { transition: opacity .2s; }
+#clock svg.focus .wk:not(.on):not(.in) { opacity: .4; }
+#clock .wk.on { stroke: #eef1f8; stroke-width: 2.5; }
+.rbtn { cursor: pointer; transition: border-color .2s; }
+.rbtn:hover, .rbtn:focus-visible { border-color: rgba(255,138,42,.45); outline: none; }
+.rlist { display: grid; gap: 12px; }
+.rstat { padding: 18px 20px; display: grid; gap: 4px; }
+.rstat .n { font: 800 1.9rem/1.1 var(--display); }
+.rkey { display: flex; flex-wrap: wrap; gap: 8px 16px; font: 400 .76rem var(--mono); color: var(--dim); }
+.rkey i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+@media (max-width: 860px) { .riskwrap { grid-template-columns: minmax(0, 1fr); } }
+
+/* live now */
+.livewrap { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.livemap { padding: 14px; }
+#lmap { width: 100%; display: block; cursor: crosshair; touch-action: pan-y; }
+.lkey { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.lkey .belt { font: 400 .74rem var(--mono); color: var(--dim); margin-left: 4px; }
+.lkey .belt i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: rgba(255,138,42,.28); margin-right: 6px; vertical-align: -2px; }
+.rstat[hidden] { display: none; }
+.lbars { display: grid; gap: 9px; margin-top: 6px; }
+.lbar { display: grid; grid-template-columns: 82px minmax(0, 1fr) 56px; align-items: center; gap: 10px; font: 400 .78rem var(--mono); color: var(--dim); }
+.lbar .t { height: 8px; border-radius: 4px; background: rgba(148,170,220,.1); overflow: hidden; }
+.lbar .t b { display: block; height: 100%; border-radius: 4px; }
+.lbar .v { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+#l-hours svg { width: 100%; height: auto; display: block; margin-top: 8px; overflow: visible; }
+#l-hours text { font: 400 10px var(--mono); fill: var(--dim); }
+.eyebrow .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4d4d; margin-right: 9px; vertical-align: 1px; animation: ping 1.6s infinite; }
+.navlinks a.livenav::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; margin-right: 7px; vertical-align: 1px; }
+@media (max-width: 900px) { .livewrap { grid-template-columns: minmax(0, 1fr); } }
+
+
+/* early warning */
+.alwrap { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.almap { padding: 14px; }
+#amap { width: 100%; display: block; }
+.alkey { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font: 400 .74rem var(--mono); color: var(--dim); }
+.alkey i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+.verdict { padding: 22px 22px 18px; display: grid; gap: 14px; position: relative; overflow: hidden; }
+.verdict::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--vc, var(--dim)); }
+.verdict .lv { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.verdict .lv b { font: 800 clamp(1.9rem, 4vw, 2.6rem)/1 var(--display); letter-spacing: -.03em; color: var(--vc, var(--ink)); }
+.verdict .lv span { font: 500 .74rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.verdict .next { color: #c3cbe0; font-size: .98rem; margin: 0; }
+.alscale { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.alscale i { height: 6px; border-radius: 3px; background: rgba(148,170,220,.12); }
+.alscale i.on { background: var(--vc); }
+.factors { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.factors li { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--rim); font-size: .92rem; }
+.factors .k { font: 500 .7rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.factors .v { color: #dfe4ef; }
+.factors .v small { display: block; color: var(--dim); font-size: .8rem; margin-top: 2px; }
+.tag { font: 600 .7rem var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+.tag.ok { color: var(--harm); } .tag.mid { color: var(--ember-2); } .tag.hi { color: #ff6b4a; } .tag.na { color: var(--dim); }
+.areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 18px; }
+.area { padding: 16px 18px; display: grid; gap: 6px; transition: border-color .2s, transform .2s; }
+.area.hl { border-color: var(--ac); transform: translateY(-2px); }
+.area.flash, .bridge.flash { animation: flash 1.2s ease-out; }
+@keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(255,138,42,.7); } 100% { box-shadow: 0 0 0 14px rgba(255,138,42,0); } }
+#amap { cursor: crosshair; touch-action: pan-y; }
+#ct-tl .tlh { cursor: pointer; }
+#ct-tl .tlh:hover line, #ct-tl .tlh:focus-visible line { stroke: var(--harm); stroke-width: 2.5; stroke-dasharray: none; }
+#ct-tl .tlb { cursor: default; }
+.bridge { transition: border-color .2s; }
+.bridge.hl { border-color: rgba(47,212,160,.6); }
+@media (prefers-reduced-motion: reduce) { .area.flash, .bridge.flash { animation: none; } .area.hl { transform: none; } }
+.area .t { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.area .num { font: 700 .8rem var(--mono); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--ac); color: #05070d; flex: none; }
+.area h4 { margin: 0; font: 700 1.05rem/1.2 var(--display); }
+.area p { margin: 0; color: #c3cbe0; font-size: .9rem; }
+.area a { font: 500 .74rem var(--mono); color: var(--ember-2); text-decoration: none; }
+.area a:hover { text-decoration: underline; }
+.alnote { color: var(--dim); font-size: .82rem; margin-top: 16px; max-width: 95ch; }
+.alnote b { color: #c3cbe0; font-weight: 600; }
+.alempty { padding: 16px 18px; color: #c3cbe0; }
+@media (max-width: 900px) { .alwrap { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { .factors li { grid-template-columns: minmax(0, 1fr) auto; } .factors li .k { grid-column: 1 / -1; } }
+
+/* continuity monitor */
+.ctline { padding: 18px 18px 10px; }
+#ct-tl svg { width: 100%; height: auto; display: block; overflow: visible; }
+#ct-tl text { font-family: var(--mono); }
+.ctgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 14px; }
+.bridge { padding: 18px 18px 16px; display: grid; gap: 8px; align-content: start; }
+.bridge .ft { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.bridge .ft span { font: 500 .7rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.bridge .n { font: 800 1.7rem/1.1 var(--display); }
+.bridge p { margin: 0; color: #c3cbe0; font-size: .88rem; }
+.bridge svg { width: 100%; height: 34px; display: block; }
+.ctrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+.sunset { padding: 20px 22px; display: grid; gap: 8px; border-color: rgba(255,138,42,.35); }
+.sunset h3 { margin: 0; font-size: 1.25rem; }
+.sunset p { margin: 0; color: #c3cbe0; font-size: .95rem; }
+.sunset a { color: var(--ember-2); }
+.drift { padding: 20px 22px; display: grid; gap: 10px; }
+.band { position: relative; height: 26px; margin-top: 4px; }
+.band .rail { position: absolute; left: 0; right: 0; top: 11px; height: 4px; border-radius: 2px; background: rgba(148,170,220,.12); }
+.band .ok { position: absolute; top: 9px; height: 8px; border-radius: 4px; background: rgba(47,212,160,.35); }
+.band .mk { position: absolute; top: 2px; width: 3px; height: 22px; border-radius: 2px; background: var(--ink); transform: translateX(-1px); }
+.bandlab { display: flex; justify-content: space-between; font: 400 .72rem var(--mono); color: var(--dim); }
+@media (max-width: 760px) { .ctrow { grid-template-columns: minmax(0, 1fr); } }
+
+
+/* who SYNTRA serves */
+.serve { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
+.sv { padding: 22px 20px 18px; display: grid; gap: 12px; align-content: start; transition: border-color .25s, transform .25s; }
+.sv:hover { border-color: rgba(255,138,42,.4); transform: translateY(-2px); }
+.sv-h { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; align-items: center; }
+.sv-h svg { width: 40px; height: 40px; padding: 8px; border-radius: 12px; background: rgba(255,138,42,.1); border: 1px solid rgba(255,138,42,.25);
+  fill: none; stroke: var(--ember); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sv h3 { font-size: 1.08rem; line-height: 1.2; letter-spacing: -.02em; }
+.sv-h span { font: 400 .72rem var(--mono); color: var(--dim); }
+.sv p { margin: 0; color: #c3cbe0; font-size: .92rem; }
+.sv ul { list-style: none; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--rim); display: grid; gap: 7px; }
+.sv li { font-size: .85rem; color: var(--dim); padding-left: 20px; position: relative; }
+.sv li::before { content: ""; position: absolute; left: 2px; top: .5em; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--dim); }
+.sv li.on { color: #dfe4ef; }
+.sv li.on::before { background: var(--harm); border-color: var(--harm); box-shadow: 0 0 8px rgba(47,212,160,.6); }
+.sv li a { color: inherit; text-decoration: none; }
+.sv li a:hover { color: var(--ember-2); text-decoration: underline; }
+@media (prefers-reduced-motion: reduce) { .sv { transition: none; } .sv:hover { transform: none; } }
+.area a, .sv li a { display: inline-block; padding-block: 6px; margin-block: -6px; }
+@media (pointer: coarse) { .area a, .sv li a { padding-block: 12px; margin-block: -12px; } }
+
+/* bento */
+.bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; perspective: 1200px; }
+.tile { grid-column: span 2; padding: 24px; min-height: 190px; display: grid; gap: 8px; align-content: end; position: relative; overflow: hidden;
+  transform-style: preserve-3d; transition: transform .25s ease-out, border-color .25s; }
+.tile.w3 { grid-column: span 3; } .tile.w4 { grid-column: span 4; }
+.tile::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), rgba(255,138,42,.18), transparent 60%); }
+.tile:hover { border-color: rgba(255,138,42,.45); } .tile:hover::before { opacity: 1; }
+.tile .tag { font: 500 .68rem var(--mono); letter-spacing: .14em; color: var(--ember); text-transform: uppercase;
+  border: 0; padding: 0; border-radius: 0; justify-self: start; }
+.tile .tag.new::after { content: "new"; margin-left: 8px; padding: 1px 6px; border-radius: 999px; font-size: .6rem; letter-spacing: .08em;
+  color: #05070d; background: var(--harm); }
+.tile h3 { font-size: 1.3rem; }
+.tile p { color: #c3cbe0; font-size: .92rem; max-width: 46ch; }
+.tile .art { position: absolute; top: 20px; right: 20px; width: 44px; height: 44px; color: var(--ember); opacity: .55; }
+@media (max-width: 900px) { .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tile, .tile.w3, .tile.w4 { grid-column: span 2; } }
+@media (min-width: 560px) and (max-width: 900px) { .tile { grid-column: span 1; } .tile.w4, .bento .tile:last-child { grid-column: span 2; } }
+
+/* validation + credits */
+.tbl { overflow-x: auto; border-radius: 18px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; }
+th, td { padding: 15px 18px; border-bottom: 1px solid var(--rim); text-align: left; }
+th { font: 500 .7rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+td .barcell { display: inline-block; height: 6px; border-radius: 4px; background: var(--harm); vertical-align: middle; margin-left: 10px; }
+@media (max-width: 600px) { table { min-width: 0; font-size: .86rem; } th, td { padding: 12px 8px; } th { font-size: .6rem; letter-spacing: .06em; } td .barcell { display: none; } }
+/* team */
+.team { position: relative; overflow: hidden; isolation: isolate; padding-block: 110px 90px; }
+.team .embers { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.team::after { content: ""; position: absolute; left: 50%; bottom: -38%; width: 130%; height: 80%; transform: translateX(-50%); z-index: -2; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255,106,26,.26), rgba(255,138,42,.07) 55%, transparent); }
+.team .sec-head { margin-inline: auto; text-align: center; justify-items: center; }
+.fire-text { background: linear-gradient(90deg, #ff5a1f, #ffc25c, #ff8a2a, #ff5a1f); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: burn 6s linear infinite; }
+@keyframes burn { to { background-position: 300% 0; } }
+.crew { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; }
+@property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.tm { flex: 1 1 280px; max-width: 370px; position: relative; border-radius: 22px; cursor: pointer; outline: none; perspective: 1100px;
+  opacity: 0; transform: translateY(34px) scale(.97);
+  transition: opacity .8s ease var(--d), transform .8s cubic-bezier(.2,.8,.2,1) var(--d), box-shadow .35s; }
+.tm.in { opacity: 1; transform: none; }
+.tm.done { transition: transform .2s ease-out, box-shadow .35s; }
+.tm:hover, .tm:focus-visible { box-shadow: 0 26px 70px -24px rgba(255,90,31,.6); }
+.tm:focus-visible .tm-card { box-shadow: 0 0 0 2px var(--ember-2); }
+.tm-card { position: relative; height: 100%; display: grid; border-radius: 22px; padding: 1.3px; transform-style: preserve-3d;
+  background: conic-gradient(from var(--a), rgba(255,138,42,.1), #ff5a1f 50deg, #ffc25c 80deg, rgba(255,138,42,.1) 140deg, rgba(255,138,42,.1));
+  animation: spin 7s linear infinite; transition: transform .9s cubic-bezier(.34,1.45,.5,1); }
+.tm:hover .tm-card { animation-duration: 2.4s; }
+.tm.flipped .tm-card { transform: rotateY(180deg); }
+.tm-front, .tm-back { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.tm-front, .tm-in.tm-back { grid-area: 1 / 1; }
+.tm-in.tm-back { transform: rotateY(180deg); align-content: start; grid-template-rows: auto 1fr auto;
+  background: radial-gradient(120% 90% at 100% 100%, rgba(255,90,31,.28), transparent 60%), linear-gradient(180deg, rgba(20,14,16,.98), rgba(9,8,14,.98)); }
+.tm-who { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.tm-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.tm-col { display: grid; gap: 14px; min-width: 0; }
+/* burning initials inside a target lock */
+.tm-lock { position: relative; align-self: center; padding: 14px 14px 8px; pointer-events: none; }
+.tm-lock b { position: relative; display: block; font: 900 4.6rem/.84 var(--display); letter-spacing: -.045em; color: transparent;
+  -webkit-text-stroke: 1.2px rgba(255,170,80,.6);
+  background: linear-gradient(to top, #ff4d12 0%, #ff8a2a 22%, #ffc25c 42%, rgba(255,194,92,0) 62%) 0 0 / 100% 260% no-repeat;
+  -webkit-background-clip: text; background-clip: text; opacity: .62; }
+.tm-lock b::before { content: attr(data-t); position: absolute; inset: 0; z-index: -1; color: rgba(255,106,26,.55); -webkit-text-stroke: 0; filter: blur(16px); opacity: 0; }
+.tm-lock::after { content: ""; position: absolute; inset: 0; opacity: .9; --k: rgba(255,194,92,.85);
+  background: linear-gradient(var(--k), var(--k)) 0 0 / 16px 1.5px, linear-gradient(var(--k), var(--k)) 0 0 / 1.5px 16px,
+    linear-gradient(var(--k), var(--k)) 100% 0 / 16px 1.5px, linear-gradient(var(--k), var(--k)) 100% 0 / 1.5px 16px,
+    linear-gradient(var(--k), var(--k)) 0 100% / 16px 1.5px, linear-gradient(var(--k), var(--k)) 0 100% / 1.5px 16px,
+    linear-gradient(var(--k), var(--k)) 100% 100% / 16px 1.5px, linear-gradient(var(--k), var(--k)) 100% 100% / 1.5px 16px;
+  background-repeat: no-repeat; }
+.tm-lock::before { content: ""; position: absolute; left: 6px; right: 6px; top: 0; height: 2px; border-radius: 2px; opacity: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,226,170,.95), transparent); box-shadow: 0 0 12px rgba(255,170,80,.8); }
+.tm.flipped .tm-lock b { animation: ignite 1.3s cubic-bezier(.2,.7,.2,1) .35s both, flick 2.4s ease-in-out 1.65s infinite; }
+.tm.flipped .tm-lock b::before { animation: glowin .9s ease-out .6s both, glowpulse 2.4s ease-in-out 1.5s infinite; }
+.tm.flipped .tm-lock::after { animation: lockon .7s cubic-bezier(.34,1.56,.64,1) .25s both; }
+.tm.flipped .tm-lock::before { animation: scan 2.8s ease-in-out 1s infinite; }
+@keyframes ignite { from { background-position: 0 0; } to { background-position: 0 100%; } }
+@keyframes flick { 0%, 100% { background-position: 0 100%; } 35% { background-position: 0 88%; } 60% { background-position: 0 96%; } 80% { background-position: 0 84%; } }
+@keyframes glowin { from { opacity: 0; } to { opacity: 1; } }
+@keyframes glowpulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+@keyframes lockon { from { opacity: 0; transform: scale(1.45) rotate(8deg); } to { opacity: .9; transform: none; } }
+@keyframes scan { 0% { top: 4%; opacity: 0; } 12% { opacity: 1; } 50% { top: 92%; opacity: .9; } 62%, 100% { top: 92%; opacity: 0; } }
+@media (max-width: 420px) { .tm-lock b { font-size: 4rem; } }
+.tm-hint { justify-self: end; font: 500 .64rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: rgba(151,163,189,.75); }
+.tm-links { display: flex; flex-wrap: wrap; gap: 10px; position: relative; }
+.tm-link { display: inline-flex; align-items: center; gap: 9px; padding: 10px 15px; border-radius: 12px; font: 600 .82rem var(--mono); color: var(--ink); text-decoration: none;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,194,92,.35); transition: transform .2s, box-shadow .25s, background .25s, border-color .25s; }
+.tm-link svg { width: 18px; height: 18px; }
+.tm-link:hover, .tm-link:focus-visible { transform: translateY(-2px); background: linear-gradient(135deg, #ff5a1f, #ffb347); border-color: transparent; color: #1a0800;
+  box-shadow: 0 10px 30px -8px rgba(255,90,31,.8); outline: none; }
+.tm-link.off { opacity: .45; pointer-events: none; border-style: dashed; }
+.tm-link.li { width: 100%; justify-content: flex-start; padding: 12px 14px; font-size: .84rem; }
+.tm-link.li svg { width: 20px; height: 20px; color: #ffc25c; transition: color .25s; }
+.tm-link.li:hover svg, .tm-link.li:focus-visible svg { color: #1a0800; }
+.tm-link .arr { margin-left: auto; font-weight: 700; transition: transform .25s; }
+.tm-link:hover .arr { transform: translate(2px, -2px); }
+.tm-card::after { content: ""; position: absolute; inset: 0; border-radius: 22px; pointer-events: none; opacity: 0; transform: translateZ(2px);
+  background: linear-gradient(105deg, transparent 30%, rgba(255,220,150,.55) 46%, rgba(255,120,40,.35) 52%, transparent 66%); background-size: 250% 100%; }
+.tm.flare .tm-card::after { animation: flare .85s ease-out; }
+@keyframes flare { 0% { opacity: 0; background-position: 120% 0; } 25% { opacity: 1; } 100% { opacity: 0; background-position: -60% 0; } }
+@keyframes spin { to { --a: 360deg; } }
+.tm-in { position: relative; height: 100%; border-radius: 21px; padding: 20px 22px 24px; display: grid; gap: 16px; align-content: start; overflow: hidden;
+  background: linear-gradient(180deg, rgba(15,21,38,.97), rgba(7,10,19,.97)); }
+.tm-in::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0%), rgba(255,138,42,.17), transparent 62%); }
+.tm:hover .tm-in::before { opacity: 1; }
+.tm-top { display: flex; justify-content: space-between; gap: 10px; font: 500 .66rem var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.tm-top b { color: var(--ember); font-weight: 500; }
+.tm-top .conf i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; margin-right: 7px; vertical-align: 0; animation: ping 1.6s infinite; }
+.tm-id { display: flex; align-items: center; gap: 16px; }
+.scope { position: relative; flex: none; width: 104px; height: 104px; }
+.scope::before { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1px dashed rgba(255,194,92,.38); animation: spin2 18s linear infinite; }
+.scope::after { content: ""; position: absolute; inset: -6px; pointer-events: none;
+  background: linear-gradient(rgba(255,194,92,.55), rgba(255,194,92,.55)) 50% 0 / 1px 9px no-repeat, linear-gradient(rgba(255,194,92,.55), rgba(255,194,92,.55)) 50% 100% / 1px 9px no-repeat,
+    linear-gradient(rgba(255,194,92,.55), rgba(255,194,92,.55)) 0 50% / 9px 1px no-repeat, linear-gradient(rgba(255,194,92,.55), rgba(255,194,92,.55)) 100% 50% / 9px 1px no-repeat; }
+.scope .orb { position: absolute; inset: -3px; border-radius: 50%; animation: spin2 4.5s linear infinite; }
+.scope .orb::after { content: ""; position: absolute; top: -1px; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+.scope .core { position: absolute; inset: 15px; border-radius: 50%; display: grid; place-items: center; font: 800 1.05rem var(--display); letter-spacing: .02em; color: #2a0d00;
+  background: radial-gradient(circle at 50% 60%, #fff3cf 0%, #ffc25c 30%, #ff7a22 62%, #c2410c 100%); animation: flicker 2.6s ease-in-out infinite; }
+/* photo: ember outline + smoke by default, the clear photo burns in on hover */
+@property --p { syntax: "<percentage>"; inherits: true; initial-value: -25%; }
+.scope .core.ph { inset: 12px; overflow: hidden; color: transparent; --p: -25%; transition: --p 1.15s cubic-bezier(.45,.05,.25,1);
+  background: radial-gradient(circle at 50% 62%, #3a1406, #0b0710 74%); }
+.tm:hover .core.ph, .tm:focus-visible .core.ph, .tm.lit .core.ph { --p: 125%; }
+.core.ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.ph-smoke { filter: grayscale(1) sepia(1) saturate(5) hue-rotate(-22deg) brightness(.48) contrast(1.25) blur(2.4px); transform: scale(1.1); opacity: .85; }
+.ph-heat { filter: url(#thermal); mix-blend-mode: screen; }
+.ph-clear { -webkit-mask-image: linear-gradient(to top, #000 var(--p), transparent calc(var(--p) + 22%)); mask-image: linear-gradient(to top, #000 var(--p), transparent calc(var(--p) + 22%)); }
+.ph-fire { position: absolute; inset: 0; border-radius: 50%; mix-blend-mode: screen; pointer-events: none;
+  background: linear-gradient(to top, transparent calc(var(--p) - 2%), rgba(255,90,31,.9) calc(var(--p) + 4%), rgba(255,222,150,.95) calc(var(--p) + 10%), rgba(255,138,42,.55) calc(var(--p) + 16%), transparent calc(var(--p) + 25%)); }
+.tm:hover .scope::before { animation-duration: 5s; border-color: rgba(255,194,92,.7); }
+@keyframes spin2 { to { transform: rotate(360deg); } }
+@keyframes flicker { 0%, 100% { box-shadow: 0 0 18px 2px rgba(255,106,26,.55), 0 0 44px 8px rgba(255,90,31,.18); } 50% { box-shadow: 0 0 26px 5px rgba(255,138,42,.7), 0 0 60px 14px rgba(255,90,31,.26); } }
+.tm h3 { font: 800 1.28rem/1.15 var(--display); margin: 0; }
+.tm .role { margin-top: 6px; font: 600 .74rem/1.35 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.tm p { margin: 0; color: #c3cbe0; font-size: .93rem; }
+@media (prefers-reduced-motion: reduce) { .scope .core.ph { transition: none; } .tm { opacity: 1; transform: none; } .tm-card { animation: none; transition: none; } .tm.flare .tm-card::after, .tm.flipped .tm-lock b, .tm.flipped .tm-lock b::before, .tm.flipped .tm-lock::after, .tm.flipped .tm-lock::before { animation: none; } .tm-lock b { background-position: 0 100%; } .tm-lock b::before { opacity: 1; } .fire-text, .scope::before, .scope .orb, .scope .core, .tm-top .conf i { animation: none; } }
+
+.credits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.credits .glass { padding: 22px; display: grid; gap: 8px; align-content: start; }
+.credits ul { margin: 0; padding-left: 18px; color: #c3cbe0; font-size: .92rem; display: grid; gap: 4px; }
+@media (max-width: 860px) { .credits { grid-template-columns: minmax(0, 1fr); } }
+footer { position: relative; z-index: 2; margin-top: 100px; border-top: 1px solid var(--rim); }
+footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 24px; font: 400 .78rem var(--mono); color: var(--dim); }
+.nogl { display: none; position: absolute; inset: auto 16px 16px auto; font: 400 .74rem var(--mono); color: var(--dim); }
+@media (prefers-reduced-motion: reduce) { .ticker .track, .chip.live i, .eyebrow .pulse, .hero .wrap > * { animation: none; } .glow { display: none; } html { scroll-behavior: auto; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="mk-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc25c"/><stop offset="1" stop-color="#ff8a2a"/></linearGradient><symbol id="mk" viewBox="280 160 1060 1220"><path d="M1145 350H690a211 211 0 0 0 0 422h240a211 211 0 0 1 0 422H470" fill="none" stroke="url(#mk-g)" stroke-width="145"/><circle cx="1145" cy="350" r="152.5" fill="#05070d" stroke="#ffc25c" stroke-width="45"/><circle cx="470" cy="1187" r="152.5" fill="#05070d" stroke="#ff8a2a" stroke-width="45"/><circle cx="805" cy="762" r="33" fill="#05070d"/></symbol></defs></svg>
+<div class="glow" id="glow" aria-hidden="true"></div>
+
+<nav class="top"><div class="wrap">
+  <a class="logo" href="#top" aria-label="SYNTRA home"><svg aria-hidden="true"><use href="#mk"/></svg>SYNTRA</a>
+  <div class="navlinks glass">
+    <a class="livenav" href="#live">Live now</a><a href="#alert">Alerts</a><a href="#seam">The seam</a><a href="#check">Check a month</a><a href="#risk">Risk clock</a><a href="#team">Team</a><a href="#app">App</a>
+    <button type="button" class="mbtn" id="mbtn" aria-expanded="false" aria-controls="mnav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="mlab">Menu</span></button>
+    <a class="cta app-link" href="#app">Open the app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</div></nav>
+<div class="mnav glass" id="mnav" hidden></div>
+
+<header class="hero" id="top">
+  <div id="globe" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="eyebrow">NASA Space Apps 2026 · Harmonization of MODIS and VIIRS Hot Spots</div>
+    <h1>One fire record. <span class="grad">Two satellite eras.</span></h1>
+    <p class="lede">SYNTRA merges 26 years of NASA MODIS and VIIRS hotspots into one consistent record for Sudan, so a bad
+      fire season looks bad because of fire, not because a sharper satellite arrived.</p>
+    <div class="hud" id="layers" aria-label="Globe layers">
+      <button type="button" class="chip live" data-layer="live" aria-pressed="true"><i></i><span id="live-chip">Live</span></button>
+      <button type="button" class="chip" data-layer="belt" aria-pressed="true"><i style="background:var(--ember)"></i>Fire belt 2016–25</button>
+      <button type="button" class="chip" data-layer="MODIS" aria-pressed="true"><i style="background:var(--modis)"></i>MODIS</button>
+      <button type="button" class="chip" data-layer="VIIRS_NOAA20" aria-pressed="true"><i style="background:var(--n20)"></i>NOAA-20</button>
+      <button type="button" class="chip" data-layer="VIIRS_NOAA21" aria-pressed="true"><i style="background:var(--n21)"></i>NOAA-21</button>
+    </div>
+    <div class="btns">
+      <a class="btn hot app-link" href="#app">Open the live app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a class="btn" href="#live">Today's fires <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M4 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <a class="btn" href="#seam">See the 2012 seam <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M4 9l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    </div>
+    <div class="hint" id="ghint">Drag the globe to spin it · click it, then scroll to zoom · tap a layer to switch it off</div>
+  </div>
+  <div class="gdock">
+    <div class="gctl glass" id="gctl" role="group" aria-label="Globe controls">
+      <span class="zs" id="zs">Click globe to zoom</span>
+      <button type="button" id="gz-in" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" id="gz-out" aria-label="Zoom out" title="Zoom out"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" id="gz-home" aria-label="Back to Sudan" title="Back to Sudan"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3M8 5.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="readout glass" id="readout"></div>
+  </div>
+  <div class="nogl" id="nogl">3D needs WebGL; the rest of the page works without it.</div>
+</header>
+
+<div class="ticker" aria-label="Key numbers"><div class="track" id="ticker"></div></div>
+
+<section class="wrap sec" id="live" aria-labelledby="live-h">
+  <div class="sec-head">
+    <div class="eyebrow"><span class="pulse"></span>Live · NASA FIRMS</div>
+    <h2 id="live-h">Sudan right now</h2>
+    <p>Every fire hotspot NASA's satellites picked up over Sudan in the last 24 hours, cleaned the same way as the 26-year record
+      (inside the border, confident detections only, gas flares and other fixed heat sources removed). It refreshes every 30 minutes.
+      Hover or tap a dot for its details.</p>
+  </div>
+  <div class="livewrap">
+    <div class="livemap glass">
+      <canvas id="lmap" role="img" aria-label="Map of Sudan with the latest fire hotspots"></canvas>
+      <div class="lkey" id="lkey"></div>
+    </div>
+    <div class="rlist">
+      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)" id="l-lab">Hotspots in the last 24 h</span><span class="n mono" id="l-total">…</span><span class="dim" id="l-when">Loading the live feed…</span></div>
+      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">By satellite</span><div class="lbars" id="l-bars"></div></div>
+      <div class="rstat glass" id="l-hours-box"><span class="eyebrow" style="color:var(--dim)">Hotspots by hour of the satellite pass</span><div id="l-hours"></div></div>
+      <div class="rstat glass" id="l-max-box"><span class="eyebrow" style="color:var(--dim)">Strongest fire</span><span class="n mono" id="l-max"></span><span class="dim" id="l-max2"></span></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec" id="alert" aria-labelledby="al-h">
+  <div class="sec-head">
+    <div class="eyebrow">Early warning · for decision makers</div>
+    <h2 id="al-h">Which of today's fires are <span class="grad">not normal?</span></h2>
+    <p>A fire count on its own does not tell anyone what to do. SYNTRA compares today with the same days in 26 fire
+      seasons of the harmonized record, area by area, and adds the weather and the kind of fires seen. The answer is one call:
+      expected seasonal burning, or something to act on.</p>
+  </div>
+  <div class="alwrap">
+    <div class="almap glass">
+      <canvas id="amap" role="img" aria-label="Map of Sudan: areas with more fires today than is normal for this time of year"></canvas>
+      <div class="alkey">
+        <span><i style="background:rgba(148,170,220,.35)"></i>fires today, within normal</span>
+        <span><i style="background:#ffc25c"></i>above normal for this area</span>
+        <span><i style="background:#ff6b4a"></i>surge: above 99% of past days</span>
+        <span><i style="background:#c77dff"></i>fires where they are rare</span>
+      </div>
+    </div>
+    <div class="verdict glass" id="al-verdict" aria-live="polite">
+      <div class="lv"><span>Today's call</span><b id="al-level">…</b></div>
+      <div class="alscale" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <p class="next" id="al-next">Reading the live satellite feed and NASA POWER weather…</p>
+      <ul class="factors" id="al-factors"></ul>
+    </div>
+  </div>
+  <div class="areas" id="al-areas"></div>
+  <p class="alnote" id="al-note"></p>
+</section>
+
+<section class="story" id="seam" aria-labelledby="seam-h">
+  <div class="pin">
+    <div id="land" aria-hidden="true"></div>
+    <div class="story-ui">
+      <div class="wrap story-top">
+        <div>
+          <div class="eyebrow">The 2012 seam · scroll to fix it</div>
+          <h2 id="seam-h">300 months of Sudan's fires, in 3D</h2>
+          <div class="legend3d">
+            <span><i style="background:var(--modis)"></i>MODIS (raw)</span>
+            <span><i style="background:var(--viirs)"></i>VIIRS</span>
+            <span><i style="background:var(--harm)"></i>MODIS in VIIRS units</span>
+          </div>
+        </div>
+        <div class="meter glass">
+          <span class="eyebrow" style="color:var(--dim)">2012 vs 2011</span>
+          <span class="big mono" id="jump">×2.49</span>
+          <div class="bar"><i id="jumpbar"></i></div>
+          <div class="seg" role="group" aria-label="Record shown">
+            <button type="button" id="m-raw" aria-pressed="true">Raw</button>
+            <button type="button" id="m-auto" aria-pressed="false">Scroll</button>
+            <button type="button" id="m-harm" aria-pressed="false">Harmonized</button>
+          </div>
+        </div>
+      </div>
+      <div></div>
+      <div class="wrap steps-rail">
+        <div class="sstep glass on" data-s="0"><div class="k">01 · 2001–2011</div><h3>MODIS only</h3><p>Terra and Aqua, 1 km pixels. Each bar is one month; years run back to front.</p></div>
+        <div class="sstep glass" data-s="1"><div class="k">02 · 2012</div><h3>VIIRS arrives</h3><p>375 m pixels see far more fires. Joined raw, the record jumps ×2.5 overnight.</p></div>
+        <div class="sstep glass" data-s="2"><div class="k">03 · Harmonize</div><h3>Same units</h3><p>A factor per calendar month, fitted on 2012–2021, lifts MODIS into VIIRS units.</p></div>
+        <div class="sstep glass" data-s="3"><div class="k">04 · Validate</div><h3>R² 0.993</h3><p>On years the model never saw. Raw MODIS scores 0.36. The seam is gone.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap finale" aria-labelledby="fin-h">
+  <div class="eyebrow">Accuracy on years the model never saw</div>
+  <h2 id="fin-h" class="huge"><span class="from mono">R² 0.36</span><span class="arrow">to</span><span class="to mono" id="fin">0.993</span></h2>
+  <p>Raw MODIS predicts what VIIRS saw with R² 0.36. After SYNTRA's harmonization: 0.993, tested leave-one-year-out on 119 months.</p>
+</section>
+
+<section class="wrap sec" id="continuity" aria-labelledby="ct-h">
+  <div class="sec-head">
+    <div class="eyebrow">Continuity monitor</div>
+    <h2 id="ct-h">A record that <span class="grad">outlives MODIS</span></h2>
+    <p>Satellites retire. Every time one hands over to another, a fire record can break, as it did in 2012. SYNTRA keeps
+      the whole record in VIIRS units and fits each handover on the years both satellites flew, tests it on years it never saw,
+      and keeps checking it against the live feed.</p>
+  </div>
+  <div class="ctline glass"><div id="ct-tl" role="img" aria-label="Timeline of the satellites in the record and their handovers"></div></div>
+  <div class="ctgrid" id="ct-bridges"></div>
+  <div class="ctrow">
+    <div class="sunset glass">
+      <span class="eyebrow">MODIS is retiring</span>
+      <h3>When MODIS goes dark, this record does not break</h3>
+      <p>NASA plans to stop collecting Terra MODIS science data around January 2027, and Aqua's end date is still under
+        review (<a href="https://ladsweb.modaps.eosdis.nasa.gov/learn/modis-to-viirs-transition" target="_blank" rel="noopener">NASA LAADS DAAC, MODIS to VIIRS transition</a>).
+        Any fire record that mixes raw MODIS with VIIRS will jump again. SYNTRA's does not: 2000 to 2011 is already in VIIRS units,
+        so the series carries on unchanged on NOAA-20 and NOAA-21.</p>
+    </div>
+    <div class="drift glass" id="ct-drift">
+      <span class="eyebrow" style="color:var(--dim)">Live drift check</span>
+      <div class="dim">Loading the live feed…</div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec" aria-labelledby="pipe-h">
+  <div class="sec-head">
+    <div class="eyebrow">Under the hood</div>
+    <h2 id="pipe-h">From raw pixels to a record you can plan with</h2>
+  </div>
+  <div class="pipe">
+    <div class="pcard glass"><span class="k">DOWNLOAD</span><span class="n mono" data-count="4462802">4,462,802</span><p>clean hotspots, 2000–2026, from the FIRMS archive and the near-real-time API.</p></div>
+    <div class="pcard glass"><span class="k">CLEAN</span><span class="n mono" data-count="45464">45,464</span><p>detections at always-hot sites set aside: gas flares, industry and other static heat sources.</p></div>
+    <div class="pcard glass"><span class="k">HARMONIZE</span><span class="n mono">0.1°</span><p>fire cell-days: each grid cell counts once a day, then MODIS is converted month by month.</p></div>
+    <div class="pcard glass"><span class="k">VALIDATE</span><span class="n mono">R² 0.993</span><p>leave-one-year-out on 119 months. NOAA-20 × 0.986 takes over where Suomi NPP data ends.</p></div>
+  </div>
+</section>
+
+<section class="wrap sec" id="check" aria-labelledby="check-h">
+  <div class="sec-head">
+    <div class="eyebrow">Try it</div>
+    <h2 id="check-h">Was that month normal?</h2>
+    <p>Pick any month since 2001. SYNTRA compares it with the same month in every earlier year, the way the app's status card does.</p>
+  </div>
+  <div class="checker">
+    <div class="ctrl glass">
+      <label for="yr">Year <span class="yearout" id="yrout">2026</span></label>
+      <input type="range" id="yr" min="2001" max="2026" value="2026" step="1">
+      <div class="monthpick" id="mp" role="group" aria-label="Month"></div>
+      <p class="dim" style="font-size:.84rem">Very high: above the 90th percentile. Above or below normal: 20% or more from the median.</p>
+    </div>
+    <div class="verdict glass" id="verdict" aria-live="polite"></div>
+  </div>
+</section>
+
+<section class="wrap sec" id="risk" aria-labelledby="risk-h">
+  <div class="sec-head">
+    <div class="eyebrow">Fire season</div>
+    <h2 id="risk-h">The risk clock</h2>
+    <p>52 weeks around the dial. Each slice shows how often that week has been a high-fire week since 2001. The needle marks the latest day of data. Hover or tap any week; tap the cards to light up the peak season or jump back to now.</p>
+  </div>
+  <div class="riskwrap">
+    <div id="clock"></div>
+    <div class="rlist">
+      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">Highest-risk period</span><span class="n" id="rp"></span><span class="dim" id="rp2"></span></div>
+      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">Season length</span><span class="n" id="rd"></span><span class="dim">more high-fire weeks per decade (linear fit, a direction only)</span></div>
+      <div class="rstat glass"><span class="eyebrow" style="color:var(--dim)">Latest week of data</span><span class="n" id="rw"></span><span class="dim" id="rw2"></span></div>
+      <div class="rkey" id="rkey"></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec" id="app" aria-labelledby="app-h">
+  <div class="sec-head">
+    <div class="eyebrow">The app</div>
+    <h2 id="app-h">Everything a fire planner asks, in one place</h2>
+    <p>Draw any area of Sudan on the map. Every view runs on the same harmonized record.</p>
+  </div>
+  <div class="bento" id="bento">
+    <div class="tile glass w4"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></g></svg><span class="tag new">Early warning</span><h3>Is today normal for this time of year?</h3><p>One call a day from the live feed, a 26-year baseline and NASA POWER weather: expected seasonal burning, or the areas to check first.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5" opacity=".5"/></g></svg><span class="tag">Live</span><h3>Live map</h3><p>Last 7 days, five satellites, static sources apart.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></g></svg><span class="tag">Status</span><h3>This month, in plain words</h3><p>Very high, above normal, normal or below normal, with the rule that decided it.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16M15 4v16M3 14.5h18"/></g></svg><span class="tag">Calendar</span><h3>Burning calendar</h3><p>Every month since 2000 in one heatmap.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 12V6.5M12 12l4 2.5"/></g></svg><span class="tag">Risk</span><h3>Risk periods</h3><p>Which weeks burn most often, and how long each season lasted.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M9 20V6M14 20v-8M19 20V9"/></g></svg><span class="tag">3D</span><h3>Regions over time</h3><p>Weekly fires for 2–3 regions, split north to south or west to east, all settings yours.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/></g></svg><span class="tag new">Continuity</span><h3>Continuity monitor</h3><p>Every satellite handover with its factor, and a live drift check for when MODIS retires.</p></div>
+    <div class="tile glass"><svg class="art" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></g></svg><span class="tag">Export</span><h3>Report and data</h3><p>One interactive HTML report with every chart, plus CSVs of the series, calendar and hotspots.</p></div>
+  </div>
+  <div class="btns" style="margin-top:22px"><a class="btn hot app-link" href="#app">Open the live app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a><span class="hint" id="soon" style="align-self:center">Live link added at deployment</span></div>
+</section>
+
+<section class="wrap sec" aria-labelledby="test-h">
+  <div class="sec-head">
+    <div class="eyebrow">Does it hold up?</div>
+    <h2 id="test-h">Tested on years it never saw</h2>
+    <p>119 held-out months per country. It works where vegetation burns. In Saudi Arabia, with few real fires and many gas flares, it does not, and we show that too.</p>
+  </div>
+  <div class="tbl glass">
+    <table>
+      <thead><tr><th>Country</th><th class="n">R² raw MODIS</th><th class="n">R² harmonized</th><th class="n">Median annual error</th></tr></thead>
+      <tbody>
+        <tr><td><b>Sudan</b></td><td class="n">0.36</td><td class="n">0.99<span class="barcell" style="width:99px"></span></td><td class="n">2.4%</td></tr>
+        <tr><td>Ethiopia</td><td class="n">0.21</td><td class="n">0.99<span class="barcell" style="width:99px"></span></td><td class="n">3.3%</td></tr>
+        <tr><td>Iraq</td><td class="n">0.26</td><td class="n">0.91<span class="barcell" style="width:91px"></span></td><td class="n">7.8%</td></tr>
+        <tr><td>Saudi Arabia</td><td class="n">−13.7</td><td class="n">−0.93<span class="barcell" style="width:0"></span></td><td class="n">14.2%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="wrap sec" id="serve" aria-labelledby="serve-h">
+  <div class="sec-head">
+    <div class="eyebrow">Who SYNTRA serves</div>
+    <h2 id="serve-h">One fire record, <span class="grad">many decisions</span></h2>
+    <p>The same consistent record answers different questions for different people. Each item links to where it works on
+      this page today.</p>
+  </div>
+  <div class="serve">
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/></svg>
+        <div><h3>NASA</h3><span>Earth science and applied sciences</span></div></div>
+      <p>Terra MODIS is due to stop collecting science data around January 2027. SYNTRA shows a fire record can stay
+        unbroken through that switch, built on NASA FIRMS and NASA POWER, for agriculture, disasters and health.</p>
+      <ul><li class="on"><a href="#continuity">Continuity monitor and live drift check</a></li><li class="on"><a href="#continuity">NOAA-21 on standby as the next handover</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9m0 0c0-3 2-5 5-5 0 3-2 5-5 5Zm0 4c0-3-2-5-5-5 0 3 2 5 5 5Zm0 4c0-2.5 2-4.5 4.5-4.5 0 2.5-2 4.5-4.5 4.5Z"/></svg>
+        <div><h3>Agriculture and food security</h3><span>Ministry of Agriculture · FAO · WFP</span></div></div>
+      <p>Most of Sudan's fires are crop leftovers burned after harvest, so the record is also a farming calendar seen from space.
+        A late start points to a late harvest; a farm area that stops burning is a sign of land-use change worth checking.</p>
+      <ul><li class="on"><a href="#alert">Fire type: farm burning or something more intense</a></li><li class="on"><a href="#risk">Risk clock: when the burning season peaks</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.7-7 10-7 10Z"/><path d="M8.5 11.5h2l1-2 1.5 4 1-2h1.5"/></svg>
+        <div><h3>Public health</h3><span>Ministry of Health · WHO</span></div></div>
+      <p>The October to December peak puts smoke over towns and cities. Knowing the weeks and the areas lets health teams
+        prepare clinics for more breathing-related cases.</p>
+      <ul><li class="on"><a href="#risk">The high-fire weeks of the year</a></li><li class="on"><a href="#alert">Humidity and wind against normal</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.4 3.4 8.2 8 9 4.6-.8 8-4.6 8-9V6l-8-3Z"/><path d="M12 8v5m0 3h.01"/></svg>
+        <div><h3>Civil defence and disaster response</h3><span>Civil defence · disaster management</span></div></div>
+      <p>One call a day, made from the satellites, the 26-year baseline and the weather: expected seasonal burning, or a
+        short list of areas to check first.</p>
+      <ul><li class="on"><a href="#alert">Early warning with the areas to check</a></li><li class="on"><a href="#live">Live NASA FIRMS feed, every 30 minutes</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 6 12h3l-4 6h14l-4-6h3l-6-9Z"/><path d="M12 18v3"/></svg>
+        <div><h3>Environment and protected areas</h3><span>Environment and forestry bodies</span></div></div>
+      <p>A fire where land rarely burns means something. The baseline tells routine burning from the unusual, area by
+        area, which matters most in reserves such as Dinder National Park.</p>
+      <ul><li class="on"><a href="#alert">Fires where they are rare</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>
+        <div><h3>Humanitarian agencies</h3><span>UN and relief organisations</span></div></div>
+      <p>Fires that break the usual pattern show where to look first. SYNTRA flags them as a reason to check, never as a
+        claim about what caused them.</p>
+      <ul><li class="on"><a href="#alert">Areas to check, with a satellite view link</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 16l4-5 3 3 5-7"/></svg>
+        <div><h3>Research and climate</h3><span>Universities · climate studies</span></div></div>
+      <p>One consistent series from 2000 means a trend is real, not the 2012 satellite switch. Questions like "is the fire
+        season starting earlier?" become answerable.</p>
+      <ul><li class="on"><a href="#check">Any month since 2000, in one set of units</a></li></ul>
+    </article>
+    <article class="sv glass">
+      <div class="sv-h"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>
+        <div><h3>Every country with a fire season</h3><span>Beyond Sudan</span></div></div>
+      <p>The method is not tied to Sudan: on held-out months it scores R² 0.986 in Ethiopia and 0.905 in Iraq. Where real
+        fires are too few, as in Saudi Arabia, it says so instead of guessing.</p>
+      <ul><li class="on"><a href="#test-h">Tested on four countries</a></li></ul>
+    </article>
+  </div>
+</section>
+
+<section class="team" id="team" aria-labelledby="team-h">
+  <canvas class="embers" id="embers" aria-hidden="true"></canvas>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+    <filter id="thermal" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+      <feColorMatrix type="saturate" values="0" result="g"/>
+      <feConvolveMatrix in="g" order="3" kernelMatrix="-1 -1 -1 -1 8 -1 -1 -1 -1" preserveAlpha="true" result="e"/>
+      <feComponentTransfer in="e" result="e2"><feFuncR type="linear" slope="3.4"/><feFuncG type="linear" slope="3.4"/><feFuncB type="linear" slope="3.4"/></feComponentTransfer>
+      <feColorMatrix in="e2" type="matrix" values="0 0 0 0 1  0 0 0 0 .62  0 0 0 0 .22  .4 .4 .4 0 0" result="lines"/>
+      <feGaussianBlur in="lines" stdDeviation="1.3" result="glow"/>
+      <feMerge><feMergeNode in="glow"/><feMergeNode in="lines"/><feMergeNode in="lines"/></feMerge>
+    </filter></defs></svg>
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">The crew</div>
+      <h2 id="team-h">The team behind <span class="fire-text">the fire record</span></h2>
+      <p>Five people, one record: from raw NASA satellite files to the page you are reading.</p>
+    </div>
+    <div class="crew">
+    <article class="tm" style="--d:0ms;--c:var(--harm)" tabindex="0" role="button" aria-pressed="false" aria-label="Riyadh Khalid Barnawi, Team leader and system architecture. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>01</b> · lead</span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core ph"><img class="ph-smoke" src="team/rb.jpg" alt="" decoding="async"><img class="ph-heat" src="team/rb.jpg" alt="" decoding="async"><img class="ph-clear" src="team/rb.jpg" alt="" decoding="async"><span class="ph-fire"></span></span></div>
+          <div><h3>Riyadh Khalid Barnawi</h3><div class="role fire-text">Team leader · system architecture</div></div></div>
+        <p>How the pieces fit together: data, model, app and site.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <div class="tm-top"><span>Hotspot <b>01</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div class="tm-body">
+          <div class="tm-col"><div><h3>Riyadh Khalid Barnawi</h3><div class="role fire-text">Team leader · system architecture</div></div>
+          <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/riyadh-barnawi-4748b43b4/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div></div>
+          <span class="tm-lock" aria-hidden="true"><b data-t="RB">RB</b></span>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
+    </div></article>
+    <article class="tm" style="--d:110ms;--c:var(--n21)" tabindex="0" role="button" aria-pressed="false" aria-label="Ahmad Salah Qadah, Data engineering, NASA FIRMS. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>02</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core ph"><img class="ph-smoke" src="team/aq.jpg" alt="" decoding="async"><img class="ph-heat" src="team/aq.jpg" alt="" decoding="async"><img class="ph-clear" src="team/aq.jpg" alt="" decoding="async"><span class="ph-fire"></span></span></div>
+          <div><h3>Ahmad Salah Qadah</h3><div class="role fire-text">Data engineering · NASA FIRMS</div></div></div>
+        <p>Sourcing, cleaning and quality-checking 4.46 million MODIS and VIIRS hotspots, plus the live NASA feed.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <div class="tm-top"><span>Hotspot <b>02</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div class="tm-body">
+          <div class="tm-col"><div><h3>Ahmad Salah Qadah</h3><div class="role fire-text">Data engineering · NASA FIRMS</div></div>
+          <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/ahmedqadah/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div></div>
+          <span class="tm-lock" aria-hidden="true"><b data-t="AQ">AQ</b></span>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
+    </div></article>
+    <article class="tm" style="--d:220ms;--c:var(--viirs)" tabindex="0" role="button" aria-pressed="false" aria-label="Yazeed Firas Yasin, Data analysis · modeling. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>03</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core ph"><img class="ph-smoke" src="team/yy.jpg" alt="" decoding="async"><img class="ph-heat" src="team/yy.jpg" alt="" decoding="async"><img class="ph-clear" src="team/yy.jpg" alt="" decoding="async"><span class="ph-fire"></span></span></div>
+          <div><h3>Yazeed Firas Yasin</h3><div class="role fire-text">Data analysis · modeling</div></div></div>
+        <p>The harmonization model, its validation and the fire statistics.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <div class="tm-top"><span>Hotspot <b>03</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div class="tm-body">
+          <div class="tm-col"><div><h3>Yazeed Firas Yasin</h3><div class="role fire-text">Data analysis · modeling</div></div>
+          <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/yazeed-y-ab77a71b4/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div></div>
+          <span class="tm-lock" aria-hidden="true"><b data-t="YY">YY</b></span>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
+    </div></article>
+    <article class="tm" style="--d:330ms;--c:var(--n20)" tabindex="0" role="button" aria-pressed="false" aria-label="Obai Yousef Merdad, Backend engineering. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>04</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core ph"><img class="ph-smoke" src="team/om.jpg" alt="" decoding="async"><img class="ph-heat" src="team/om.jpg" alt="" decoding="async"><img class="ph-clear" src="team/om.jpg" alt="" decoding="async"><span class="ph-fire"></span></span></div>
+          <div><h3>Obai Yousef Merdad</h3><div class="role fire-text">Backend engineering</div></div></div>
+        <p>The server side: the processing pipeline and the services behind the app.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <div class="tm-top"><span>Hotspot <b>04</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div class="tm-body">
+          <div class="tm-col"><div><h3>Obai Yousef Merdad</h3><div class="role fire-text">Backend engineering</div></div>
+          <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/obai-merdad/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div></div>
+          <span class="tm-lock" aria-hidden="true"><b data-t="OM">OM</b></span>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
+    </div></article>
+    <article class="tm" style="--d:440ms;--c:var(--modis)" tabindex="0" role="button" aria-pressed="false" aria-label="Hisham Alawi Albaiti, UI/UX design · front-end engineering. Press to show the LinkedIn link."><div class="tm-card">
+      <div class="tm-in tm-front">
+        <div class="tm-top"><span>Hotspot <b>05</b></span><span class="conf"><i></i>Conf · high</span></div>
+        <div class="tm-id"><div class="scope" aria-hidden="true"><span class="orb"></span><span class="core ph"><img class="ph-smoke" src="team/ha.jpg" alt="" decoding="async"><img class="ph-heat" src="team/ha.jpg" alt="" decoding="async"><img class="ph-clear" src="team/ha.jpg" alt="" decoding="async"><span class="ph-fire"></span></span></div>
+          <div><h3>Hisham Alawi Albaiti</h3><div class="role fire-text">UI/UX design · front-end engineering</div></div></div>
+        <p>Interface, interaction design and the story site you are scrolling now.</p>
+        <span class="tm-hint" aria-hidden="true">Click to flip ↻</span>
+      </div>
+      <div class="tm-in tm-back" aria-hidden="true">
+        <div class="tm-top"><span>Hotspot <b>05</b> · profile</span><span class="conf"><i></i>Locked on</span></div>
+        <div class="tm-body">
+          <div class="tm-col"><div><h3>Hisham Alawi Albaiti</h3><div class="role fire-text">UI/UX design · front-end engineering</div></div>
+          <div class="tm-links">
+          <a class="tm-link li" data-href="https://www.linkedin.com/in/hishamalbaiti/" target="_blank" rel="noopener" tabindex="-1"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M0 1.15C0 .52.52 0 1.18 0h13.64C15.48 0 16 .52 16 1.15v13.7c0 .63-.52 1.15-1.18 1.15H1.18C.52 16 0 15.48 0 14.85V1.15zM4.94 13.4V6.17h-2.4v7.23h2.4zM3.74 5.18c.84 0 1.36-.56 1.36-1.25-.02-.71-.52-1.25-1.34-1.25-.82 0-1.36.54-1.36 1.25 0 .69.52 1.25 1.33 1.25h.01zm2.53 8.22h2.4V9.36c0-.22.02-.43.08-.59.18-.43.57-.88 1.23-.88.87 0 1.22.66 1.22 1.64v3.87h2.4V9.25c0-2.22-1.18-3.25-2.76-3.25-1.28 0-1.84.7-2.16 1.2v.02h-.02l.02-.02V6.17h-2.4c.03.68 0 7.23 0 7.23z"/></svg><span>LinkedIn</span><b class="arr" aria-hidden="true">↗</b></a>
+        </div></div>
+          <span class="tm-lock" aria-hidden="true"><b data-t="HA">HA</b></span>
+        </div>
+        <span class="tm-hint" aria-hidden="true">Click to flip back ↺</span>
+      </div>
+    </div></article>
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec" aria-labelledby="cred-h">
+  <div class="sec-head"><div class="eyebrow">Data and tools</div><h2 id="cred-h">Open NASA data, open method</h2></div>
+  <div class="credits">
+    <div class="glass"><h3>NASA data</h3><ul><li>FIRMS MODIS hotspots, Terra and Aqua</li><li>FIRMS VIIRS 375 m hotspots: S-NPP, NOAA-20, NOAA-21</li><li>FIRMS near-real-time API for 2026</li></ul></div>
+    <div class="glass"><h3>Other data and code</h3><ul><li>Natural Earth country borders</li><li>Python, pandas, Streamlit, Plotly, three.js</li><li>Method and code on GitHub</li></ul></div>
+    <div class="glass"><h3>AI tools used</h3><ul><li>ChatGPT (OpenAI): research and understanding the challenge</li><li>Claude (Anthropic): coding help and review</li><li>AI image tools: logo and illustrations</li><li>AI slide tools: pitch deck design</li><li>Every number comes from our own code run on NASA FIRMS data</li></ul></div>
+  </div>
+</section>
+
+<footer><div class="wrap"><span><svg class="mk" aria-hidden="true"><use href="#mk"/></svg>Team SYNTRA · NASA Space Apps Challenge 2026 · Jeddah</span><span id="foot"></span></div></footer>
+<div class="tip3d" id="tip" hidden></div>
+
+<script src="data.js"></script>
+<script src="alerts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+<script>
+(function () {
+  "use strict";
+  var D = window.SYNTRA || {};
+  var APP_URL = "https://syntra-nasa.streamlit.app/";   // Streamlit Community Cloud
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var coarse = matchMedia("(pointer: coarse)").matches;
+  var fmt = function (v) { return Math.round(v).toLocaleString("en-US"); };
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var COL = { MODIS: "#e69f00", VIIRS_SNPP: "#56b4e9", VIIRS_NOAA20: "#cc79a7", VIIRS_NOAA21: "#f0e442" };
+  var tip = document.getElementById("tip");
+  var lenis = null;
+  if (window.Lenis && !reduce && !coarse) {
+    try {
+      lenis = new Lenis({ lerp: .1, smoothWheel: true, wheelMultiplier: .9 });
+      document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+        a.addEventListener("click", function (e) {
+          var id = a.getAttribute("href"), el = id.length > 1 && document.querySelector(id);
+          if (el) { e.preventDefault(); lenis.scrollTo(el, { duration: 1.4, offset: el.id === "seam" ? 0 : -84 }); }
+        });
+      });
+    } catch (e) { lenis = null; }
+  }
+  function showTip(x, y, html) { tip.hidden = false; tip.style.left = x + "px"; tip.style.top = y + "px"; tip.innerHTML = html; }
+  function hideTip() { tip.hidden = true; }
+  window.syTip = { show: showTip, hide: hideTip };
+  addEventListener("scroll", hideTip, { passive: true });
+  (function () {   // solid top bar once the page scrolls, so content never shows through the logo and links
+    var nav = document.querySelector("nav.top"); if (!nav) return;
+    function f() { nav.classList.toggle("scrolled", (window.scrollY || 0) > 40); }
+    addEventListener("scroll", f, { passive: true }); f();
+  })();
+
+  // app links
+  document.querySelectorAll(".app-link").forEach(function (a) {
+    if (APP_URL) { a.href = APP_URL; a.target = "_blank"; a.rel = "noopener"; }
+  });
+  if (APP_URL) document.getElementById("soon").hidden = true;
+
+  // cursor glow
+  var glow = document.getElementById("glow");
+  if (!coarse && !reduce) addEventListener("pointermove", function (e) { glow.style.transform = "translate(" + (e.clientX - 280) + "px," + (e.clientY - 280) + "px)"; });
+  else glow.style.display = "none";
+
+  // monthly series
+  var months = D.months || [], harm = D.harm || [], raw = D.raw || [];
+  var idx = {}; months.forEach(function (m, i) { idx[m] = i; });
+  function val(arr, y, m) { var i = idx[y + "-" + (m < 10 ? "0" : "") + m]; return i === undefined ? null : arr[i]; }
+
+  // ticker + readout. LIVE = null: the 7-day snapshot built into data.js; otherwise the /api/live answer (last 24 h).
+  var LIVE = null;
+  function hhmm(iso) { return iso ? iso.slice(11, 16) + " UTC " + iso.slice(8, 10) + " " + MON[+iso.slice(5, 7) - 1] : ""; }
+  function renderStats() {
+    var s = LIVE ? LIVE.by_sensor || {} : D.live_by_sensor || {};
+    var total = LIVE ? LIVE.total : D.live_total || 0;
+    var span = LIVE ? "in the last 24 h · newest pass " + hhmm(LIVE.newest_pass_utc) : (D.live_from || "") + " to " + (D.live_to || "");
+    var items = [
+      "<b>LIVE</b> " + fmt(total) + " hotspots over Sudan" + (LIVE ? " " : ", ") + span,
+      "NOAA-20 <b>" + fmt(s.VIIRS_NOAA20 || 0) + "</b> · NOAA-21 <b>" + fmt(s.VIIRS_NOAA21 || 0) + "</b> · MODIS <b>" + fmt(s.MODIS || 0) + "</b>",
+      "October 2026 <b>+56%</b> vs a typical October · 2nd of 26",
+      "Held-out R² <b>" + (D.heldout_r2 || 0.993) + "</b> · raw MODIS " + (D.raw_r2 || 0.36),
+      "Extreme fire weeks <b>22 Oct – 23 Dec</b> · 97% of years",
+      "Suomi NPP data ends 2 Nov 2026 · NOAA-20 × 0.986 takes over",
+      "4.46 M hotspots · 26 years · one unit: fire cell-days"
+    ];
+    var html = items.map(function (t) { return "<span>" + t + "</span>"; }).join("");
+    document.getElementById("ticker").innerHTML = html + html;
+    document.getElementById("live-chip").textContent = "Live · " + fmt(total) + (LIVE ? " in 24 h" : " in 7 days");
+    document.getElementById("readout").innerHTML = "SUDAN · 8.7–22.2° N · 21.8–38.6° E<br>FIRMS record through <b>" + (D.data_to || "") + "</b><br>" +
+      (LIVE ? "live feed <b>last 24 h</b> · newest pass <b>" + hhmm(LIVE.newest_pass_utc) + "</b>"
+            : "live window <b>" + (D.live_from || "") + " to " + (D.live_to || "") + "</b>") + "<br>grid 0.1° · VIIRS S-NPP units";
+    document.getElementById("foot").textContent = "Data: NASA FIRMS through " + (D.data_to || "") + (LIVE ? " · live feed fetched " + hhmm(LIVE.fetched_utc) : "") +
+      " · colors: Okabe-Ito, colorblind-safe";
+  }
+  renderStats();
+  var globeLive = null;   // set by the globe: rebuilds its live layers from a list of [lon, lat, sensor, ...]
+
+  // "Sudan right now": flat map + numbers. Points are [lon, lat, sensor] (snapshot) or
+  // [lon, lat, sensor, pass minutes since 1970 UTC, FRP MW] (live feed).
+  var SN = { MODIS: "MODIS", VIIRS_NOAA20: "NOAA-20", VIIRS_NOAA21: "NOAA-21" };
+  var SNL = { MODIS: "MODIS (Terra/Aqua)", VIIRS_NOAA20: "VIIRS on NOAA-20", VIIRS_NOAA21: "VIIRS on NOAA-21" };
+  var LS = { pts: [], off: {}, vis: [], hover: null, live: false, failed: false };
+  var LB = (function () {
+    var b = D.border || [], x0 = 21.8, x1 = 38.6, y0 = 8.7, y1 = 22.2;
+    if (b.length) { x0 = 99; x1 = -99; y0 = 99; y1 = -99; b.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }); }
+    return { x0: x0 - .3, x1: x1 + .3, y0: y0 - .3, y1: y1 + .3, kx: Math.cos((y0 + y1) / 2 * Math.PI / 180) };
+  })();
+  var cellMax = Math.max.apply(null, (D.cells || [[0, 0, 1]]).map(function (c) { return c[2]; }));
+  function isoOf(t) { return new Date(t * 6e4).toISOString(); }
+  function ago(iso) {
+    var m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 6e4));
+    return m < 60 ? m + " min ago" : Math.floor(m / 60) + " h " + (m % 60) + " min ago";
+  }
+  function drawLMap() {
+    var cv = document.getElementById("lmap"), w = cv.clientWidth; if (!w) return;
+    var h = Math.round(w * (LB.y1 - LB.y0) / ((LB.x1 - LB.x0) * LB.kx)), dpr = Math.min(2, devicePixelRatio || 1);
+    cv.style.height = h + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    var c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var sx = w / (LB.x1 - LB.x0), sy = h / (LB.y1 - LB.y0);
+    function px(lon, lat) { return [(lon - LB.x0) * sx, (LB.y1 - lat) * sy]; }
+    // graticule every 4 degrees
+    c.strokeStyle = "rgba(148,170,220,.08)"; c.lineWidth = 1; c.fillStyle = "rgba(151,163,189,.55)"; c.font = "10px JetBrains Mono, monospace";
+    for (var lo = 24; lo < LB.x1; lo += 4) { var a = px(lo, 0)[0]; c.beginPath(); c.moveTo(a, 0); c.lineTo(a, h); c.stroke(); c.fillText(lo + "°E", a + 3, h - 4); }
+    for (var la = 12; la < LB.y1; la += 4) { var y = px(0, la)[1]; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); c.fillText(la + "°N", 3, y - 3); }
+    // typical fire belt (2016-25), faint
+    (D.cells || []).forEach(function (cl) { var q = px(cl[0] - .05, cl[1] + .05); c.fillStyle = "rgba(255,138,42," + (.04 + .22 * Math.sqrt(cl[2] / cellMax)).toFixed(3) + ")"; c.fillRect(q[0], q[1], .1 * sx, .1 * sy); });
+    // border
+    var b = D.border || [];
+    if (b.length) { c.beginPath(); b.forEach(function (p, i) { var q = px(p[0], p[1]); if (i) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); }); c.strokeStyle = "rgba(255,138,42,.85)"; c.lineWidth = 1.4; c.stroke(); }
+    // hotspots
+    LS.vis = []; c.strokeStyle = "rgba(5,7,13,.85)"; c.lineWidth = .8;
+    LS.order.forEach(function (p) {
+      if (LS.off[p[2]]) return; var q = px(p[0], p[1]); LS.vis.push([q[0], q[1], p]);
+      c.fillStyle = COL[p[2]] || "#fff"; c.beginPath(); c.arc(q[0], q[1], 2.6, 0, 6.2832); c.fill(); c.stroke();
+    });
+    if (LS.hover) { c.strokeStyle = "#eef1f8"; c.lineWidth = 2; c.beginPath(); c.arc(LS.hover[0], LS.hover[1], 7, 0, 6.2832); c.stroke(); }
+  }
+  (function () {
+    var cv = document.getElementById("lmap"), key = document.getElementById("lkey");
+    Object.keys(SN).forEach(function (k) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", "true");
+      b.innerHTML = "<i style='background:" + COL[k] + "'></i>" + SN[k];
+      b.addEventListener("click", function () { var on = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", on); LS.off[k] = !on; LS.hover = null; drawLMap(); });
+      key.appendChild(b);
+    });
+    var belt = document.createElement("span"); belt.className = "belt"; belt.innerHTML = "<i></i>usual fire belt 2016–25"; key.appendChild(belt);
+    function pick(e) {
+      var r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, best = null, bd = e.pointerType === "mouse" ? 100 : 400;
+      LS.vis.forEach(function (v) { var d = (v[0] - x) * (v[0] - x) + (v[1] - y) * (v[1] - y); if (d < bd) { bd = d; best = v; } });
+      if (best !== LS.hover) { LS.hover = best; drawLMap(); }
+      if (!best) { hideTip(); return; }
+      var p = best[2];
+      showTip(e.clientX, e.clientY, "<b>" + SNL[p[2]] + "</b>" + (p[3] ? "<br>pass " + hhmm(isoOf(p[3])) : "") +
+        (p[4] != null ? "<br>fire power " + p[4] + " MW" : "") + "<br>" + p[1].toFixed(2) + "° N, " + p[0].toFixed(2) + "° E");
+    }
+    cv.addEventListener("pointermove", function (e) { if (e.pointerType === "mouse") pick(e); });
+    cv.addEventListener("pointerdown", function (e) { if (e.pointerType !== "mouse") pick(e); });
+    cv.addEventListener("pointerleave", function (e) { if (e.pointerType !== "mouse") return; hideTip(); if (LS.hover) { LS.hover = null; drawLMap(); } });
+    document.addEventListener("pointerdown", function (e) { if (e.target !== cv && LS.hover) { hideTip(); LS.hover = null; drawLMap(); } });
+    addEventListener("scroll", function () { if (LS.hover && coarse) { hideTip(); LS.hover = null; drawLMap(); } }, { passive: true });
+    addEventListener("resize", drawLMap);
+  })();
+  function renderLive() {
+    // draw in a fixed mixed order so one satellite does not paint over the others where they saw the same fire
+    LS.order = LS.pts.slice().sort(function (a, b) { var h = function (p) { var v = Math.sin(p[0] * 12.9898 + p[1] * 78.233) * 43758.5453; return v - Math.floor(v); }; return h(a) - h(b); });
+    var pts = LS.pts, n = pts.length, by = {};
+    pts.forEach(function (p) { by[p[2]] = (by[p[2]] || 0) + 1; });
+    document.getElementById("l-lab").textContent = LS.live ? "Hotspots in the last 24 h" : "Hotspots, " + (D.live_from || "") + " to " + (D.live_to || "");
+    document.getElementById("l-total").textContent = fmt(n);
+    document.getElementById("l-when").textContent = LS.live
+      ? "newest pass " + hhmm(LIVE.newest_pass_utc) + " (" + ago(LIVE.newest_pass_utc) + ") · checked " + hhmm(LIVE.fetched_utc)
+      : LS.failed ? "The live feed is not reachable, so this is the saved 7-day snapshot." : "Loading the live feed…";
+    var mx = Math.max.apply(null, Object.keys(SN).map(function (k) { return by[k] || 0; }).concat([1]));
+    var miss = LS.live && LIVE.missing || [];
+    document.getElementById("l-bars").innerHTML = Object.keys(SN).map(function (k) {
+      if (miss.indexOf(k) >= 0) return "<div class='lbar'><span>" + SN[k] + "</span><span class='t'></span><span class='v dim'>no data</span></div>";
+      return "<div class='lbar'><span>" + SN[k] + "</span><span class='t'><b style='width:" + (100 * (by[k] || 0) / mx).toFixed(1) + "%;background:" + COL[k] + "'></b></span><span class='v'>" + fmt(by[k] || 0) + "</span></div>";
+    }).join("");
+    document.getElementById("lmap").setAttribute("aria-label", "Map of Sudan with " + fmt(n) + " fire hotspots: " +
+      Object.keys(SN).map(function (k) { return SN[k] + " " + fmt(by[k] || 0); }).join(", "));
+    // by hour, last 24 h before the check
+    var hb = document.getElementById("l-hours-box"), timed = LS.live && n && pts[0][3];
+    hb.hidden = !timed;
+    if (timed) {
+      var end = Date.parse(LIVE.fetched_utc) / 6e4, bins = []; for (var i = 0; i < 24; i++) bins.push(0);
+      pts.forEach(function (p) { var k = Math.floor((end - p[3]) / 60); if (k >= 0 && k < 24) bins[23 - k]++; });
+      var W = 320, H = 64, bw = W / 24, hm = Math.max.apply(null, bins.concat([1]));
+      var svg = "<svg viewBox='0 0 " + W + " " + (H + 16) + "' role='img' aria-label='Hotspots per hour over the last 24 hours'>";
+      bins.forEach(function (v, i) {
+        var hh = v ? Math.max(3, v / hm * H) : 1.5;
+        svg += "<rect class='hb' data-i='" + i + "' x='" + (i * bw + 1) + "' y='" + (H - hh) + "' width='" + (bw - 2) + "' height='" + hh + "' rx='2' fill='" + (v ? "#ff8a2a" : "#2b3a5c") + "'/>";
+      });
+      svg += "<line x1='0' x2='" + W + "' y1='" + H + "' y2='" + H + "' stroke='rgba(148,170,220,.25)'/>";
+      svg += "<text x='0' y='" + (H + 13) + "'>24 h ago</text><text x='" + W / 2 + "' y='" + (H + 13) + "' text-anchor='middle'>12 h ago</text><text x='" + W + "' y='" + (H + 13) + "' text-anchor='end'>now</text></svg>";
+      var hw = document.getElementById("l-hours"); hw.innerHTML = svg;
+      hw.querySelectorAll(".hb").forEach(function (r) {
+        r.addEventListener("pointermove", function (e) { var i = +r.dataset.i, a = isoOf(end - (24 - i) * 60), z = isoOf(end - (23 - i) * 60);
+          showTip(e.clientX, e.clientY, "<b>" + fmt(bins[i]) + " hotspots</b><br>" + a.slice(11, 16) + "–" + z.slice(11, 16) + " UTC"); });
+        r.addEventListener("pointerleave", hideTip);
+      });
+    }
+    // strongest fire by radiative power
+    var mb = document.getElementById("l-max-box"), top = null;
+    pts.forEach(function (p) { if (p[4] != null && (!top || p[4] > top[4])) top = p; });
+    mb.hidden = !(LS.live && top);
+    if (LS.live && top) {
+      document.getElementById("l-max").textContent = (top[4] >= 10 ? fmt(top[4]) : top[4].toFixed(1)) + " MW";
+      document.getElementById("l-max2").textContent = "fire radiative power · " + SNL[top[2]] + " · " + top[1].toFixed(2) + "° N, " + top[0].toFixed(2) + "° E · " + hhmm(isoOf(top[3]));
+    }
+    drawLMap();
+  }
+  LS.pts = D.live || []; renderLive();
+
+  var hasGL = !!window.THREE && (function () { try { var c = document.createElement("canvas"); return !!(c.getContext("webgl") || c.getContext("experimental-webgl")); } catch (e) { return false; } })();
+  var scenes = [];
+  function visibleWatch(el, s) { new IntersectionObserver(function (es) { s.on = es[0].isIntersecting; }, { rootMargin: "100px" }).observe(el); }
+  function sizeTo(r, cam, el) {
+    var w = el.clientWidth, h = el.clientHeight;
+    if (!w || !h) return;
+    r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+  }
+
+  // ======================= GLOBE =======================
+  if (hasGL) (function () {
+    var host = document.getElementById("globe");
+    var R = 1;
+    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(1.75, devicePixelRatio || 1));
+    host.appendChild(renderer.domElement);
+    var scene = new THREE.Scene();
+    var cam = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    function ll(lon, lat, r) {
+      var p = (90 - lat) * Math.PI / 180, t = (lon + 180) * Math.PI / 180;
+      return new THREE.Vector3(-r * Math.sin(p) * Math.cos(t), r * Math.cos(p), r * Math.sin(p) * Math.sin(t));
+    }
+    var wide = function () { return host.clientWidth > 900; };
+    var home = ll(31, 13, 3.9);
+    cam.position.copy(home);
+    var controls = new THREE.OrbitControls(cam, renderer.domElement);
+    controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = .06; controls.rotateSpeed = .5;
+    var grabbed = false; controls.addEventListener("start", function () { grabbed = true; flyHome = false; });
+    if (!reduce) cam.position.copy(home).setLength(11);
+    // Mouse: OrbitControls rotates. Zoom is ours (wheel only after a click on the globe, so the page still scrolls;
+    // +/- buttons; pinch on touch). Touch: a sideways swipe spins, vertical swipes still scroll the page.
+    controls.enabled = !coarse;
+    var cv = renderer.domElement, ZMIN = 1.75, ZMAX = 8, zoomGoal = null, flyHome = false, engaged = false, vel = 0;
+    cv.style.touchAction = "pan-y";
+    var zs = document.getElementById("zs");
+    function offs() { return cam.position.clone().sub(controls.target); }
+    function clampZ(v) { return Math.max(ZMIN, Math.min(ZMAX, v)); }
+    function zoomBy(f) { grabbed = true; flyHome = false; zoomGoal = clampZ((zoomGoal || offs().length()) * f); }
+    function spin(d) { var o = offs(), sp = new THREE.Spherical().setFromVector3(o); sp.theta += d; o.setFromSpherical(sp); cam.position.copy(controls.target).add(o); }
+    function engage(on) {
+      if (engaged === on) return; engaged = on; host.classList.toggle("engaged", on);
+      if (on) cv.setAttribute("data-lenis-prevent", ""); else cv.removeAttribute("data-lenis-prevent");
+      zs.textContent = on ? "Scroll to zoom" : "Click globe to zoom";
+    }
+    cv.addEventListener("pointerdown", function (e) { grabbed = true; flyHome = false; if (e.pointerType === "mouse") engage(true); });
+    cv.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse") engage(false); });
+    cv.addEventListener("wheel", function (e) {
+      if (!engaged) return;
+      e.preventDefault(); e.stopPropagation();
+      zoomBy(Math.exp(Math.max(-60, Math.min(60, e.deltaY)) * .004));
+    }, { passive: false });
+    document.getElementById("gz-in").addEventListener("click", function () { zoomBy(.72); });
+    document.getElementById("gz-out").addEventListener("click", function () { zoomBy(1.38); });
+    document.getElementById("gz-home").addEventListener("click", function () { zoomGoal = null; vel = 0; flyHome = true; grabbed = true; });
+    if (coarse) {
+      document.getElementById("ghint").textContent = "Swipe sideways to spin the globe · pinch to zoom · tap a layer to switch it off";
+      var tp = {}, lastX = 0, pinch0 = 0, z0 = 0;
+      var npts = function () { return Object.keys(tp).length; };
+      var pdist = function () { var a = Object.keys(tp).map(function (k) { return tp[k]; }); return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; };
+      cv.addEventListener("pointerdown", function (e) {
+        tp[e.pointerId] = { x: e.clientX, y: e.clientY }; lastX = e.clientX; vel = 0;
+        if (npts() === 2) { pinch0 = pdist(); z0 = zoomGoal || offs().length(); }
+      });
+      cv.addEventListener("pointermove", function (e) {
+        if (!tp[e.pointerId]) return;
+        tp[e.pointerId] = { x: e.clientX, y: e.clientY };
+        if (npts() === 2 && pinch0) zoomGoal = clampZ(z0 * pinch0 / pdist());
+        else if (npts() === 1) { var dx = e.clientX - lastX; lastX = e.clientX; vel = -dx * .007; spin(vel); }
+      });
+      ["pointerup", "pointercancel"].forEach(function (n) { cv.addEventListener(n, function (e) {
+        delete tp[e.pointerId]; pinch0 = 0;
+        var k = Object.keys(tp); if (k.length) lastX = tp[k[0]].x;
+      }); });
+    }
+    var world = new THREE.Group(); scene.add(world);
+
+    // body: dark ocean with a soft rim
+    world.add(new THREE.Mesh(new THREE.SphereGeometry(R, 96, 96), new THREE.ShaderMaterial({
+      uniforms: {},
+      vertexShader: "varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }",
+      fragmentShader: "varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.-max(dot(vN,vV),0.),2.2); vec3 c = mix(vec3(.025,.04,.08), vec3(.10,.18,.34), f); gl_FragColor = vec4(c,1.); }"
+    })));
+    // atmosphere
+    world.add(new THREE.Mesh(new THREE.SphereGeometry(R * 1.16, 64, 64), new THREE.ShaderMaterial({
+      side: THREE.BackSide, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      vertexShader: "varying vec3 vN; void main(){ vN = normalize(normalMatrix*normal); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }",
+      fragmentShader: "varying vec3 vN; void main(){ float i = pow(.72 - dot(vN, vec3(0.,0.,1.)), 3.); gl_FragColor = vec4(.33,.55,1.,1.)*i*.9; }"
+    })));
+
+    function points(list, opts) {
+      var n = list.length, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), size = new Float32Array(n), ph = new Float32Array(n);
+      var c = new THREE.Color();
+      list.forEach(function (p, i) {
+        var v = ll(p.lon, p.lat, opts.r); pos.set([v.x, v.y, v.z], i * 3);
+        c.set(p.color); col.set([c.r, c.g, c.b], i * 3); size[i] = p.size; ph[i] = Math.random() * 6.28;
+      });
+      var g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+      g.setAttribute("size", new THREE.BufferAttribute(size, 1));
+      g.setAttribute("phase", new THREE.BufferAttribute(ph, 1));
+      var m = new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 }, uPx: { value: renderer.getPixelRatio() }, uPulse: { value: opts.pulse ? 1 : 0 }, uAlpha: { value: opts.alpha || 1 } },
+        vertexShader: "attribute float size; attribute float phase; attribute vec3 color; varying vec3 vC; varying float vF; uniform float uTime; uniform float uPx; uniform float uPulse;" +
+          "void main(){ vC = color; vec4 mv = modelViewMatrix*vec4(position,1.); vec3 n = normalize((modelMatrix*vec4(position,0.)).xyz);" +
+          "vec3 toCam = normalize(cameraPosition - (modelMatrix*vec4(position,1.)).xyz); vF = smoothstep(-.05,.25,dot(n,toCam));" +
+          "float s = size*(1. + uPulse*.6*sin(uTime*2.6+phase)); gl_PointSize = s*uPx*(3.2/-mv.z); gl_Position = projectionMatrix*mv; }",
+        fragmentShader: "varying vec3 vC; varying float vF; uniform float uAlpha; void main(){ vec2 d = gl_PointCoord-.5; float r = length(d); if(r>.5) discard;" +
+          "float a = smoothstep(.5,.0,r); gl_FragColor = vec4(vC*(.6+.8*a), a*vF*uAlpha); }",
+        transparent: true, depthWrite: false, blending: opts.add ? THREE.AdditiveBlending : THREE.NormalBlending
+      });
+      var pts = new THREE.Points(g, m); world.add(pts); return pts;
+    }
+    points((D.land || []).map(function (p) { return { lon: p[0], lat: p[1], color: "#5b78b3", size: 3.4 }; }), { r: R * 1.001, alpha: .75 });
+
+    // Sudan border
+    var b = (D.border || []).map(function (p) { return ll(p[0], p[1], R * 1.004); });
+    if (b.length) world.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(b), new THREE.LineBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: .9 })));
+
+    var layers = {};
+    var maxc = Math.max.apply(null, (D.cells || [[0, 0, 1]]).map(function (c) { return c[2]; }));
+    var ramp = [new THREE.Color("#7a1f00"), new THREE.Color("#ff6a1a"), new THREE.Color("#ffd27a")];
+    layers.belt = points((D.cells || []).map(function (c) {
+      var t = Math.pow(c[2] / maxc, .5), col = t < .5 ? ramp[0].clone().lerp(ramp[1], t * 2) : ramp[1].clone().lerp(ramp[2], (t - .5) * 2);
+      return { lon: c[0], lat: c[1], color: "#" + col.getHexString(), size: 1.1 + 3.2 * t };
+    }), { r: R * 1.006, add: true, alpha: .6 });
+    function buildLive(list) {
+      ["MODIS", "VIIRS_NOAA20", "VIIRS_NOAA21"].forEach(function (k) {
+        var was = layers[k], vis = was ? was.visible : true;
+        if (was) { world.remove(was); was.geometry.dispose(); was.material.dispose(); }
+        layers[k] = points(list.filter(function (p) { return p[2] === k; }).map(function (p) { return { lon: p[0], lat: p[1], color: COL[k], size: 5 }; }),
+          { r: R * 1.009, add: true, pulse: true });
+        layers[k].visible = vis;
+      });
+    }
+    buildLive(D.live || []);
+    globeLive = buildLive;
+
+    // satellites on near-polar orbits with fading trails
+    function sat(color, inc, raan, period, rad) {
+      var g = new THREE.Group(); world.add(g);
+      var dot = new THREE.Mesh(new THREE.SphereGeometry(.012, 16, 16), new THREE.MeshBasicMaterial({ color: color }));
+      var halo = new THREE.Sprite(new THREE.SpriteMaterial({ color: color, transparent: true, opacity: .55, blending: THREE.AdditiveBlending,
+        map: (function () { var c = document.createElement("canvas"); c.width = c.height = 64; var x = c.getContext("2d"); var gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+          gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(1, "rgba(255,255,255,0)"); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })() }));
+      halo.scale.set(.07, .07, 1); dot.add(halo); g.add(dot);
+      var N = 90, tp = new Float32Array(N * 3), tc = new Float32Array(N * 3), cc = new THREE.Color(color);
+      var tg = new THREE.BufferGeometry(); tg.setAttribute("position", new THREE.BufferAttribute(tp, 3)); tg.setAttribute("color", new THREE.BufferAttribute(tc, 3));
+      for (var i = 0; i < N; i++) { var f = 1 - i / N; tc.set([cc.r * f, cc.g * f, cc.b * f], i * 3); }
+      var trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending }));
+      g.add(trail);
+      var bg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      var beam = new THREE.Line(bg, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: .45, blending: THREE.AdditiveBlending }));
+      g.add(beam);
+      var q = new THREE.Quaternion().setFromEuler(new THREE.Euler(inc, raan, 0, "YXZ"));
+      function at(t) { var a = t * 2 * Math.PI / period; return new THREE.Vector3(Math.cos(a) * rad, 0, Math.sin(a) * rad).applyQuaternion(q); }
+      return function (t) {
+        dot.position.copy(at(t));
+        var bp = bg.attributes.position; bp.setXYZ(0, dot.position.x, dot.position.y, dot.position.z);
+        var nad = dot.position.clone().setLength(1.004); bp.setXYZ(1, nad.x, nad.y, nad.z); bp.needsUpdate = true;
+        beam.material.opacity = .25 + .2 * Math.sin(t * 5);
+        for (var i = 0; i < N; i++) { var v = at(t - i * .045); tp.set([v.x, v.y, v.z], i * 3); }
+        tg.attributes.position.needsUpdate = true;
+      };
+    }
+    var sats = [sat("#e69f00", 1.71, .4, 16, 1.32), sat("#e69f00", 1.71, 2.0, 16, 1.32), sat("#cc79a7", 1.72, 1.1, 13, 1.4), sat("#f0e442", 1.72, 2.8, 13, 1.4)];
+
+    // layer chips
+    document.querySelectorAll("#layers .chip").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var on = btn.getAttribute("aria-pressed") !== "true"; btn.setAttribute("aria-pressed", on);
+        var k = btn.dataset.layer;
+        if (k === "live") ["MODIS", "VIIRS_NOAA20", "VIIRS_NOAA21"].forEach(function (s) {
+          layers[s].visible = on; var c = document.querySelector('#layers [data-layer="' + s + '"]'); if (c) c.setAttribute("aria-pressed", on);
+        });
+        else if (layers[k]) layers[k].visible = on;
+        var anyLive = ["MODIS", "VIIRS_NOAA20", "VIIRS_NOAA21"].some(function (s) { return layers[s].visible; });
+        document.querySelector('#layers [data-layer="live"]').setAttribute("aria-pressed", anyLive);
+      });
+    });
+
+    var S = { on: true, el: host };
+    visibleWatch(host, S);
+    var t0 = performance.now();
+    S.tick = function (now) {
+      var t = (now - t0) / 1000;
+      world.children.forEach(function (o) { if (o.material && o.material.uniforms && o.material.uniforms.uTime) o.material.uniforms.uTime.value = t; });
+      sats.forEach(function (f) { f(reduce ? 3 : t); });
+      if (!reduce) world.rotation.y = Math.sin(t * .12) * .16;
+      if (!reduce && !grabbed && t < 3.2) { var k = Math.min(1, t / 3), e = 1 - Math.pow(1 - k, 4); cam.position.copy(home).setLength(11 + (3.9 - 11) * e); }
+      if (Math.abs(vel) > 1e-4 && !(coarse && Object.keys(tp).length)) { spin(vel); vel *= .93; }
+      if (zoomGoal) {
+        var o = offs(), L = o.length(), nL = L + (zoomGoal - L) * (reduce ? 1 : .18);
+        o.setLength(nL); cam.position.copy(controls.target).add(o);
+        if (Math.abs(zoomGoal - nL) < .003) zoomGoal = null;
+      }
+      if (flyHome) {
+        var L0 = cam.position.length(), a = reduce ? 1 : .09;
+        cam.position.lerp(home, a).setLength(L0 + (home.length() - L0) * a);
+        if (cam.position.distanceTo(home) < .01) { cam.position.copy(home); flyHome = false; }
+      }
+      // keep Sudan clear of the text on wide screens
+      controls.target.set(0, wide() ? 0 : .62, 0);
+      controls.update();
+      renderer.render(scene, cam);
+    };
+    S.resize = function () { sizeTo(renderer, cam, host); };
+    scenes.push(S);
+  })();
+
+  // ======================= 3D FIRE LANDSCAPE =======================
+  var landAPI = null;
+  if (hasGL) (function () {
+    var host = document.getElementById("land");
+    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(1.75, devicePixelRatio || 1));
+    host.appendChild(renderer.domElement);
+    var scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x05070d, 26, 60);
+    var cam = new THREE.PerspectiveCamera(36, 1, .1, 100);
+    cam.position.set(-15, 11.5, 19);
+    var controls = new THREE.OrbitControls(cam, renderer.domElement);
+    controls.enableZoom = false; controls.enablePan = false; controls.enableDamping = true; controls.target.set(0, .4, 0);
+    controls.minPolarAngle = .35; controls.maxPolarAngle = 1.35; controls.enabled = !coarse;
+    scene.add(new THREE.AmbientLight(0x8899cc, .55));
+    var dl = new THREE.DirectionalLight(0xffffff, .9); dl.position.set(6, 12, 8); scene.add(dl);
+    var rim = new THREE.DirectionalLight(0xff8a2a, .5); rim.position.set(-8, 4, -10); scene.add(rim);
+
+    var Y0 = 2001, Y1 = 2025, NY = Y1 - Y0 + 1, gx = .78, gz = .52, H = 4.6, VMAX = 18000;
+    var grid = new THREE.GridHelper(30, 30, 0x1d2742, 0x141b2e); grid.position.y = -.01; scene.add(grid);
+    var geo = new THREE.BoxGeometry(gx * .82, 1, gz * .78); geo.translate(0, .5, 0);
+    var mat = new THREE.MeshStandardMaterial({ roughness: .45, metalness: .1, vertexColors: false });
+    var mesh = new THREE.InstancedMesh(geo, mat, NY * 12);
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(mesh);
+    var cells = [], dummy = new THREE.Object3D(), cM = new THREE.Color("#e69f00"), cV = new THREE.Color("#56b4e9"), cH = new THREE.Color("#2fd4a0"), tmp = new THREE.Color();
+    for (var y = Y0; y <= Y1; y++) for (var m = 1; m <= 12; m++) {
+      var rv = val(raw, y, m) || 0, hv = val(harm, y, m) || 0, modisEra = (y < 2012) || (y === 2012 && m === 1);
+      cells.push({ y: y, m: m, raw: rv, harm: hv, modis: modisEra, x: (m - 6.5) * gx, z: (y - (Y0 + Y1) / 2) * gz });
+    }
+    // year labels
+    function label(text, x, y, z, size, color) {
+      var c = document.createElement("canvas"), ctx = c.getContext("2d"); c.width = 256; c.height = 64;
+      ctx.font = "500 34px JetBrains Mono, monospace"; ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, 128, 32);
+      var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+      s.position.set(x, y, z); s.scale.set(size * 4, size, 1); scene.add(s);
+    }
+    [2001, 2006, 2011, 2012, 2016, 2021, 2025].forEach(function (yy) { label(String(yy), -6.5 * gx - .9, .2, (yy - (Y0 + Y1) / 2) * gz, .36, yy === 2012 ? "#56b4e9" : "#97a3bd"); });
+    ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"].forEach(function (s, i) { label(s, (i + 1 - 6.5) * gx, .2, (Y1 + 1.4 - (Y0 + Y1) / 2) * gz, .34, "#97a3bd"); });
+    // seam plane at 2012
+    var seam = new THREE.Mesh(new THREE.PlaneGeometry(12 * gx + .6, H * .9), new THREE.MeshBasicMaterial({ color: 0x56b4e9, transparent: true, opacity: .07, side: THREE.DoubleSide, depthWrite: false }));
+    seam.position.set(0, H * .45, (2011.5 - (Y0 + Y1) / 2) * gz); scene.add(seam);
+
+    var mix = 0, target = 0, userMoved = false, rh = Math.hypot(15, 19), cy0 = 11.5, az0 = Math.atan2(-15, 19), az = az0, azT = az0;
+    controls.addEventListener("start", function () { userMoved = true; });
+    var grow = reduce ? 1 : 0, flash = 0, flashed = false;
+    function apply(k) {
+      cells.forEach(function (c, i) {
+        var v = c.modis ? c.raw + (c.harm - c.raw) * k : c.harm;
+        var row = (c.y - Y0) / (NY - 1), g = Math.min(1, Math.max(0, grow * 1.7 - row * .7)), ge = 1 - Math.pow(1 - g, 3);
+        var h = Math.max(.02, v / VMAX * H * ge);
+        dummy.position.set(c.x, 0, c.z); dummy.scale.set(1, h, 1); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix);
+        if (c.modis) tmp.copy(cM).lerp(cH, k); else tmp.copy(cV);
+        mesh.setColorAt(i, tmp);
+      });
+      mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+    apply(0);
+
+    // hover
+    var ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+    renderer.domElement.addEventListener("pointermove", function (e) {
+      var r = renderer.domElement.getBoundingClientRect();
+      mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(mouse, cam);
+      var hit = ray.intersectObject(mesh)[0];
+      if (hit && hit.instanceId !== undefined) {
+        var c = cells[hit.instanceId];
+        showTip(e.clientX, e.clientY, "<b>" + MON[c.m - 1] + " " + c.y + "</b><br>" + (c.modis ? "raw MODIS " + fmt(c.raw) + "<br>" : "") + "harmonized " + fmt(c.harm) + " cell-days");
+      } else hideTip();
+    });
+    renderer.domElement.addEventListener("pointerleave", hideTip);
+
+    var S = { on: false, el: host }; visibleWatch(host, S);
+    S.tick = function (now) {
+      var dt = Math.min(.05, (now - (S.last || now)) / 1000); S.last = now;
+      var a = reduce ? 1 : 1 - Math.exp(-dt * 6);
+      mix += (target - mix) * a;
+      var growing = grow < 1;
+      if (growing) grow = Math.min(1, grow + dt / 1.8);
+      if (Math.abs(target - mix) > .0005 || growing) apply(mix);
+      if (mix > .97 && !flashed) { flashed = true; flash = 1; }
+      if (mix < .5) flashed = false;
+      flash = Math.max(0, flash - dt * 1.2);
+      seam.material.opacity = .05 + .35 * flash + .06 * (1 - mix);
+      if (!userMoved && !reduce) { az += (azT - az) * a; cam.position.set(Math.sin(az) * rh, cy0, Math.cos(az) * rh); }
+      controls.update(); renderer.render(scene, cam);
+    };
+    S.resize = function () { sizeTo(renderer, cam, host); };
+    scenes.push(S);
+    landAPI = { set: function (k) { target = k; }, drift: function (p) { azT = az0 + (p - .5) * .7; } };
+  })();
+  if (!hasGL) { document.getElementById("nogl").style.display = "block"; document.getElementById("gctl").hidden = true; }
+
+  // live feed: /api/live (Netlify Function relaying NASA FIRMS public 24 h files). Elsewhere, or if it fails,
+  // the page keeps the 7-day snapshot from data.js.
+  function pullLive() {
+    if (!/^https?:$/.test(location.protocol) || !window.fetch) { LS.failed = true; renderLive(); return; }
+    fetch("/api/live", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (L) {
+      if (!L || !Array.isArray(L.points)) throw 0;
+      LIVE = L; renderStats();
+      if (globeLive) globeLive(L.points);
+      LS.pts = L.points; LS.live = true; renderLive();
+    }).catch(function () { if (!LS.live) { LS.failed = true; renderLive(); } });
+  }
+  pullLive(); setInterval(pullLive, 30 * 60 * 1000);
+
+  // scroll story
+  (function () {
+    var story = document.getElementById("seam"), steps = [].slice.call(document.querySelectorAll(".sstep"));
+    var j11 = 0, j12r = 0, j12h = 0;
+    for (var m = 1; m <= 12; m++) { j11 += val(harm, 2011, m) || 0; j12h += val(harm, 2012, m) || 0; }
+    var r11 = 0, r12 = 0; for (m = 1; m <= 12; m++) { r11 += val(raw, 2011, m) || 0; r12 += val(raw, 2012, m) || 0; }
+    var rawJ = r12 / r11, harmJ = j12h / j11;
+    var mode = "auto";
+    var jump = document.getElementById("jump"), bar = document.getElementById("jumpbar");
+    function setK(k) {
+      if (landAPI) landAPI.set(k);
+      jump.textContent = "×" + (rawJ + (harmJ - rawJ) * k).toFixed(2);
+      bar.style.width = (k * 100) + "%";
+    }
+    function onScroll() {
+      var r = story.getBoundingClientRect(), total = r.height - innerHeight;
+      var p = Math.min(1, Math.max(0, -r.top / total));
+      if (landAPI) landAPI.drift(p);
+      var s = p < .22 ? 0 : p < .45 ? 1 : p < .72 ? 2 : 3;
+      steps.forEach(function (el, i) { el.classList.toggle("on", i === s); });
+      if (mode === "auto") setK(Math.min(1, Math.max(0, (p - .42) / .3)));
+    }
+    function setMode(mo) {
+      mode = mo;
+      ["raw", "auto", "harm"].forEach(function (k) { document.getElementById("m-" + k).setAttribute("aria-pressed", k === mo); });
+      if (mo === "raw") setK(0); else if (mo === "harm") setK(1); else onScroll();
+    }
+    ["raw", "auto", "harm"].forEach(function (k) { document.getElementById("m-" + k).addEventListener("click", function () { setMode(k); }); });
+    document.getElementById("m-auto").setAttribute("aria-pressed", "true"); document.getElementById("m-raw").setAttribute("aria-pressed", "false");
+    var queued = false;
+    addEventListener("scroll", function () { if (!queued) { queued = true; requestAnimationFrame(function () { queued = false; onScroll(); }); } }, { passive: true });
+    onScroll();
+  })();
+
+  // render loop
+  function resizeAll() { scenes.forEach(function (s) { s.resize(); }); }
+  addEventListener("resize", resizeAll); resizeAll();
+  (function loop(now) { if (lenis) lenis.raf(now); scenes.forEach(function (s) { if (s.on) s.tick(now); }); requestAnimationFrame(loop); })(performance.now());
+
+  // counters
+  (function () {
+    var els = document.querySelectorAll("[data-count]");
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting || reduce) return; io.unobserve(e.target);
+        var el = e.target, end = +el.dataset.count, t0 = null;
+        (function step(ts) { if (t0 === null) t0 = ts; var p = Math.min(1, (ts - t0) / 1400), k = 1 - Math.pow(1 - p, 3); el.textContent = fmt(end * k); if (p < 1) requestAnimationFrame(step); })(performance.now());
+      });
+    }, { threshold: .6 });
+    els.forEach(function (el) { io.observe(el); });
+  })();
+
+  // finale count-up
+  (function () {
+    var el = document.getElementById("fin"), done = false;
+    new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting || done || reduce) return; done = true;
+      var t0 = null; (function step(ts) { if (t0 === null) t0 = ts; var p = Math.min(1, (ts - t0) / 1600), k = 1 - Math.pow(1 - p, 4);
+        el.textContent = (0.36 + (0.993 - 0.36) * k).toFixed(3); if (p < 1) requestAnimationFrame(step); })(performance.now());
+    }, { threshold: .5 }).observe(el);
+  })();
+
+  // magnetic buttons
+  if (!coarse && !reduce) document.querySelectorAll(".btn.hot").forEach(function (b) {
+    b.addEventListener("pointermove", function (e) { var r = b.getBoundingClientRect();
+      b.style.transform = "translate(" + ((e.clientX - r.left - r.width / 2) * .22) + "px," + ((e.clientY - r.top - r.height / 2) * .3) + "px)"; });
+    b.addEventListener("pointerleave", function () { b.style.transform = ""; });
+  });
+
+  // month checker
+  (function () {
+    var yr = document.getElementById("yr"), yo = document.getElementById("yrout"), mp = document.getElementById("mp"), out = document.getElementById("verdict");
+    var sel = { y: 2026, m: 10 };
+    var LV = { "Very high": "#ff6b3d", "Above normal": "#e69f00", "Normal": "#2fd4a0", "Below normal": "#56b4e9" };
+    
+    function pct(sorted, q) { var p = (sorted.length - 1) * q, lo = Math.floor(p), hi = Math.ceil(p); return sorted[lo] + (sorted[hi] - sorted[lo]) * (p - lo); }
+    MON.forEach(function (n, i) {
+      var b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.m = i + 1;
+      b.addEventListener("click", function () { sel.m = i + 1; render(); }); mp.appendChild(b);
+    });
+    yr.addEventListener("input", function () { sel.y = +yr.value; render(); });
+    function render() {
+      yo.textContent = sel.y;
+      [].forEach.call(mp.children, function (b) {
+        b.setAttribute("aria-pressed", +b.dataset.m === sel.m);
+        b.disabled = val(harm, sel.y, +b.dataset.m) === null;
+      });
+      var v = val(harm, sel.y, sel.m);
+      if (v === null) { sel.m = 10; if (val(harm, sel.y, 10) === null) { out.innerHTML = "<p class='dim'>No complete data for this month yet.</p>"; return; } return render(); }
+      var hist = []; for (var y = 2000; y < sel.y; y++) { var h = val(harm, y, sel.m); if (h !== null) hist.push(h); }
+      var name = MON[sel.m - 1] + " " + sel.y;
+      if (hist.length < 5) { out.style.setProperty("--c", "#97a3bd");
+        out.innerHTML = "<span class='vbadge'>TOO EARLY</span><div class='vnum mono'>" + fmt(v) + "</div><p class='dim'>" + name + ": fewer than 5 earlier years of this month to compare with.</p>"; return; }
+      var s = hist.slice().sort(function (a, b) { return a - b; }), med = pct(s, .5), p90 = pct(s, .9), an = 100 * (v - med) / med;
+      var rank = 1 + hist.filter(function (h) { return h > v; }).length;
+      var lv = v > p90 ? "Very high" : an >= 20 ? "Above normal" : an <= -20 ? "Below normal" : "Normal";
+      out.style.setProperty("--c", LV[lv]);
+      var ord = function (n) { var t = n % 100; return n + ((t > 10 && t < 14) ? "th" : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] || "th")); };
+      out.innerHTML = "<span class='vbadge'><i class='vdot'></i>" + lv.toUpperCase() + "</span>" +
+        "<div><span class='vnum mono'>" + fmt(v) + "</span> <span class='dim'>fire cell-days in " + name + "</span></div>" +
+        "<div class='vrow'><div><small>vs median</small><b>" + (an >= 0 ? "+" : "") + an.toFixed(0) + "%</b></div><div><small>rank</small><b>" + ord(rank) + " of " + (hist.length + 1) + "</b></div><div><small>90th pct</small><b>" + fmt(p90) + "</b></div></div>" +
+        "<div id='spark'></div>";
+      // every same month, as bars
+      var W = 560, Hh = 120, ys = [], vs = [];
+      for (y = 2001; y <= 2026; y++) { var q = val(harm, y, sel.m); if (q !== null) { ys.push(y); vs.push(q); } }
+      var mx = Math.max.apply(null, vs) * 1.08, bw = W / ys.length;
+      var svg = "<svg viewBox='0 0 " + W + " " + (Hh + 18) + "' role='img' aria-label='Every " + MON[sel.m - 1] + " since 2001'>";
+      svg += "<line x1='0' x2='" + W + "' y1='" + (Hh - med / mx * Hh) + "' y2='" + (Hh - med / mx * Hh) + "' stroke='#97a3bd' stroke-dasharray='3 4'/>";
+      ys.forEach(function (yy, i) {
+        var hh = vs[i] / mx * Hh, on = yy === sel.y;
+        svg += "<rect x='" + (i * bw + 2) + "' y='" + (Hh - hh) + "' width='" + (bw - 4) + "' height='" + hh + "' rx='3' fill='" + (on ? LV[lv] : "#2b3a5c") + "'><title>" + MON[sel.m - 1] + " " + yy + ": " + fmt(vs[i]) + "</title></rect>";
+        if ((yy % 5 === 0 && Math.abs(yy - sel.y) > 1) || on) svg += "<text x='" + (i * bw + bw / 2) + "' y='" + (Hh + 14) + "' text-anchor='middle'" + (on ? " style='fill:#eef1f8'" : "") + ">" + yy + "</text>";
+      });
+      svg += "<text x='" + W + "' y='" + (Hh - med / mx * Hh - 5) + "' text-anchor='end'>median before " + sel.y + ": " + fmt(med) + "</text></svg>";
+      document.getElementById("spark").innerHTML = svg;
+    }
+    render();
+  })();
+
+  // risk clock
+  (function () {
+    var R0 = D.risk || {}, W = R0.weeks || [];
+    var CL = { Low: "#2a3350", Moderate: "#fee391", High: "#fe9929", Extreme: "#d95f0e" };
+    var host = document.getElementById("clock"), cx = 280, cy = 280, r1 = 120, r2 = 250;
+    var svg = "<svg viewBox='0 0 560 560' tabindex='0' role='img' aria-label='Share of years each week of the year was a high-fire week. Use the arrow keys to step through the weeks.'>", hits = "";
+    function pol(r, a) { return [cx + r * Math.sin(a), cy - r * Math.cos(a)]; }
+    W.forEach(function (w, i) {
+      var a0 = i / 52 * 2 * Math.PI + .004, a1 = (i + 1) / 52 * 2 * Math.PI - .004, ro = r1 + (r2 - r1) * Math.max(.06, w[1] / 100);
+      var p = [pol(r1, a0), pol(ro, a0), pol(ro, a1), pol(r1, a1)];
+      svg += "<path class='wk' data-i='" + i + "' d='M" + p[0] + "L" + p[1] + "A" + ro + "," + ro + " 0 0 1 " + p[2] + "L" + p[3] + "A" + r1 + "," + r1 + " 0 0 0 " + p[0] + "Z' fill='" + CL[w[2]] + "' stroke='#05070d' stroke-width='1.5'/>";
+      var b0 = i / 52 * 2 * Math.PI, b1 = (i + 1) / 52 * 2 * Math.PI, rh = r2 + 12, h = [pol(r1 - 14, b0), pol(rh, b0), pol(rh, b1), pol(r1 - 14, b1)];
+      hits += "<path class='hit' data-i='" + i + "' d='M" + h[0] + "L" + h[1] + "A" + rh + "," + rh + " 0 0 1 " + h[2] + "L" + h[3] + "A" + (r1 - 14) + "," + (r1 - 14) + " 0 0 0 " + h[0] + "Z' fill='transparent'/>";
+    });
+    [25, 50, 75, 100].forEach(function (t) { svg += "<circle cx='" + cx + "' cy='" + cy + "' r='" + (r1 + (r2 - r1) * t / 100) + "' fill='none' stroke='rgba(148,170,220,.14)' stroke-dasharray='2 5'/>"; });
+    MON.forEach(function (n, i) { var a = (i / 12) * 2 * Math.PI + Math.PI / 12, p = pol(r2 + 20, a); svg += "<text x='" + p[0] + "' y='" + (p[1] + 4) + "' text-anchor='middle' fill='#97a3bd' font-size='12'>" + n.toUpperCase() + "</text>"; });
+    var dp = (D.data_to || "2026-11-13").split("-").map(Number);
+    var doy = (Date.UTC(dp[0], dp[1] - 1, dp[2]) - Date.UTC(dp[0], 0, 1)) / 864e5, wi = Math.min(51, Math.floor(doy / 7));
+    var na = (Math.min(doy, 363.9) / 364) * 2 * Math.PI, np = pol(r2 + 6, na);
+    var n0 = pol(r1 - 8, na);
+    svg += "<line x1='" + n0[0] + "' y1='" + n0[1] + "' x2='" + np[0] + "' y2='" + np[1] + "' stroke='#eef1f8' stroke-width='2.5' stroke-linecap='round'/><circle cx='" + n0[0] + "' cy='" + n0[1] + "' r='4' fill='#eef1f8'/>";
+    svg += "<text id='ck1' x='" + cx + "' y='" + (cy - 34) + "' text-anchor='middle' fill='#97a3bd' font-size='11' letter-spacing='1.5'></text>";
+    svg += "<text id='ck2' x='" + cx + "' y='" + (cy + 8) + "' text-anchor='middle' fill='#eef1f8' font-size='38' font-weight='800' style='font-family:var(--display)'></text>";
+    svg += "<text id='ck3' x='" + cx + "' y='" + (cy + 30) + "' text-anchor='middle' fill='#c3cbe0' font-size='11'></text>";
+    svg += "<text id='ck4' x='" + cx + "' y='" + (cy + 50) + "' text-anchor='middle' font-size='11.5' font-weight='600'></text>";
+    svg += "<g class='hits'>" + hits + "</g></svg>";
+    host.innerHTML = svg;
+    // pick a week: hover or tap a slice, arrow keys, or the cards on the right. The centre reads it out.
+    var sv = host.querySelector("svg"), wks = [].slice.call(host.querySelectorAll(".wk")), pin = wi, band = null;
+    var TX = { Low: "#97a3bd", Moderate: "#fee391", High: "#fe9929", Extreme: "#ff8a4a" };
+    function sel(i) {
+      var w = W[i]; if (!w) return;
+      document.getElementById("ck1").textContent = (i === wi ? "THIS WEEK · " : "WEEK OF ") + w[0].toUpperCase();
+      document.getElementById("ck2").textContent = w[1] + "%";
+      document.getElementById("ck3").textContent = "of years " + (R0.years ? R0.years[0] + "–" + R0.years[1] : "") + " ran high";
+      var c4 = document.getElementById("ck4"); c4.textContent = w[2] + " · typical " + fmt(w[3]) + " fire cell-days"; c4.setAttribute("fill", TX[w[2]] || "#eef1f8");
+      wks.forEach(function (p, j) { p.classList.toggle("on", j === i); p.classList.toggle("in", !!band && j >= band[0] && j < band[1]); });
+      sv.classList.toggle("focus", i !== wi || !!band);
+    }
+    host.querySelectorAll(".hit").forEach(function (h) {
+      var i = +h.dataset.i;
+      h.addEventListener("pointerenter", function (e) { if (e.pointerType === "mouse") sel(i); });
+      h.addEventListener("click", function () { pin = i; band = null; sel(i); });
+    });
+    sv.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse") sel(pin); });
+    sv.addEventListener("keydown", function (e) {
+      var d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (d) { e.preventDefault(); band = null; pin = (pin + d + 52) % 52; sel(pin); }
+      else if (e.key === "Home" || e.key === "Escape") { e.preventDefault(); band = null; pin = wi; sel(pin); }
+    });
+    sel(wi);
+    var top = (R0.periods || [])[0];
+    if (top) { document.getElementById("rp").textContent = top.start + " – " + top.end; document.getElementById("rp2").textContent = top["class"] + ": high activity in " + Math.round(top.share_of_years_pct) + "% of years"; }
+    function asBtn(el, fn) { el.setAttribute("role", "button"); el.tabIndex = 0; el.classList.add("rbtn"); el.addEventListener("click", fn);
+      el.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } }); }
+    var i0 = top ? W.findIndex(function (w) { return w[0] === top.start; }) : -1;
+    if (i0 >= 0) asBtn(document.getElementById("rp").parentNode, function () { band = band ? null : [i0, i0 + top.weeks]; pin = band ? i0 : wi; sel(pin); });
+    asBtn(document.getElementById("rw").parentNode, function () { band = null; pin = wi; sel(wi); });
+    document.getElementById("rd").textContent = "+" + (R0.per_decade || 0) + " weeks";
+    var tw = W[wi]; if (tw) { document.getElementById("rw").textContent = tw[2]; document.getElementById("rw2").textContent = "week of " + tw[0] + ": high in " + tw[1] + "% of years"; }
+    document.getElementById("rkey").innerHTML = ["Low", "Moderate", "High", "Extreme"].map(function (k) { return "<span><i style='background:" + CL[k] + "'></i>" + k + "</span>"; }).join("");
+  })();
+
+  // team: reveal on scroll, tilt, rising embers
+  (function () {
+    var sec = document.getElementById("team"); if (!sec) return;
+    var cards = [].slice.call(sec.querySelectorAll(".tm"));
+    function shown(c) { c.classList.add("in"); setTimeout(function () { c.classList.add("done"); }, 900 + (parseInt(c.style.getPropertyValue("--d"), 10) || 0)); }
+    if (reduce || !window.IntersectionObserver) cards.forEach(shown);
+    else { var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { shown(e.target); io.unobserve(e.target); } }); }, { threshold: .2 }); cards.forEach(function (c) { io.observe(c); }); }
+    if (coarse && window.IntersectionObserver) {
+      var lit = new IntersectionObserver(function (es) { es.forEach(function (e) {
+        if (e.isIntersecting) setTimeout(function () { e.target.classList.add("lit"); }, 700); else e.target.classList.remove("lit");
+      }); }, { threshold: .6 });
+      cards.forEach(function (c) { lit.observe(c); });
+    }
+    if (!coarse && !reduce) cards.forEach(function (t) {
+      var inner = t.firstElementChild;
+      t.addEventListener("pointermove", function (e) {
+        var r = t.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+        inner.style.setProperty("--mx", x * 100 + "%"); inner.style.setProperty("--my", y * 100 + "%");
+        if (t.classList.contains("done")) t.style.transform = "perspective(900px) rotateX(" + ((.5 - y) * 7) + "deg) rotateY(" + ((x - .5) * 9) + "deg) translateY(-6px)";
+      });
+      t.addEventListener("pointerleave", function () { t.style.transform = ""; });
+    });
+    // flip to the profile side; links are set from data-href (empty = "coming soon")
+    cards.forEach(function (t) {
+      var back = t.querySelector(".tm-back"), links = [].slice.call(back.querySelectorAll(".tm-link"));
+      links.forEach(function (a) {
+        var u = a.getAttribute("data-href");
+        if (u) a.href = u; else { a.classList.add("off"); a.querySelector("span").textContent += " · soon"; a.setAttribute("aria-disabled", "true"); }
+        a.addEventListener("click", function (e) { e.stopPropagation(); });
+        a.addEventListener("keydown", function (e) { e.stopPropagation(); });
+      });
+      function flip(e) {
+        var on = !t.classList.contains("flipped");
+        t.classList.toggle("flipped", on); t.setAttribute("aria-pressed", on);
+        back.setAttribute("aria-hidden", !on); links.forEach(function (a) { a.tabIndex = on && a.href ? 0 : -1; });
+        t.classList.remove("flare"); void t.offsetWidth; t.classList.add("flare");
+        var r = t.getBoundingClientRect(), s0 = sec.getBoundingClientRect();
+        var x = e && e.clientX ? e.clientX : r.left + r.width / 2, y = e && e.clientY ? e.clientY : r.top + r.height / 2;
+        burst(x - s0.left, y - s0.top);
+      }
+      t.addEventListener("click", flip);
+      t.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(null); } });
+    });
+    var cv = document.getElementById("embers"), ctx = cv.getContext("2d"), P = [], W = 0, H = 0, on = false, raf = 0;
+    var COLS = ["255,138,42", "255,138,42", "255,194,92", "255,90,31"];
+    function spawn(p, anywhere) {
+      p.x = Math.random() * W; p.y = anywhere ? Math.random() * H : H + 8; p.vy = .25 + Math.random() * .85; p.r = .6 + Math.random() * 1.8;
+      p.ph = Math.random() * 6.283; p.sw = .25 + Math.random() * .7; p.c = COLS[(Math.random() * COLS.length) | 0]; return p;
+    }
+    function size() {
+      var dpr = Math.min(2, devicePixelRatio || 1); W = sec.clientWidth; H = sec.clientHeight;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var n = W < 700 ? 38 : 90; P = []; for (var i = 0; i < n; i++) P.push(spawn({}, true));
+    }
+    function draw(t) {
+      ctx.clearRect(0, 0, W, H); ctx.globalCompositeOperation = "lighter";
+      P.forEach(function (p) {
+        if (!reduce) { p.y -= p.vy; p.x += Math.sin(t / 900 + p.ph) * p.sw * .45; if (p.y < -12) spawn(p, false); }
+        var a = Math.max(0, Math.min(1, p.y / H * 1.5)) * (.5 + .5 * Math.sin(t / 110 + p.ph * 3)), R = p.r * 4;
+        var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, R);
+        g.addColorStop(0, "rgba(" + p.c + "," + a.toFixed(3) + ")"); g.addColorStop(.35, "rgba(" + p.c + "," + (a * .35).toFixed(3) + ")"); g.addColorStop(1, "rgba(" + p.c + ",0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, 6.2832); ctx.fill();
+      });
+    }
+    var S2 = [];   // sparks from a card flip
+    function burst(x, y) {
+      if (reduce) return;
+      for (var i = 0; i < 46; i++) { var a = Math.random() * 6.2832, v = 1.5 + Math.random() * 5.5;
+        S2.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.5, r: .8 + Math.random() * 1.8, life: 1, c: COLS[(Math.random() * COLS.length) | 0] }); }
+      if (!raf) raf = requestAnimationFrame(frame);
+    }
+    function sparks() {
+      S2 = S2.filter(function (p) { return p.life > 0; });
+      S2.forEach(function (p) {
+        p.x += p.vx; p.y += p.vy; p.vx *= .95; p.vy = p.vy * .95 - .04; p.life -= .022;
+        var R = p.r * 3.5, g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, R);
+        g.addColorStop(0, "rgba(255,240,200," + p.life.toFixed(3) + ")"); g.addColorStop(.4, "rgba(" + p.c + "," + (p.life * .7).toFixed(3) + ")"); g.addColorStop(1, "rgba(" + p.c + ",0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, 6.2832); ctx.fill();
+      });
+    }
+    function frame(t) { raf = 0; if (!on && !S2.length) return; draw(t); sparks(); raf = requestAnimationFrame(frame); }
+    size(); draw(0);
+    addEventListener("resize", function () { size(); if (reduce) draw(0); });
+    if (!reduce) new IntersectionObserver(function (es) { on = es[0].isIntersecting; if (on && !raf) raf = requestAnimationFrame(frame); }).observe(sec);
+  })();
+
+  // bento tilt + spotlight
+  document.querySelectorAll(".tile").forEach(function (t) {
+    if (coarse || reduce) return;
+    t.addEventListener("pointermove", function (e) {
+      var r = t.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      t.style.setProperty("--mx", x * 100 + "%"); t.style.setProperty("--my", y * 100 + "%");
+      t.style.transform = "rotateX(" + ((.5 - y) * 8) + "deg) rotateY(" + ((x - .5) * 10) + "deg) translateZ(0)";
+    });
+    t.addEventListener("pointerleave", function () { t.style.transform = ""; });
+  });
+})();
+</script>
+<script>
+/* Early warning + continuity monitor. Baselines: alerts.js (scripts/alert_baseline.py). Live: /api/live, /api/weather. */
+(function () {
+  var A = window.SYNTRA_ALERT, D = window.SYNTRA || {};
+  if (!A) return;
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var MONL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var G = A.grid;
+  // towns for "near ..." labels (approximate centres)
+  var TOWNS = [["Khartoum",32.56,15.5],["Wad Madani",33.52,14.4],["Sennar",33.62,13.55],["Ed Damazin",34.36,11.79],["Kurmuk",34.28,10.55],
+    ["Kosti",32.66,13.16],["El Obeid",30.22,13.18],["Um Ruwaba",31.22,12.9],["Rashad",31.06,11.86],["Kadugli",29.72,11.01],["Talodi",30.38,10.63],
+    ["Dilling",29.65,12.05],["Al Fula",28.35,11.73],["Babanusa",27.81,11.33],["En Nahud",28.43,12.7],["Ed Daein",26.13,11.46],["Nyala",24.88,12.05],
+    ["El Fasher",25.35,13.63],["Kutum",24.67,14.2],["Zalingei",23.47,12.91],["Geneina",22.45,13.45],["Gedaref",35.38,14.03],["Kassala",36.4,15.45],
+    ["Port Sudan",37.22,19.62],["Atbara",33.98,17.7],["Dongola",30.48,19.17]];
+  function km(a, b, c, d) { var r = Math.PI / 180, x = (c - a) * r * Math.cos((b + d) / 2 * r), y = (d - b) * r; return 6371 * Math.sqrt(x * x + y * y); }
+  function near(lon, lat) {
+    var best = null, bd = 1e9; TOWNS.forEach(function (t) { var d = km(lon, lat, t[1], t[2]); if (d < bd) { bd = d; best = t; } });
+    return bd < 25 ? "Around " + best[0] : bd < 260 ? Math.round(bd / 5) * 5 + " km from " + best[0] : "Remote area";
+  }
+  function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function pctOf(q, v) { var i = 0; while (i < 100 && q[i + 1] <= v) i++; return i; }
+  function ord(n) { var s = ["th","st","nd","rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+  function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+  function doy(iso) { var d = new Date(iso + "T00:00:00Z"); return Math.min(365, Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5)); }
+
+  var LIVE = null, WX = null, flagged = [], cellsToday = [], B;
+
+  /* ---------- the map ---------- */
+  B = (function () {
+    var b = D.border || [], x0 = 99, x1 = -99, y0 = 99, y1 = -99;
+    b.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
+    if (!b.length) { x0 = 21.8; x1 = 38.6; y0 = 8.7; y1 = 22.2; }
+    return { x0: x0 - .3, x1: x1 + .3, y0: y0 - .3, y1: y1 + .3, kx: Math.cos((y0 + y1) / 2 * Math.PI / 180) };
+  })();
+  function drawMap() {
+    var cv = document.getElementById("amap"), w = cv.clientWidth; if (!w) return;
+    var h = Math.round(w * (B.y1 - B.y0) / ((B.x1 - B.x0) * B.kx)), dpr = Math.min(2, devicePixelRatio || 1);
+    cv.style.height = h + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    var c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var sx = w / (B.x1 - B.x0), sy = h / (B.y1 - B.y0);
+    function px(lon, lat) { return [(lon - B.x0) * sx, (B.y1 - lat) * sy]; }
+    // normal fire belt for this month: mean daily detections per area, faint
+    var m = String(new Date().getUTCMonth() + 1), mx = 0;
+    Object.keys(A.cells).forEach(function (k) { var v = A.cells[k][m]; if (v && v[0] > mx) mx = v[0]; });
+    Object.keys(A.cells).forEach(function (k) {
+      var v = A.cells[k][m]; if (!v || !mx) return; var g = k.split(","), q = px(+g[0] * G, (+g[1] + 1) * G);
+      c.fillStyle = "rgba(255,138,42," + (.03 + .2 * Math.sqrt(v[0] / mx)).toFixed(3) + ")"; c.fillRect(q[0], q[1], G * sx - 1, G * sy - 1);
+    });
+    var b = D.border || [];
+    if (b.length) { c.beginPath(); b.forEach(function (p, i) { var q = px(p[0], p[1]); if (i) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); }); c.strokeStyle = "rgba(255,138,42,.8)"; c.lineWidth = 1.3; c.stroke(); }
+    // today's areas
+    cellsToday.forEach(function (t) {
+      var q = px(t.gx * G, (t.gy + 1) * G), s = Math.min(G * sx, G * sy);
+      c.fillStyle = t.kind ? t.col : "rgba(148,170,220,.35)";
+      c.globalAlpha = t.kind ? .95 : .8; c.fillRect(q[0] + 1, q[1] + 1, G * sx - 2, G * sy - 2); c.globalAlpha = 1;
+    });
+    flagged.forEach(function (t, i) {
+      if (i >= 6) return; var q = px((t.gx + .5) * G, (t.gy + .5) * G), rr = Math.max(6, Math.min(9, Math.min(G * sx, G * sy) / 2 - .5));
+      c.fillStyle = "#05070d"; c.beginPath(); c.arc(q[0], q[1], rr, 0, 6.2832); c.fill();
+      c.strokeStyle = t.col; c.lineWidth = 2; c.stroke();
+      c.fillStyle = "#eef1f8"; c.font = "700 " + (rr < 8 ? 8 : 10) + "px JetBrains Mono, monospace"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(i + 1, q[0], q[1] + .5);
+    });
+    if (hl >= 0 && flagged[hl]) {
+      var t = flagged[hl], q = px((t.gx + .5) * G, (t.gy + .5) * G), rr = Math.max(6, Math.min(9, Math.min(G * sx, G * sy) / 2 - .5)) + 5;
+      c.strokeStyle = "#eef1f8"; c.lineWidth = 2; c.beginPath(); c.arc(q[0], q[1], rr, 0, 6.2832); c.stroke();
+    }
+    c.textAlign = "start"; c.textBaseline = "alphabetic";
+  }
+  addEventListener("resize", drawMap);
+  // hover (mouse) or tap (touch) an area on the map for its numbers; flagged areas also light up their card
+  var hl = -1, KL0 = { surge: "Surge", rare: "Fire where it is rare", above: "Above normal" };
+  function setHl(i) {
+    if (i === hl) return; hl = i; drawMap();
+    document.querySelectorAll("#al-areas .area").forEach(function (a, j) { a.classList.toggle("hl", j === i); });
+  }
+  (function () {
+    var cv = document.getElementById("amap"), T = window.syTip;
+    function pick(e) {
+      var r = cv.getBoundingClientRect(), lon = B.x0 + (e.clientX - r.left) / r.width * (B.x1 - B.x0), lat = B.y1 - (e.clientY - r.top) / r.height * (B.y1 - B.y0);
+      var gx = Math.floor(lon / G), gy = Math.floor(lat / G), m = new Date().getUTCMonth() + 1;
+      var t = cellsToday.filter(function (c) { return c.gx === gx && c.gy === gy; })[0];
+      var base = (A.cells[gx + "," + gy] || {})[String(m)];
+      if (!t && !base) { if (T) T.hide(); setHl(-1); return; }
+      var cx = (gx + .5) * G, cy = (gy + .5) * G, fi = t ? flagged.indexOf(t) : -1;
+      var h = "<b>" + near(cx, cy) + "</b>" + (fi >= 0 && fi < 6 ? " · #" + (fi + 1) : "") + "<br>" +
+        (t ? fmt(t.n) + " detection" + (t.n === 1 ? "" : "s") + " in the last 24 h" + (t.kind ? " · <b>" + KL0[t.kind] + "</b>" : " · within normal") : "no detections in the last 24 h") +
+        (base ? "<br>normal " + MON[m - 1] + " day: " + base[0].toFixed(1) + " · fires on " + Math.round(base[3] * 100) + "% of days" : "<br>no " + MON[m - 1] + " fires on record here");
+      if (T) T.show(e.clientX, e.clientY, h);
+      setHl(fi < 6 ? fi : -1);
+    }
+    cv.addEventListener("pointermove", function (e) { if (e.pointerType === "mouse") pick(e); });
+    cv.addEventListener("pointerdown", function (e) { if (e.pointerType !== "mouse") pick(e); });
+    cv.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse") { if (T) T.hide(); setHl(-1); } });
+    cv.addEventListener("click", function () {
+      var card = hl >= 0 && document.querySelectorAll("#al-areas .area")[hl];
+      if (card) { card.scrollIntoView({ behavior: "smooth", block: "nearest" }); card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash"); }
+    });
+    document.addEventListener("pointerdown", function (e) { if (e.target !== cv && e.pointerType !== "mouse" && hl >= 0) setHl(-1); });
+    document.getElementById("al-areas").addEventListener("pointerover", function (e) {
+      var a = e.target.closest && e.target.closest(".area"); if (!a) return;
+      setHl([].indexOf.call(a.parentNode.children, a));
+    });
+    document.getElementById("al-areas").addEventListener("pointerleave", function () { setHl(-1); });
+  })();
+
+  /* ---------- the call ---------- */
+  function render() {
+    var now = new Date(), m = now.getUTCMonth() + 1, M = String(m);
+    var ok = LIVE && Array.isArray(LIVE.points);
+    var factors = [], score = 0;
+    flagged = []; cellsToday = [];
+    var RW = D.risk && D.risk.weeks;
+    if (RW && RW.length) {
+      var wk = RW[Math.min(RW.length - 1, Math.floor((doy(now.toISOString().slice(0, 10)) - 1) / 7))];
+      factors.push(["Season", "Week of " + wk[0] + ": a high-fire week in " + wk[1] + "% of years" +
+        "<small>" + (wk[1] >= 50 ? "Peak burning season, so many fires are expected. The rows below say whether today is unusual even for this season." : "Outside the main burning season, so even a modest rise stands out.") + "</small>",
+        "na", wk[2] + " season"]);
+    }
+    if (ok) {
+      var miss = LIVE.missing || [], sensor = (LIVE.by_sensor.VIIRS_NOAA20 > 0 && miss.indexOf("VIIRS_NOAA20") < 0) ? "VIIRS_NOAA20" : "VIIRS_NOAA21";
+      var pts = LIVE.points.filter(function (p) { return p[2] === sensor; });
+      var n = pts.length, P = pctOf(A.national[M], n), q = A.national[M];
+      var fl = P >= 97 ? 3 : P >= 90 ? 2 : P >= 75 ? 1 : 0; score += fl;
+      factors.push(["Fire count", fmt(n) + " detections in 24 h" + "<small>" + ord(P) + " percentile of " + MONL[m - 1] + " days since " + A.from.slice(0, 4) + " · a typical day has " + fmt(q[50]) + "</small>",
+        fl ? (fl > 1 ? "hi" : "mid") : "ok", ["Normal", "Above normal", "High", "Extreme"][fl]]);
+      // areas
+      var by = {};
+      pts.forEach(function (p) { var k = Math.floor(p[0] / G) + "," + Math.floor(p[1] / G); (by[k] = by[k] || []).push(p); });
+      Object.keys(by).forEach(function (k) {
+        var g = k.split(","), cnt = by[k].length, base = (A.cells[k] || {})[M] || [0, 0, 0, 0];
+        var t = { gx: +g[0], gy: +g[1], n: cnt, mean: base[0], p95: base[1], p99: base[2], share: base[3], kind: null, col: null };
+        if (cnt >= 3 && base[3] < .05) { t.kind = "rare"; t.col = "#c77dff"; }
+        else if (cnt >= 5 && cnt > base[2]) { t.kind = "surge"; t.col = "#ff6b4a"; }
+        else if (cnt >= 5 && cnt > base[1]) { t.kind = "above"; t.col = "#ffc25c"; }
+        t.excess = cnt - base[0];
+        cellsToday.push(t); if (t.kind) flagged.push(t);
+      });
+      var rank = { surge: 0, rare: 1, above: 2 };
+      flagged.sort(function (a, b) { return rank[a.kind] - rank[b.kind] || b.excess - a.excess; });
+      var nsurge = flagged.filter(function (t) { return t.kind !== "above"; }).length;
+      var al = nsurge >= 3 ? 3 : nsurge >= 1 ? 2 : flagged.length >= 3 ? 1 : 0; score += al;
+      factors.push(["Areas", flagged.length ? flagged.length + " of " + Object.keys(by).length + " burning areas above their normal" + "<small>" + nsurge + " with a surge or fire where it is rare · areas are " + G + "° squares (about 55 km)</small>"
+        : "All " + Object.keys(by).length + " burning areas within their normal<small>each area compared with its own " + MONL[m - 1] + " history</small>",
+        al ? (al > 1 ? "hi" : "mid") : "ok", ["Normal", "Watch", "Unusual", "Widespread"][al]]);
+      // fire character
+      var C = A.character[M], night = pts.filter(function (p) { var h = ((p[3] % 1440) / 60 + 2) % 24; return h < 6 || h >= 18; }).length / Math.max(1, n);
+      var frp = median(pts.map(function (p) { return p[4]; }).filter(function (v) { return v != null; }));
+      var intense = (frp != null && frp > 1.5 * C[1]) || night > Math.max(.35, 2 * C[0]);
+      if (intense) score += 1;
+      factors.push(["Fire type", "Median fire power " + (frp != null ? frp.toFixed(1) + " MW" : "n/a") + ", " + Math.round(night * 100) + "% at night" +
+        "<small>normal for " + MON[m - 1] + ": " + C[1] + " MW, " + Math.round(C[0] * 100) + "% at night. Small daytime fires point to crop and grass burning.</small>",
+        intense ? "mid" : "ok", intense ? "More intense" : "Typical burning"]);
+    }
+    // weather
+    if (WX && WX.days && WX.days.length) {
+      var last = WX.days.slice(-3), rh = 0, rhN = 0, rhP10 = 0, ws = 0, wsP90 = 0, t = 0, tN = 0;
+      last.forEach(function (d) { var b = A.weather[String(doy(d[0]))]; rh += d[1]; t += d[2]; ws += d[3]; rhN += b[0]; rhP10 += b[1]; tN += b[2]; wsP90 += b[4]; });
+      var k = last.length; rh /= k; rhN /= k; rhP10 /= k; ws /= k; wsP90 /= k; t /= k; tN /= k;
+      var dry = rh <= rhP10 ? 2 : rh < rhN - 5 ? 1 : 0, windy = ws > wsP90;
+      score += dry + (windy ? 1 : 0);
+      var span = last[0][0].slice(8) + "–" + last[k - 1][0].slice(8) + " " + MON[+last[k - 1][0].slice(5, 7) - 1];
+      factors.push(["Humidity", Math.round(rh) + "% relative humidity" + "<small>" + span + " · normal for these days " + Math.round(rhN) + "% · fire belt, NASA POWER</small>",
+        dry ? (dry > 1 ? "hi" : "mid") : "ok", ["Normal", "Drier", "Much drier"][dry]]);
+      factors.push(["Wind, heat", ws.toFixed(1) + " m/s wind, " + t.toFixed(1) + " °C" + "<small>normal " + (A.weather[String(doy(last[k - 1][0]))][3]).toFixed(1) + " m/s, " + tN.toFixed(1) + " °C</small>",
+        windy ? "mid" : "ok", windy ? "Windy" : "Normal"]);
+    } else if (WX === false) {
+      factors.push(["Weather", "NASA POWER is not reachable right now<small>the call uses the fire data only</small>", "na", "No data"]);
+    }
+
+    // verdict
+    var lv = score >= 7 ? 3 : score >= 5 ? 2 : score >= 2 ? 1 : 0;
+    var LV = [["Expected seasonal burning", "var(--harm)", "Fires match what this season normally brings. Routine monitoring is enough; no area stands out."],
+      ["Watch", "var(--ember-2)", "Something is off the normal pattern. Check the areas below with local contacts and look again after the next satellite pass."],
+      ["Warning", "#ff8a4a", "Several signals are above normal at once. Prioritise ground checks in the areas below today and alert local civil defence."],
+      ["Severe", "#ff4d4d", "Fire activity and fire weather are far outside the normal range. Treat the areas below as urgent."]][lv];
+    var box = document.getElementById("al-verdict");
+    if (!ok) {
+      document.getElementById("al-level").textContent = LIVE === false ? "Live feed unavailable" : "…";
+      document.getElementById("al-next").textContent = LIVE === false ? "The early warning needs the live NASA FIRMS feed, which is not reachable right now." : "Reading the live satellite feed and NASA POWER weather…";
+      return;
+    }
+    box.style.setProperty("--vc", LV[1]);
+    document.getElementById("al-level").textContent = LV[0];
+    document.querySelectorAll("#al-verdict .alscale i").forEach(function (e, i) { e.className = i <= lv ? "on" : ""; });
+    document.getElementById("al-next").textContent = LV[2];
+    document.getElementById("al-factors").innerHTML = factors.map(function (f) {
+      return "<li><span class='k'>" + f[0] + "</span><span class='v'>" + f[1] + "</span><span class='tag " + f[2] + "'>" + f[3] + "</span></li>";
+    }).join("");
+    var KL = { surge: "Surge", rare: "Fire where it is rare", above: "Above normal" };
+    document.getElementById("al-areas").innerHTML = flagged.length ? flagged.slice(0, 6).map(function (t, i) {
+      var lon = (t.gx + .5) * G, lat = (t.gy + .5) * G;
+      var vs = t.mean >= .5 ? fmt(t.n) + " detections today, " + (t.n / t.mean).toFixed(1) + "× a normal " + MON[m - 1] + " day (" + t.mean.toFixed(1) + ")"
+        : fmt(t.n) + " detections today; this area has fires on only " + Math.round(t.share * 100) + "% of " + MON[m - 1] + " days";
+      return "<div class='area glass' style='--ac:" + t.col + "'><div class='t'><h4>" + near(lon, lat) + "</h4><span class='num'>" + (i + 1) + "</span></div>" +
+        "<span class='tag' style='color:" + t.col + ";justify-self:start'>" + KL[t.kind] + "</span><p>" + vs + "</p>" +
+        "<a href='https://www.google.com/maps/@" + lat.toFixed(2) + "," + lon.toFixed(2) + ",10z/data=!3m1!1e3' target='_blank' rel='noopener'>" + lat.toFixed(2) + "° N, " + lon.toFixed(2) + "° E · satellite view ↗</a></div>";
+    }).join("") : "<div class='alempty glass'>No area is above its normal for " + MONL[m - 1] + " right now.</div>";
+    document.getElementById("al-note").innerHTML = "<b>How the call is made.</b> Detections from VIIRS on " + (sensorName(LIVE)) + " in the last 24 h. " +
+      "Normal = every past " + MONL[m - 1] + " day since " + A.from.slice(0, 4) + ": VIIRS from 2012, MODIS before that put into VIIRS units with one factor per month. " +
+      "An area is <b>above normal</b> when it has more fires than on 95% of past days of this month, a <b>surge</b> above 99%. " +
+      "Weather is the mean of 4 fire-belt points (Darfur, South Kordofan, White Nile, Blue Nile) against their 2001–2025 average for the same days; " +
+      "recent NASA POWER days come from a near-real-time model run and arrive a few days late. This supports a decision; it does not replace people on the ground.";
+    drawMap();
+  }
+  function sensorName(L) { var miss = L.missing || []; return (L.by_sensor.VIIRS_NOAA20 > 0 && miss.indexOf("VIIRS_NOAA20") < 0) ? "NOAA-20" : "NOAA-21"; }
+
+  /* ---------- continuity monitor ---------- */
+  function timeline() {
+    var host = document.getElementById("ct-tl"), cw = host.clientWidth || 900, narrow = cw < 640;
+    var Y0 = 2000, Y1 = 2028, W = Math.max(330, Math.min(1000, cw)), rows = [
+      ["Terra MODIS", "var(--modis)", 2000.83, 2027.04, "science data to end ~Jan 2027", "ends ~Jan 2027"],
+      ["Aqua MODIS", "var(--modis)", 2002.5, null, "still flying · end date under review", "end date under review"],
+      ["S-NPP VIIRS", "var(--viirs)", 2012.05, 2026.84, "archive to " + A.bridges.snpp_last_day, "to " + A.bridges.snpp_last_day],
+      ["NOAA-20 VIIRS", "var(--n20)", 2018.25, null, "carries the record now", "carries the record"],
+      ["NOAA-21 VIIRS", "var(--n21)", 2026.8, null, "in the live feed, on standby", "standby"]];
+    var INFO = ["In this record from 1 Nov 2000. NASA plans to stop Terra MODIS science data around January 2027.",
+      "In this record from 4 Jul 2002. Still flying; its end date is under review.",
+      "In this record from 20 Jan 2012 to " + A.bridges.snpp_last_day + ". 375 m pixels; the unit the whole record is kept in.",
+      "In this record from 1 Apr 2018. Carries the record since S-NPP data ended, × " + A.bridges.n20_snpp.k.toFixed(3) + ".",
+      "Used in the live feed only, as the standby for NOAA-20."];
+    var now = new Date(), yn = now.getUTCFullYear() + (now.getUTCMonth() + now.getUTCDate() / 31) / 12;
+    var L = narrow ? 92 : 150, R = W - 14, x = function (y) { return L + (y - Y0) / (Y1 - Y0) * (R - L); }, rh = 30, top = 26;
+    var s = "<svg viewBox='0 0 " + W + " " + (top + rows.length * rh + 30) + "'>";
+    for (var y = Y0; y <= Y1; y += narrow ? 8 : 4) s += "<line x1='" + x(y) + "' x2='" + x(y) + "' y1='" + (top - 8) + "' y2='" + (top + rows.length * rh) + "' stroke='rgba(148,170,220,.1)'/><text x='" + x(y) + "' y='" + (top - 12) + "' font-size='11' fill='#97a3bd' text-anchor='middle'>" + y + "</text>";
+    // handovers
+    [[2002.5, "Terra → +Aqua"], [2012.05, "MODIS → VIIRS"], [2026.84, "S-NPP → NOAA-20"]].forEach(function (h, j) {
+      s += "<g class='tlh' data-j='" + j + "' tabindex='0' role='button' aria-label='Handover " + h[1] + ": show its bridge'><rect x='" + (x(h[0]) - 8) + "' y='" + (top - 4) + "' width='16' height='" + (rows.length * rh + 10) + "' fill='transparent'/>" +
+        "<line x1='" + x(h[0]) + "' x2='" + x(h[0]) + "' y1='" + (top - 4) + "' y2='" + (top + rows.length * rh + 6) + "' stroke='rgba(47,212,160,.55)' stroke-dasharray='3 3'/></g>";
+    });
+    s += "<line x1='" + x(yn) + "' x2='" + x(yn) + "' y1='" + (top - 4) + "' y2='" + (top + rows.length * rh + 6) + "' stroke='#eef1f8' stroke-width='1.5'/><text x='" + (x(yn) - 4) + "' y='" + (top + rows.length * rh + 20) + "' font-size='11' fill='#eef1f8' text-anchor='end'>today</text>";
+    rows.forEach(function (r, i) {
+      var yy = top + i * rh + 8, a = x(r[2]), b = x(r[3] || yn);
+      s += "<text x='0' y='" + (yy + 10) + "' font-size='" + (narrow ? 10.5 : 12) + "' fill='#dfe4ef'>" + (narrow ? r[0].replace(' MODIS', '').replace(' VIIRS', '') : r[0]) + "</text>";
+      s += "<rect class='tlb' data-i='" + i + "' x='" + a + "' y='" + yy + "' width='" + Math.max(3, b - a) + "' height='14' rx='4' fill='" + r[1] + "' opacity='.9'/>";
+      if (r[3] && r[3] > yn) s += "<rect x='" + x(yn) + "' y='" + yy + "' width='" + (x(r[3]) - x(yn)) + "' height='14' rx='4' fill='none' stroke='" + r[1] + "' stroke-dasharray='3 2'/>";
+      if (!r[3]) s += "<path d='M" + (b + 2) + " " + yy + " l8 7 l-8 7z' fill='" + r[1] + "'/>";
+      var inside = b - a > (narrow ? 150 : 230);
+      s += "<text x='" + (inside ? a + 8 : a - 8) + "' y='" + (yy + 10) + "' font-size='10.5' font-weight='600' fill='" + (inside ? "#05070d" : "#97a3bd") + "' text-anchor='" + (inside ? "start" : "end") + "'>" + (narrow ? r[5] : r[4]) + "</text>";
+    });
+    host.innerHTML = s + "</svg>";
+    var T = window.syTip, HN = ["Terra → Terra + Aqua", "MODIS → VIIRS", "S-NPP → NOAA-20"];
+    function card(j) { return document.querySelectorAll("#ct-bridges .bridge")[j]; }
+    host.querySelectorAll(".tlb").forEach(function (b) {
+      var i = +b.dataset.i;
+      b.addEventListener("pointermove", function (e) { if (T) T.show(e.clientX, e.clientY, "<b>" + rows[i][0] + "</b><br>" + INFO[i]); });
+      b.addEventListener("pointerdown", function (e) { if (e.pointerType !== "mouse" && T) T.show(e.clientX, e.clientY, "<b>" + rows[i][0] + "</b><br>" + INFO[i]); });
+      b.addEventListener("pointerleave", function (e) { if (e.pointerType === "mouse" && T) T.hide(); });
+    });
+    host.querySelectorAll(".tlh").forEach(function (g) {
+      var j = +g.dataset.j;
+      function go() { var c = card(j); if (!c) return; c.scrollIntoView({ behavior: "smooth", block: "nearest" }); c.classList.remove("flash"); void c.offsetWidth; c.classList.add("flash"); }
+      g.addEventListener("pointerenter", function (e) { var c = card(j); if (c) c.classList.add("hl"); if (e.pointerType === "mouse" && T) T.show(e.clientX, e.clientY, "<b>Handover: " + HN[j] + "</b><br>click to see its bridge"); });
+      g.addEventListener("pointerleave", function () { var c = card(j); if (c) c.classList.remove("hl"); if (T) T.hide(); });
+      g.addEventListener("click", go);
+      g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    });
+  }
+  function bridges(ratio21) {
+    var K = A.k_cells_modis_to_viirs, ks = [], i; for (i = 1; i <= 12; i++) ks.push(K[String(i)]);
+    var mx = Math.max.apply(null, ks), bars = ks.map(function (k, j) { var h = 30 * k / mx; return "<rect x='" + (j * 8.3) + "' y='" + (32 - h) + "' width='6.3' height='" + h + "' rx='1.5' fill='var(--harm)' opacity='.8'/>"; }).join("");
+    var mv = A.bridges.modis_viirs, n20 = A.bridges.n20_snpp;
+    var cards = [
+      ["Terra → Terra + Aqua", "×" + A.bridges.terra_aqua.k.toFixed(2), "One annual factor fills Nov 2000 – Jun 2002, the months before Aqua joined Terra.", "ok", "Live"],
+      ["MODIS → VIIRS", "R² " + mv.r2.toFixed(3), "12 monthly factors (" + Math.min.apply(null, ks).toFixed(2) + "–" + mx.toFixed(2) + "), fitted on " + mv.overlap[0] + "–" + mv.overlap[1] + ". Raw MODIS scores " + mv.r2_raw.toFixed(2) + " on the same " + mv.months + " held-out months.<svg viewBox='0 0 100 34' preserveAspectRatio='none' aria-hidden='true'>" + bars + "</svg>", "ok", "Live"],
+      ["NOAA-20 → S-NPP", "×" + n20.k.toFixed(3), "R² " + n20.r2.toFixed(3) + " on " + n20.n_months + " months both flew. Took over from S-NPP on " + A.bridges.snpp_last_day + ".", "ok", "Live"],
+      ["NOAA-21 → NOAA-20", ratio21 != null ? "×" + ratio21.toFixed(2) : "…", "Today's NOAA-20 / NOAA-21 ratio from the live feed. Ready to carry the record if NOAA-20 stops.", "mid", "Standby"]];
+    document.getElementById("ct-bridges").innerHTML = cards.map(function (c) {
+      return "<div class='bridge glass'><div class='ft'><span>" + c[0] + "</span><span class='tag " + c[3] + "'>" + c[4] + "</span></div><div class='n mono'>" + c[1] + "</div><p>" + c[2] + "</p></div>";
+    }).join("");
+  }
+  function drift() {
+    var el = document.getElementById("ct-drift"), m = new Date().getUTCMonth() + 1, band = A.ratio[String(m)];
+    if (!LIVE) { el.innerHTML = "<span class='eyebrow' style='color:var(--dim)'>Live drift check</span><div class='dim'>" + (LIVE === false ? "The live feed is not reachable right now." : "Loading the live feed…") + "</div>"; return; }
+    var b = LIVE.by_sensor, v = b.VIIRS_NOAA20 || b.VIIRS_NOAA21 || 0, mo = b.MODIS || 0;
+    var head = "<span class='eyebrow' style='color:var(--dim)'>Live drift check · VIIRS ÷ MODIS, last 24 h</span>";
+    if (!band || mo < 20) { el.innerHTML = head + "<div class='n mono' style='font:800 1.7rem var(--display)'>" + (mo ? (v / mo).toFixed(2) : "–") + "</div><p class='dim' style='margin:0'>Too few MODIS fires today (or this month) for a fair check. It runs whenever both satellites see at least 20.</p>"; return; }
+    var r = v / mo, lo = 0, hi = Math.max(band[2] * 1.25, r * 1.1), X = function (q) { return (q - lo) / (hi - lo) * 100; };
+    var inBand = r >= band[0] && r <= band[2];
+    el.innerHTML = head +
+      "<div style='display:flex;align-items:baseline;gap:12px;flex-wrap:wrap'><span class='mono' style='font:800 1.9rem/1 var(--display)'>" + r.toFixed(2) + "</span><span class='tag " + (inBand ? "ok" : "hi") + "'>" + (inBand ? "In range" : "Drifting") + "</span></div>" +
+      "<div class='band'><div class='rail'></div><div class='ok' style='left:" + X(band[0]) + "%;width:" + (X(band[2]) - X(band[0])) + "%'></div><div class='mk' style='left:" + Math.min(99.5, X(r)) + "%'></div></div>" +
+      "<div class='bandlab'><span>normal " + MON[m - 1] + " range " + band[0] + "–" + band[2] + "</span><span>" + fmt(band[3]) + " days since 2012</span></div>" +
+      "<p class='dim' style='margin:0;font-size:.88rem'>" + (inBand ? "The two sensors still agree the way they did on past " + MONL[m - 1] + " days, so the conversion holds." : "Today's ratio is outside its usual " + MONL[m - 1] + " range. One day can be noise; several in a row mean a satellite is drifting and the factor needs refitting.") + "</p>";
+  }
+
+  timeline(); bridges(null); drift(); drawMap();
+  var tlw = 0; addEventListener("resize", function () { var w = document.getElementById("ct-tl").clientWidth; if (Math.abs(w - tlw) > 30) { tlw = w; timeline(); } });
+  function pull() {
+    if (!/^https?:$/.test(location.protocol) || !window.fetch) { LIVE = false; WX = false; render(); drift(); return; }
+    fetch("/api/live", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (L) {
+      if (!L || !Array.isArray(L.points)) throw 0; LIVE = L;
+      var b = L.by_sensor; bridges(b.VIIRS_NOAA20 && b.VIIRS_NOAA21 ? b.VIIRS_NOAA20 / b.VIIRS_NOAA21 : null);
+    }).catch(function () { if (!LIVE) LIVE = false; }).then(function () { render(); drift(); });
+    fetch("/api/weather").then(function (r) { return r.ok ? r.json() : null; }).then(function (w) {
+      WX = w && w.days && w.days.length ? w : false;
+    }).catch(function () { WX = false; }).then(function () { if (LIVE) render(); });
+  }
+  pull(); setInterval(pull, 30 * 60 * 1000);
+})();
+</script>
+<script>
+/* phone menu: the same links as the desktop nav */
+(function () {
+  var btn = document.getElementById("mbtn"), box = document.getElementById("mnav"); if (!btn || !box) return;
+  [].forEach.call(document.querySelectorAll(".navlinks a:not(.cta)"), function (a) { var c = a.cloneNode(true); box.appendChild(c); });
+  [["#continuity", "Continuity monitor"], ["#serve", "Who SYNTRA serves"]].forEach(function (l) {
+    if (!document.querySelector(l[0])) return; var a = document.createElement("a"); a.href = l[0]; a.textContent = l[1];
+    box.insertBefore(a, box.querySelector('a[href="#team"]'));
+  });
+  function set(open) { box.hidden = !open; btn.setAttribute("aria-expanded", open); }
+  btn.addEventListener("click", function (e) { e.stopPropagation(); set(box.hidden); if (!box.hidden) box.querySelector("a").focus(); });
+  box.addEventListener("click", function (e) { if (e.target.closest("a")) set(false); });
+  document.addEventListener("click", function (e) { if (!box.hidden && !box.contains(e.target)) set(false); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !box.hidden) { set(false); btn.focus(); } });
+  addEventListener("resize", function () { if (innerWidth > 760) set(false); });
+})();
+</script>
+

@@ -1,6 +1,10 @@
 # Data is downloaded with scripts/fetch_firms.py, never committed
 data/raw/
 data/processed/
+# App data packs (python -m syntra.datapack). Sudan's is committed so the deployed app
+# (Streamlit Community Cloud) starts in seconds; other countries stay local.
+data/app/*
+!data/app/Sudan/
 
 # Python
 __pycache__/
@@ -19,4 +23,8 @@ Thumbs.db
 
 # Secrets (FIRMS MAP_KEY etc.)
 .env
+.streamlit/secrets.toml
 data/external/
+
+# Netlify Drop upload bundle (rebuilt by site/build/build_dist.py)
+site/syntra-site.zip

@@ -63,12 +63,15 @@ def _count(df):
 
 
 # ---------------------------------------------------------------- 1. gridded monthly table
-def monthly_cells(veg):
+def monthly_cells(veg, spans=None):
     """One row per month: fire-active 0.1 degree cells per sensor and satellite, plus hotspots and FRP.
 
     `veg` = clean vegetation fires (columns family, satellite, year, month, cell_id, frp, acq_date).
     The *_cells columns are cell-days when COUNT = "cell_days" (the default).
     Months with no fire inside the data's time span get zeros, not a missing row.
+    spans: optional {"MODIS": PeriodIndex, "VIIRS": PeriodIndex} of the months each sensor covers.
+    Pass the COUNTRY's spans for a small drawn area: its own fires would give a span that starts at
+    the area's first fire and ends at its last one, so earlier and later years would go missing.
     """
     m = veg[veg.family == "MODIS"]
     v = veg[veg.family == "VIIRS"]
@@ -87,7 +90,7 @@ def monthly_cells(veg):
                                            tab.index.get_level_values(1).astype(int)],
                                           names=["year", "month"])
     # Every month each sensor covers (zeros for quiet months; see syntra.clean.month_span)
-    spans = {fam: month_span(veg, fam) for fam in ("MODIS", "VIIRS")}
+    spans = spans or {fam: month_span(veg, fam) for fam in ("MODIS", "VIIRS")}
     months = spans["MODIS"].union(spans["VIIRS"])
     full = pd.MultiIndex.from_arrays([months.year, months.month], names=["year", "month"])
     tab = tab.reindex(full).fillna(0).reset_index()
@@ -193,12 +196,13 @@ def scores(tab, overlap=OVERLAP):
 
 
 # ---------------------------------------------------------------- for the app: any area the user draws
-def harmonize_area(veg_area, k_terra, k_viirs):
+def harmonize_area(veg_area, k_terra, k_viirs, spans=None):
     """Harmonized monthly series for a user-drawn area, using factors fitted on the whole country.
 
     Small areas have too few fires to fit their own factors, so the country's factors are reused.
+    spans: the country's month spans (see monthly_cells), so every year is in the table.
     """
-    tab = monthly_cells(veg_area)
+    tab = monthly_cells(veg_area, spans)
     terra_only = tab.modis_flying & (tab.ym < AQUA_START)
     tab["modis_consistent"] = tab.modis_cells.astype(float)
     tab.loc[terra_only, "modis_consistent"] = tab.loc[terra_only, "terra_cells"] * tab.loc[terra_only, "month"].map(k_terra)
@@ -223,9 +227,14 @@ def run(veg=None, country=DEFAULT_COUNTRY, out_dir=PROCESSED_DIR):
         if nrt:
             new = pd.concat([pd.read_csv(p, usecols=cols) for p in nrt], ignore_index=True)
             new = new[new.year > veg.year.max()]          # never count a year twice
-            last_day = pd.to_datetime(new.acq_date).max()
-            veg = pd.concat([veg, new], ignore_index=True)
-            print(f"Added {len(new):,} vegetation fires from the FIRMS API, data to {last_day:%d %b %Y}")
+            if len(new):
+                veg = pd.concat([veg, new], ignore_index=True)
+                print(f"Added {len(new):,} vegetation fires from the FIRMS API")
+        # This year's data stops at its last day (also when the clean file already holds this year,
+        # as written by `python -m syntra.pipeline`): flag the part month
+        if int(veg.year.max()) == pd.Timestamp.today().year:
+            last_day = pd.to_datetime(veg.acq_date).max()
+            print(f"Data to {last_day:%d %b %Y}")
     tab = monthly_cells(veg)
     tab, k_terra, k_terra_all = modis_consistent(tab)
     series, k_viirs, k_viirs_all = harmonize(tab)

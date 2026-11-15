@@ -8,6 +8,7 @@ reaches everyone.
     fires = load_fires("Sudan")
 """
 import pathlib
+from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 import requests
@@ -26,6 +27,7 @@ INSTRUMENTS = {
     "viirs-snpp": "VIIRS_SNPP",
     "viirs-jpss1": "VIIRS_NOAA20",
 }
+FIRST_YEAR = {"modis": 2000, "viirs-snpp": 2012, "viirs-jpss1": 2018}  # first yearly file on FIRMS
 
 COLUMNS = ["sensor", "family", "satellite", "latitude", "longitude", "acq_date",
            "acq_datetime_utc", "year", "month", "daynight", "confidence_class",
@@ -33,26 +35,36 @@ COLUMNS = ["sensor", "family", "satellite", "latitude", "longitude", "acq_date",
            "type", "version"]
 
 
-def fetch(country=DEFAULT_COUNTRY, start=2000, end=2025, download=True):
+def fetch(country=DEFAULT_COUNTRY, start=2000, end=2025, download=True, instruments=None):
     """Get the yearly CSVs into data/raw. Returns {instrument: [paths]}.
 
     Files already on disk are reused. With download=False nothing is fetched.
     No API key is needed for these yearly files (they stop at 2025).
     """
-    files = {}
-    for inst in INSTRUMENTS:
-        got = []
-        for year in range(start, end + 1):
-            name = f"{inst}_{year}_{country}.csv"
-            path = RAW_DIR / inst / name
-            if not path.exists() and download:
-                r = requests.get(f"{BASE_URL}/{inst}/{year}/{name}", timeout=120)
-                if r.status_code == 200:  # otherwise this sensor has no file that year
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_bytes(r.content)
-            if path.exists():
-                got.append(path)
-        files[inst] = got
+    def get(inst, year):
+        name = f"{inst}_{year}_{country}.csv"
+        path = RAW_DIR / inst / name
+        if not path.exists() and download:
+            try:
+                r = requests.get(f"{BASE_URL}/{inst}/{year}/{name}", timeout=300)
+            except requests.RequestException as e:  # FIRMS busy: keep going with what is on disk
+                print(f"could not download {name}: {e.__class__.__name__}")
+                return None
+            if r.status_code == 200:  # otherwise this sensor has no file that year
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(r.content)
+        return path if path.exists() else None
+
+    # FIRMS is slow per file but fine with several at once: ~1 min for a country instead of ~30.
+    insts = list(instruments or INSTRUMENTS)
+    jobs = [(inst, year) for inst in insts for year in range(max(start, FIRST_YEAR[inst]), end + 1)]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        paths = list(pool.map(lambda j: get(*j), jobs))
+    files = {inst: [] for inst in insts}
+    for (inst, _), path in zip(jobs, paths):
+        if path is not None:
+            files[inst].append(path)
+    for inst, got in files.items():
         print(f"{inst:12} {len(got):2} yearly files")
     return files
 
@@ -77,14 +89,15 @@ def _load_instrument(inst, paths):
 
 
 def load_fires(country=DEFAULT_COUNTRY, start=2000, end=2025, vegetation_only=True,
-               download=True):
+               download=True, instruments=None):
     """One table for MODIS and VIIRS with the same column names.
 
     vegetation_only keeps type 0 (presumed vegetation fire). Type 2 = static
     sources such as gas flares, 1 = volcano, 3 = offshore.
+    instruments: optional subset of INSTRUMENTS keys, e.g. ("modis", "viirs-snpp").
     """
-    files = fetch(country, start, end, download=download)
-    fires = pd.concat([_load_instrument(i, files[i]) for i in INSTRUMENTS], ignore_index=True)
+    files = fetch(country, start, end, download=download, instruments=instruments)
+    fires = pd.concat([_load_instrument(i, files[i]) for i in files], ignore_index=True)
     fires["acq_date"] = pd.to_datetime(fires["acq_date"])
     hhmm = fires["acq_time"].astype(int).astype(str).str.zfill(4)
     fires["acq_datetime_utc"] = (fires["acq_date"]

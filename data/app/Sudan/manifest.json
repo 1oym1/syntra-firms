@@ -1,0 +1,27 @@
+{
+  "country": "Sudan",
+  "clean_version": 2,
+  "built_utc": "2026-11-14 19:30",
+  "data_to": "2026-11-13",
+  "sensors": {
+    "MODIS": {
+      "from": "2000-11-01",
+      "to": "2026-11-14",
+      "hotspots": 924476,
+      "static": 1130
+    },
+    "VIIRS_NOAA20": {
+      "from": "2018-04-01",
+      "to": "2026-11-14",
+      "hotspots": 1349161,
+      "static": 9516
+    },
+    "VIIRS_SNPP": {
+      "from": "2012-01-20",
+      "to": "2026-11-02",
+      "hotspots": 2189360,
+      "static": 23420
+    }
+  },
+  "provisional_from": "2026-01-01"
+}
