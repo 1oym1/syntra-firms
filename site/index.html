@@ -223,6 +223,67 @@ section { position: relative; z-index: 2; }
 .navlinks a.livenav::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #ff4d4d; margin-right: 7px; vertical-align: 1px; }
 @media (max-width: 900px) { .livewrap { grid-template-columns: minmax(0, 1fr); } }
 
+
+/* early warning */
+.alwrap { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.almap { padding: 14px; }
+#amap { width: 100%; display: block; }
+.alkey { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font: 400 .74rem var(--mono); color: var(--dim); }
+.alkey i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; }
+.verdict { padding: 22px 22px 18px; display: grid; gap: 14px; position: relative; overflow: hidden; }
+.verdict::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--vc, var(--dim)); }
+.verdict .lv { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.verdict .lv b { font: 800 clamp(1.9rem, 4vw, 2.6rem)/1 var(--display); letter-spacing: -.03em; color: var(--vc, var(--ink)); }
+.verdict .lv span { font: 500 .74rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.verdict .next { color: #c3cbe0; font-size: .98rem; margin: 0; }
+.alscale { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.alscale i { height: 6px; border-radius: 3px; background: rgba(148,170,220,.12); }
+.alscale i.on { background: var(--vc); }
+.factors { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.factors li { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--rim); font-size: .92rem; }
+.factors .k { font: 500 .7rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.factors .v { color: #dfe4ef; }
+.factors .v small { display: block; color: var(--dim); font-size: .8rem; margin-top: 2px; }
+.tag { font: 600 .66rem var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+.tag.ok { color: var(--harm); } .tag.mid { color: var(--ember-2); } .tag.hi { color: #ff6b4a; } .tag.na { color: var(--dim); }
+.areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; margin-top: 18px; }
+.area { padding: 16px 18px; display: grid; gap: 6px; }
+.area .t { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.area .num { font: 700 .8rem var(--mono); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--ac); color: #05070d; flex: none; }
+.area h4 { margin: 0; font: 700 1.05rem/1.2 var(--display); }
+.area p { margin: 0; color: #c3cbe0; font-size: .9rem; }
+.area a { font: 500 .74rem var(--mono); color: var(--ember-2); text-decoration: none; }
+.area a:hover { text-decoration: underline; }
+.alnote { color: var(--dim); font-size: .82rem; margin-top: 16px; max-width: 95ch; }
+.alnote b { color: #c3cbe0; font-weight: 600; }
+.alempty { padding: 16px 18px; color: #c3cbe0; }
+@media (max-width: 900px) { .alwrap { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { .factors li { grid-template-columns: minmax(0, 1fr) auto; } .factors li .k { grid-column: 1 / -1; } }
+
+/* continuity monitor */
+.ctline { padding: 18px 18px 10px; }
+#ct-tl svg { width: 100%; height: auto; display: block; overflow: visible; }
+#ct-tl text { font-family: var(--mono); }
+.ctgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 14px; }
+.bridge { padding: 18px 18px 16px; display: grid; gap: 8px; align-content: start; }
+.bridge .ft { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.bridge .ft span { font: 500 .7rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+.bridge .n { font: 800 1.7rem/1.1 var(--display); }
+.bridge p { margin: 0; color: #c3cbe0; font-size: .88rem; }
+.bridge svg { width: 100%; height: 34px; display: block; }
+.ctrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 12px; }
+.sunset { padding: 20px 22px; display: grid; gap: 8px; border-color: rgba(255,138,42,.35); }
+.sunset h3 { margin: 0; font-size: 1.25rem; }
+.sunset p { margin: 0; color: #c3cbe0; font-size: .95rem; }
+.sunset a { color: var(--ember-2); }
+.drift { padding: 20px 22px; display: grid; gap: 10px; }
+.band { position: relative; height: 26px; margin-top: 4px; }
+.band .rail { position: absolute; left: 0; right: 0; top: 11px; height: 4px; border-radius: 2px; background: rgba(148,170,220,.12); }
+.band .ok { position: absolute; top: 9px; height: 8px; border-radius: 4px; background: rgba(47,212,160,.35); }
+.band .mk { position: absolute; top: 2px; width: 3px; height: 22px; border-radius: 2px; background: var(--ink); transform: translateX(-1px); }
+.bandlab { display: flex; justify-content: space-between; font: 400 .72rem var(--mono); color: var(--dim); }
+@media (max-width: 760px) { .ctrow { grid-template-columns: minmax(0, 1fr); } }
+
 /* bento */
 .bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; perspective: 1200px; }
 .tile { grid-column: span 2; padding: 24px; min-height: 190px; display: grid; gap: 8px; align-content: end; position: relative; overflow: hidden;
@@ -373,7 +434,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
 <nav class="top"><div class="wrap">
   <a class="logo" href="#top" aria-label="SYNTRA home"><svg aria-hidden="true"><use href="#mk"/></svg>SYNTRA</a>
   <div class="navlinks glass">
-    <a class="livenav" href="#live">Live now</a><a href="#seam">The seam</a><a href="#check">Check a month</a><a href="#risk">Risk clock</a><a href="#team">Team</a><a href="#app">App</a>
+    <a class="livenav" href="#live">Live now</a><a href="#alert">Alerts</a><a href="#seam">The seam</a><a href="#check">Check a month</a><a href="#risk">Risk clock</a><a href="#team">Team</a><a href="#app">App</a>
     <a class="cta app-link" href="#app">Open the app <svg class="ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
   </div>
 </div></nav>
@@ -435,6 +496,35 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   </div>
 </section>
 
+<section class="wrap sec" id="alert" aria-labelledby="al-h">
+  <div class="sec-head">
+    <div class="eyebrow">Early warning · for decision makers</div>
+    <h2 id="al-h">Which of today's fires are <span class="grad">not normal?</span></h2>
+    <p>A fire count on its own does not tell anyone what to do. SYNTRA compares today with the same days in 26 fire
+      seasons of the harmonized record, area by area, and adds the weather and the kind of fires seen. The answer is one call:
+      expected seasonal burning, or something to act on.</p>
+  </div>
+  <div class="alwrap">
+    <div class="almap glass">
+      <canvas id="amap" role="img" aria-label="Map of Sudan: areas with more fires today than is normal for this time of year"></canvas>
+      <div class="alkey">
+        <span><i style="background:rgba(148,170,220,.35)"></i>fires today, within normal</span>
+        <span><i style="background:#ffc25c"></i>above normal for this area</span>
+        <span><i style="background:#ff6b4a"></i>surge: above 99% of past days</span>
+        <span><i style="background:#c77dff"></i>fires where they are rare</span>
+      </div>
+    </div>
+    <div class="verdict glass" id="al-verdict" aria-live="polite">
+      <div class="lv"><span>Today's call</span><b id="al-level">…</b></div>
+      <div class="alscale" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <p class="next" id="al-next">Reading the live satellite feed and NASA POWER weather…</p>
+      <ul class="factors" id="al-factors"></ul>
+    </div>
+  </div>
+  <div class="areas" id="al-areas"></div>
+  <p class="alnote" id="al-note"></p>
+</section>
+
 <section class="story" id="seam" aria-labelledby="seam-h">
   <div class="pin">
     <div id="land" aria-hidden="true"></div>
@@ -475,6 +565,32 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   <div class="eyebrow">Accuracy on years the model never saw</div>
   <h2 id="fin-h" class="huge"><span class="from mono">R² 0.36</span><span class="arrow">to</span><span class="to mono" id="fin">0.993</span></h2>
   <p>Raw MODIS predicts what VIIRS saw with R² 0.36. After SYNTRA's harmonization: 0.993, tested leave-one-year-out on 119 months.</p>
+</section>
+
+<section class="wrap sec" id="continuity" aria-labelledby="ct-h">
+  <div class="sec-head">
+    <div class="eyebrow">Continuity monitor</div>
+    <h2 id="ct-h">A record that <span class="grad">outlives MODIS</span></h2>
+    <p>Satellites retire. Every time one hands over to another, a fire record can break, as it did in 2012. SYNTRA keeps
+      the whole record in VIIRS units and fits each handover on the years both satellites flew, tests it on years it never saw,
+      and keeps checking it against the live feed.</p>
+  </div>
+  <div class="ctline glass"><div id="ct-tl" role="img" aria-label="Timeline of the satellites in the record and their handovers"></div></div>
+  <div class="ctgrid" id="ct-bridges"></div>
+  <div class="ctrow">
+    <div class="sunset glass">
+      <span class="eyebrow">MODIS is retiring</span>
+      <h3>When MODIS goes dark, this record does not break</h3>
+      <p>NASA plans to stop collecting Terra MODIS science data around January 2027, and Aqua's end date is still under
+        review (<a href="https://ladsweb.modaps.eosdis.nasa.gov/learn/modis-to-viirs-transition" target="_blank" rel="noopener">NASA LAADS DAAC, MODIS to VIIRS transition</a>).
+        Any fire record that mixes raw MODIS with VIIRS will jump again. SYNTRA's does not: 2000 to 2011 is already in VIIRS units,
+        so the series carries on unchanged on NOAA-20 and NOAA-21.</p>
+    </div>
+    <div class="drift glass" id="ct-drift">
+      <span class="eyebrow" style="color:var(--dim)">Live drift check</span>
+      <div class="dim">Loading the live feed…</div>
+    </div>
+  </div>
 </section>
 
 <section class="wrap sec" aria-labelledby="pipe-h">
@@ -695,6 +811,7 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
 <div class="tip3d" id="tip" hidden></div>
 
 <script src="data.js"></script>
+<script src="alerts.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
@@ -1447,3 +1564,236 @@ footer .wrap { padding-block: 26px 44px; display: flex; flex-wrap: wrap; justify
   });
 })();
 </script>
+<script>
+/* Early warning + continuity monitor. Baselines: alerts.js (scripts/alert_baseline.py). Live: /api/live, /api/weather. */
+(function () {
+  var A = window.SYNTRA_ALERT, D = window.SYNTRA || {};
+  if (!A) return;
+  var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var MONL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var G = A.grid;
+  // towns for "near ..." labels (approximate centres)
+  var TOWNS = [["Khartoum",32.56,15.5],["Wad Madani",33.52,14.4],["Sennar",33.62,13.55],["Ed Damazin",34.36,11.79],["Kurmuk",34.28,10.55],
+    ["Kosti",32.66,13.16],["El Obeid",30.22,13.18],["Um Ruwaba",31.22,12.9],["Rashad",31.06,11.86],["Kadugli",29.72,11.01],["Talodi",30.38,10.63],
+    ["Dilling",29.65,12.05],["Al Fula",28.35,11.73],["Babanusa",27.81,11.33],["En Nahud",28.43,12.7],["Ed Daein",26.13,11.46],["Nyala",24.88,12.05],
+    ["El Fasher",25.35,13.63],["Kutum",24.67,14.2],["Zalingei",23.47,12.91],["Geneina",22.45,13.45],["Gedaref",35.38,14.03],["Kassala",36.4,15.45],
+    ["Port Sudan",37.22,19.62],["Atbara",33.98,17.7],["Dongola",30.48,19.17]];
+  function km(a, b, c, d) { var r = Math.PI / 180, x = (c - a) * r * Math.cos((b + d) / 2 * r), y = (d - b) * r; return 6371 * Math.sqrt(x * x + y * y); }
+  function near(lon, lat) {
+    var best = null, bd = 1e9; TOWNS.forEach(function (t) { var d = km(lon, lat, t[1], t[2]); if (d < bd) { bd = d; best = t; } });
+    return bd < 25 ? "Around " + best[0] : bd < 260 ? Math.round(bd / 5) * 5 + " km from " + best[0] : "Remote area";
+  }
+  function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function pctOf(q, v) { var i = 0; while (i < 100 && q[i + 1] <= v) i++; return i; }
+  function ord(n) { var s = ["th","st","nd","rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+  function median(a) { if (!a.length) return null; var s = a.slice().sort(function (x, y) { return x - y; }), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+  function doy(iso) { var d = new Date(iso + "T00:00:00Z"); return Math.min(365, Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5)); }
+
+  var LIVE = null, WX = null, flagged = [], cellsToday = [];
+
+  /* ---------- the map ---------- */
+  var B = (function () {
+    var b = D.border || [], x0 = 99, x1 = -99, y0 = 99, y1 = -99;
+    b.forEach(function (p) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); });
+    if (!b.length) { x0 = 21.8; x1 = 38.6; y0 = 8.7; y1 = 22.2; }
+    return { x0: x0 - .3, x1: x1 + .3, y0: y0 - .3, y1: y1 + .3, kx: Math.cos((y0 + y1) / 2 * Math.PI / 180) };
+  })();
+  function drawMap() {
+    var cv = document.getElementById("amap"), w = cv.clientWidth; if (!w) return;
+    var h = Math.round(w * (B.y1 - B.y0) / ((B.x1 - B.x0) * B.kx)), dpr = Math.min(2, devicePixelRatio || 1);
+    cv.style.height = h + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    var c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var sx = w / (B.x1 - B.x0), sy = h / (B.y1 - B.y0);
+    function px(lon, lat) { return [(lon - B.x0) * sx, (B.y1 - lat) * sy]; }
+    // normal fire belt for this month: mean daily detections per area, faint
+    var m = String(new Date().getUTCMonth() + 1), mx = 0;
+    Object.keys(A.cells).forEach(function (k) { var v = A.cells[k][m]; if (v && v[0] > mx) mx = v[0]; });
+    Object.keys(A.cells).forEach(function (k) {
+      var v = A.cells[k][m]; if (!v || !mx) return; var g = k.split(","), q = px(+g[0] * G, (+g[1] + 1) * G);
+      c.fillStyle = "rgba(255,138,42," + (.03 + .2 * Math.sqrt(v[0] / mx)).toFixed(3) + ")"; c.fillRect(q[0], q[1], G * sx - 1, G * sy - 1);
+    });
+    var b = D.border || [];
+    if (b.length) { c.beginPath(); b.forEach(function (p, i) { var q = px(p[0], p[1]); if (i) c.lineTo(q[0], q[1]); else c.moveTo(q[0], q[1]); }); c.strokeStyle = "rgba(255,138,42,.8)"; c.lineWidth = 1.3; c.stroke(); }
+    // today's areas
+    cellsToday.forEach(function (t) {
+      var q = px(t.gx * G, (t.gy + 1) * G), s = Math.min(G * sx, G * sy);
+      c.fillStyle = t.kind ? t.col : "rgba(148,170,220,.35)";
+      c.globalAlpha = t.kind ? .95 : .8; c.fillRect(q[0] + 1, q[1] + 1, G * sx - 2, G * sy - 2); c.globalAlpha = 1;
+    });
+    flagged.forEach(function (t, i) {
+      if (i >= 6) return; var q = px((t.gx + .5) * G, (t.gy + .5) * G);
+      c.fillStyle = "#05070d"; c.beginPath(); c.arc(q[0], q[1], 9, 0, 6.2832); c.fill();
+      c.strokeStyle = t.col; c.lineWidth = 2; c.stroke();
+      c.fillStyle = "#eef1f8"; c.font = "700 10px JetBrains Mono, monospace"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(i + 1, q[0], q[1] + .5);
+    });
+    c.textAlign = "start"; c.textBaseline = "alphabetic";
+  }
+  addEventListener("resize", drawMap);
+
+  /* ---------- the call ---------- */
+  function render() {
+    var now = new Date(), m = now.getUTCMonth() + 1, M = String(m);
+    var ok = LIVE && Array.isArray(LIVE.points);
+    var factors = [], score = 0;
+    flagged = []; cellsToday = [];
+    if (ok) {
+      var miss = LIVE.missing || [], sensor = (LIVE.by_sensor.VIIRS_NOAA20 > 0 && miss.indexOf("VIIRS_NOAA20") < 0) ? "VIIRS_NOAA20" : "VIIRS_NOAA21";
+      var pts = LIVE.points.filter(function (p) { return p[2] === sensor; });
+      var n = pts.length, P = pctOf(A.national[M], n), q = A.national[M];
+      var fl = P >= 97 ? 3 : P >= 90 ? 2 : P >= 75 ? 1 : 0; score += fl;
+      factors.push(["Fire count", fmt(n) + " detections in 24 h" + "<small>" + ord(P) + " percentile of " + MONL[m - 1] + " days since " + A.from.slice(0, 4) + " · a typical day has " + fmt(q[50]) + "</small>",
+        fl ? (fl > 1 ? "hi" : "mid") : "ok", ["Normal", "Above normal", "High", "Extreme"][fl]]);
+      // areas
+      var by = {};
+      pts.forEach(function (p) { var k = Math.floor(p[0] / G) + "," + Math.floor(p[1] / G); (by[k] = by[k] || []).push(p); });
+      Object.keys(by).forEach(function (k) {
+        var g = k.split(","), cnt = by[k].length, base = (A.cells[k] || {})[M] || [0, 0, 0, 0];
+        var t = { gx: +g[0], gy: +g[1], n: cnt, mean: base[0], p95: base[1], p99: base[2], share: base[3], kind: null, col: null };
+        if (cnt >= 3 && base[3] < .05) { t.kind = "rare"; t.col = "#c77dff"; }
+        else if (cnt >= 5 && cnt > base[2]) { t.kind = "surge"; t.col = "#ff6b4a"; }
+        else if (cnt >= 5 && cnt > base[1]) { t.kind = "above"; t.col = "#ffc25c"; }
+        t.excess = cnt - base[0];
+        cellsToday.push(t); if (t.kind) flagged.push(t);
+      });
+      var rank = { surge: 0, rare: 1, above: 2 };
+      flagged.sort(function (a, b) { return rank[a.kind] - rank[b.kind] || b.excess - a.excess; });
+      var nsurge = flagged.filter(function (t) { return t.kind !== "above"; }).length;
+      var al = nsurge >= 3 ? 3 : nsurge >= 1 ? 2 : flagged.length >= 3 ? 1 : 0; score += al;
+      factors.push(["Areas", flagged.length ? flagged.length + " of " + Object.keys(by).length + " burning areas above their normal" + "<small>" + nsurge + " with a surge or fire where it is rare · areas are " + G + "° squares (about 55 km)</small>"
+        : "All " + Object.keys(by).length + " burning areas within their normal<small>each area compared with its own " + MONL[m - 1] + " history</small>",
+        al ? (al > 1 ? "hi" : "mid") : "ok", ["Normal", "Watch", "Unusual", "Widespread"][al]]);
+      // fire character
+      var C = A.character[M], night = pts.filter(function (p) { var h = ((p[3] % 1440) / 60 + 2) % 24; return h < 6 || h >= 18; }).length / Math.max(1, n);
+      var frp = median(pts.map(function (p) { return p[4]; }).filter(function (v) { return v != null; }));
+      var intense = (frp != null && frp > 1.5 * C[1]) || night > Math.max(.35, 2 * C[0]);
+      if (intense) score += 1;
+      factors.push(["Fire type", "Median fire power " + (frp != null ? frp.toFixed(1) + " MW" : "n/a") + ", " + Math.round(night * 100) + "% at night" +
+        "<small>normal for " + MON[m - 1] + ": " + C[1] + " MW, " + Math.round(C[0] * 100) + "% at night. Small daytime fires point to crop and grass burning.</small>",
+        intense ? "mid" : "ok", intense ? "More intense" : "Typical burning"]);
+    }
+    // weather
+    if (WX && WX.days && WX.days.length) {
+      var last = WX.days.slice(-3), rh = 0, rhN = 0, rhP10 = 0, ws = 0, wsP90 = 0, t = 0, tN = 0;
+      last.forEach(function (d) { var b = A.weather[String(doy(d[0]))]; rh += d[1]; t += d[2]; ws += d[3]; rhN += b[0]; rhP10 += b[1]; tN += b[2]; wsP90 += b[4]; });
+      var k = last.length; rh /= k; rhN /= k; rhP10 /= k; ws /= k; wsP90 /= k; t /= k; tN /= k;
+      var dry = rh <= rhP10 ? 2 : rh < rhN - 5 ? 1 : 0, windy = ws > wsP90;
+      score += dry + (windy ? 1 : 0);
+      var span = last[0][0].slice(8) + "–" + last[k - 1][0].slice(8) + " " + MON[+last[k - 1][0].slice(5, 7) - 1];
+      factors.push(["Humidity", Math.round(rh) + "% relative humidity" + "<small>" + span + " · normal for these days " + Math.round(rhN) + "% · fire belt, NASA POWER</small>",
+        dry ? (dry > 1 ? "hi" : "mid") : "ok", ["Normal", "Drier", "Much drier"][dry]]);
+      factors.push(["Wind, heat", ws.toFixed(1) + " m/s wind, " + t.toFixed(1) + " °C" + "<small>normal " + (A.weather[String(doy(last[k - 1][0]))][3]).toFixed(1) + " m/s, " + tN.toFixed(1) + " °C</small>",
+        windy ? "mid" : "ok", windy ? "Windy" : "Normal"]);
+    } else if (WX === false) {
+      factors.push(["Weather", "NASA POWER is not reachable right now<small>the call uses the fire data only</small>", "na", "No data"]);
+    }
+
+    // verdict
+    var lv = score >= 7 ? 3 : score >= 5 ? 2 : score >= 2 ? 1 : 0;
+    var LV = [["Expected seasonal burning", "var(--harm)", "Fires match what this season normally brings. Routine monitoring is enough; no area stands out."],
+      ["Watch", "var(--ember-2)", "Something is off the normal pattern. Check the areas below with local contacts and look again after the next satellite pass."],
+      ["Warning", "#ff8a4a", "Several signals are above normal at once. Prioritise ground checks in the areas below today and alert local civil defence."],
+      ["Severe", "#ff4d4d", "Fire activity and fire weather are far outside the normal range. Treat the areas below as urgent."]][lv];
+    var box = document.getElementById("al-verdict");
+    if (!ok) {
+      document.getElementById("al-level").textContent = LIVE === false ? "Live feed unavailable" : "…";
+      document.getElementById("al-next").textContent = LIVE === false ? "The early warning needs the live NASA FIRMS feed, which is not reachable right now." : "Reading the live satellite feed and NASA POWER weather…";
+      return;
+    }
+    box.style.setProperty("--vc", LV[1]);
+    document.getElementById("al-level").textContent = LV[0];
+    document.querySelectorAll("#al-verdict .alscale i").forEach(function (e, i) { e.className = i <= lv ? "on" : ""; });
+    document.getElementById("al-next").textContent = LV[2];
+    document.getElementById("al-factors").innerHTML = factors.map(function (f) {
+      return "<li><span class='k'>" + f[0] + "</span><span class='v'>" + f[1] + "</span><span class='tag " + f[2] + "'>" + f[3] + "</span></li>";
+    }).join("");
+    var KL = { surge: "Surge", rare: "Fire where it is rare", above: "Above normal" };
+    document.getElementById("al-areas").innerHTML = flagged.length ? flagged.slice(0, 6).map(function (t, i) {
+      var lon = (t.gx + .5) * G, lat = (t.gy + .5) * G;
+      var vs = t.mean >= .5 ? fmt(t.n) + " detections today, " + (t.n / t.mean).toFixed(1) + "× a normal " + MON[m - 1] + " day (" + t.mean.toFixed(1) + ")"
+        : fmt(t.n) + " detections today; this area has fires on only " + Math.round(t.share * 100) + "% of " + MON[m - 1] + " days";
+      return "<div class='area glass' style='--ac:" + t.col + "'><div class='t'><h4>" + near(lon, lat) + "</h4><span class='num'>" + (i + 1) + "</span></div>" +
+        "<span class='tag' style='color:" + t.col + ";justify-self:start'>" + KL[t.kind] + "</span><p>" + vs + "</p>" +
+        "<a href='https://www.google.com/maps/@" + lat.toFixed(2) + "," + lon.toFixed(2) + ",10z/data=!3m1!1e3' target='_blank' rel='noopener'>" + lat.toFixed(2) + "° N, " + lon.toFixed(2) + "° E · satellite view ↗</a></div>";
+    }).join("") : "<div class='alempty glass'>No area is above its normal for " + MONL[m - 1] + " right now.</div>";
+    document.getElementById("al-note").innerHTML = "<b>How the call is made.</b> Detections from VIIRS on " + (sensorName(LIVE)) + " in the last 24 h. " +
+      "Normal = every past " + MONL[m - 1] + " day since " + A.from.slice(0, 4) + ": VIIRS from 2012, MODIS before that put into VIIRS units with one factor per month. " +
+      "An area is <b>above normal</b> when it has more fires than on 95% of past days of this month, a <b>surge</b> above 99%. " +
+      "Weather is the mean of 4 fire-belt points (Darfur, South Kordofan, White Nile, Blue Nile) against their 2001–2025 average for the same days; " +
+      "recent NASA POWER days come from a near-real-time model run and arrive a few days late. This supports a decision; it does not replace people on the ground.";
+    drawMap();
+  }
+  function sensorName(L) { var miss = L.missing || []; return (L.by_sensor.VIIRS_NOAA20 > 0 && miss.indexOf("VIIRS_NOAA20") < 0) ? "NOAA-20" : "NOAA-21"; }
+
+  /* ---------- continuity monitor ---------- */
+  function timeline() {
+    var host = document.getElementById("ct-tl"), cw = host.clientWidth || 900, narrow = cw < 640;
+    var Y0 = 2000, Y1 = 2028, W = Math.max(330, Math.min(1000, cw)), rows = [
+      ["Terra MODIS", "var(--modis)", 2000.83, 2027.04, "science data to end ~Jan 2027", "ends ~Jan 2027"],
+      ["Aqua MODIS", "var(--modis)", 2002.5, null, "still flying · end date under review", "end date under review"],
+      ["S-NPP VIIRS", "var(--viirs)", 2012.05, 2026.84, "archive to " + A.bridges.snpp_last_day, "to " + A.bridges.snpp_last_day],
+      ["NOAA-20 VIIRS", "var(--n20)", 2018.0, null, "carries the record now", "carries the record"],
+      ["NOAA-21 VIIRS", "var(--n21)", 2026.0, null, "in the live feed, on standby", "standby"]];
+    var now = new Date(), yn = now.getUTCFullYear() + (now.getUTCMonth() + now.getUTCDate() / 31) / 12;
+    var L = narrow ? 92 : 150, R = W - 14, x = function (y) { return L + (y - Y0) / (Y1 - Y0) * (R - L); }, rh = 30, top = 26;
+    var s = "<svg viewBox='0 0 " + W + " " + (top + rows.length * rh + 30) + "'>";
+    for (var y = Y0; y <= Y1; y += narrow ? 8 : 4) s += "<line x1='" + x(y) + "' x2='" + x(y) + "' y1='" + (top - 8) + "' y2='" + (top + rows.length * rh) + "' stroke='rgba(148,170,220,.1)'/><text x='" + x(y) + "' y='" + (top - 12) + "' font-size='11' fill='#97a3bd' text-anchor='middle'>" + y + "</text>";
+    // handovers
+    [[2002.5, "Terra → +Aqua"], [2012.05, "MODIS → VIIRS"], [2026.84, "S-NPP → NOAA-20"]].forEach(function (h) {
+      s += "<line x1='" + x(h[0]) + "' x2='" + x(h[0]) + "' y1='" + (top - 4) + "' y2='" + (top + rows.length * rh + 6) + "' stroke='rgba(47,212,160,.55)' stroke-dasharray='3 3'/>";
+    });
+    s += "<line x1='" + x(yn) + "' x2='" + x(yn) + "' y1='" + (top - 4) + "' y2='" + (top + rows.length * rh + 6) + "' stroke='#eef1f8' stroke-width='1.5'/><text x='" + (x(yn) - 4) + "' y='" + (top + rows.length * rh + 20) + "' font-size='11' fill='#eef1f8' text-anchor='end'>today</text>";
+    rows.forEach(function (r, i) {
+      var yy = top + i * rh + 8, a = x(r[2]), b = x(r[3] || yn);
+      s += "<text x='0' y='" + (yy + 10) + "' font-size='" + (narrow ? 10.5 : 12) + "' fill='#dfe4ef'>" + (narrow ? r[0].replace(' MODIS', '').replace(' VIIRS', '') : r[0]) + "</text>";
+      s += "<rect x='" + a + "' y='" + yy + "' width='" + Math.max(3, b - a) + "' height='14' rx='4' fill='" + r[1] + "' opacity='.9'/>";
+      if (r[3] && r[3] > yn) s += "<rect x='" + x(yn) + "' y='" + yy + "' width='" + (x(r[3]) - x(yn)) + "' height='14' rx='4' fill='none' stroke='" + r[1] + "' stroke-dasharray='3 2'/>";
+      if (!r[3]) s += "<path d='M" + (b + 2) + " " + yy + " l8 7 l-8 7z' fill='" + r[1] + "'/>";
+      var inside = b - a > (narrow ? 150 : 230);
+      s += "<text x='" + (inside ? a + 8 : a - 8) + "' y='" + (yy + 10) + "' font-size='10.5' font-weight='600' fill='" + (inside ? "#05070d" : "#97a3bd") + "' text-anchor='" + (inside ? "start" : "end") + "'>" + (narrow ? r[5] : r[4]) + "</text>";
+    });
+    document.getElementById("ct-tl").innerHTML = s + "</svg>";
+  }
+  function bridges(ratio21) {
+    var K = A.k_cells_modis_to_viirs, ks = [], i; for (i = 1; i <= 12; i++) ks.push(K[String(i)]);
+    var mx = Math.max.apply(null, ks), bars = ks.map(function (k, j) { var h = 30 * k / mx; return "<rect x='" + (j * 8.3) + "' y='" + (32 - h) + "' width='6.3' height='" + h + "' rx='1.5' fill='var(--harm)' opacity='.8'/>"; }).join("");
+    var mv = A.bridges.modis_viirs, n20 = A.bridges.n20_snpp;
+    var cards = [
+      ["Terra → Terra + Aqua", "×" + A.bridges.terra_aqua.k.toFixed(2), "One annual factor fills Nov 2000 – Jun 2002, the months before Aqua joined Terra.", "ok", "Live"],
+      ["MODIS → VIIRS", "R² " + mv.r2.toFixed(3), "12 monthly factors (" + Math.min.apply(null, ks).toFixed(2) + "–" + mx.toFixed(2) + "), fitted on " + mv.overlap[0] + "–" + mv.overlap[1] + ". Raw MODIS scores " + mv.r2_raw.toFixed(2) + " on the same " + mv.months + " held-out months.<svg viewBox='0 0 100 34' preserveAspectRatio='none' aria-hidden='true'>" + bars + "</svg>", "ok", "Live"],
+      ["NOAA-20 → S-NPP", "×" + n20.k.toFixed(3), "R² " + n20.r2.toFixed(3) + " on " + n20.n_months + " months both flew. Took over from S-NPP on " + A.bridges.snpp_last_day + ".", "ok", "Live"],
+      ["NOAA-21 → NOAA-20", ratio21 != null ? "×" + ratio21.toFixed(2) : "…", "Today's NOAA-20 / NOAA-21 ratio from the live feed. Ready to carry the record if NOAA-20 stops.", "mid", "Standby"]];
+    document.getElementById("ct-bridges").innerHTML = cards.map(function (c) {
+      return "<div class='bridge glass'><div class='ft'><span>" + c[0] + "</span><span class='tag " + c[3] + "'>" + c[4] + "</span></div><div class='n mono'>" + c[1] + "</div><p>" + c[2] + "</p></div>";
+    }).join("");
+  }
+  function drift() {
+    var el = document.getElementById("ct-drift"), m = new Date().getUTCMonth() + 1, band = A.ratio[String(m)];
+    if (!LIVE) { el.innerHTML = "<span class='eyebrow' style='color:var(--dim)'>Live drift check</span><div class='dim'>" + (LIVE === false ? "The live feed is not reachable right now." : "Loading the live feed…") + "</div>"; return; }
+    var b = LIVE.by_sensor, v = b.VIIRS_NOAA20 || b.VIIRS_NOAA21 || 0, mo = b.MODIS || 0;
+    var head = "<span class='eyebrow' style='color:var(--dim)'>Live drift check · VIIRS ÷ MODIS, last 24 h</span>";
+    if (!band || mo < 20) { el.innerHTML = head + "<div class='n mono' style='font:800 1.7rem var(--display)'>" + (mo ? (v / mo).toFixed(2) : "–") + "</div><p class='dim' style='margin:0'>Too few MODIS fires today (or this month) for a fair check. It runs whenever both satellites see at least 20.</p>"; return; }
+    var r = v / mo, lo = 0, hi = Math.max(band[2] * 1.25, r * 1.1), X = function (q) { return (q - lo) / (hi - lo) * 100; };
+    var inBand = r >= band[0] && r <= band[2];
+    el.innerHTML = head +
+      "<div style='display:flex;align-items:baseline;gap:12px;flex-wrap:wrap'><span class='mono' style='font:800 1.9rem/1 var(--display)'>" + r.toFixed(2) + "</span><span class='tag " + (inBand ? "ok" : "hi") + "'>" + (inBand ? "In range" : "Drifting") + "</span></div>" +
+      "<div class='band'><div class='rail'></div><div class='ok' style='left:" + X(band[0]) + "%;width:" + (X(band[2]) - X(band[0])) + "%'></div><div class='mk' style='left:" + Math.min(99.5, X(r)) + "%'></div></div>" +
+      "<div class='bandlab'><span>normal " + MON[m - 1] + " range " + band[0] + "–" + band[2] + "</span><span>" + fmt(band[3]) + " days since 2012</span></div>" +
+      "<p class='dim' style='margin:0;font-size:.88rem'>" + (inBand ? "The two sensors still agree the way they did on past " + MONL[m - 1] + " days, so the conversion holds." : "Today's ratio is outside its usual " + MONL[m - 1] + " range. One day can be noise; several in a row mean a satellite is drifting and the factor needs refitting.") + "</p>";
+  }
+
+  timeline(); bridges(null); drift(); drawMap();
+  var tlw = 0; addEventListener("resize", function () { var w = document.getElementById("ct-tl").clientWidth; if (Math.abs(w - tlw) > 30) { tlw = w; timeline(); } });
+  function pull() {
+    if (!/^https?:$/.test(location.protocol) || !window.fetch) { LIVE = false; WX = false; render(); drift(); return; }
+    fetch("/api/live", { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (L) {
+      if (!L || !Array.isArray(L.points)) throw 0; LIVE = L;
+      var b = L.by_sensor; bridges(b.VIIRS_NOAA20 && b.VIIRS_NOAA21 ? b.VIIRS_NOAA20 / b.VIIRS_NOAA21 : null);
+    }).catch(function () { if (!LIVE) LIVE = false; }).then(function () { render(); drift(); });
+    fetch("/api/weather").then(function (r) { return r.ok ? r.json() : null; }).then(function (w) {
+      WX = w && w.days && w.days.length ? w : false;
+    }).catch(function () { WX = false; }).then(function () { if (LIVE) render(); });
+  }
+  pull(); setInterval(pull, 30 * 60 * 1000);
+})();
+</script>
+

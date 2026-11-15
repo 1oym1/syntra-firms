@@ -9,6 +9,7 @@ dist.mkdir(exist_ok=True)
 page = (site / "index.html").read_text(encoding="utf-8")
 (dist / "index.html").write_text('<!doctype html>\n<html lang="en">\n' + page + "\n</html>\n", encoding="utf-8")
 shutil.copy(site / "data.js", dist / "data.js")
+shutil.copy(site / "alerts.js", dist / "alerts.js")
 if (site / "team").is_dir():                       # team photos
     shutil.copytree(site / "team", dist / "team", dirs_exist_ok=True)
 print("built", dist, [p.name for p in dist.iterdir()])
