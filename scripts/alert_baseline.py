@@ -114,8 +114,15 @@ for d in range(1, 366):                                              # +-7 day w
     weather[d] = [round(float(g.RH2M.mean()), 1), round(float(g.RH2M.quantile(.1)), 1),
                   round(float(g.T2M.mean()), 1), round(float(g.WS2M.mean()), 2), round(float(g.WS2M.quantile(.9)), 2)]
 
-info = json.loads((ROOT / "outputs/tables/run_info_Sudan.json").read_text())
-val = pd.read_csv(ROOT / "outputs/tables/harmonization_validation.csv").set_index("country").loc["Sudan"]
+# ---- handover numbers: exactly what the Streamlit app computes from its data pack ---------------
+import sys
+sys.path.insert(0, str(ROOT))
+from syntra import apppack, datapack, series
+from syntra import harmonize as hz
+app = apppack.as_country(datapack.load("Sudan"))
+cs = series.country_series(app["veg"], app["info"])
+n20 = series.validate_n20(app["veg"], app["info"]["snpp_end"])
+ho = cs["heldout"]
 
 out = {
     "grid": G, "from": str(all_days[0].date()), "to": str(last_full.date()),
@@ -124,13 +131,14 @@ out = {
     "k_terra_to_modis": {m: round(k_ta[m], 3) for m in range(1, 13)},
     "national": national, "cells": cells, "ratio": ratio, "character": character,
     "weather": weather, "weather_points": PTS,
-    "k_cells_modis_to_viirs": {int(r.month): float(r.modis_to_viirs) for r in
-                               pd.read_csv(ROOT / "outputs/tables/factors_Sudan.csv").itertuples()},
+    "k_cells_modis_to_viirs": {int(m): round(float(k), 3) for m, k in cs["k_viirs"].items()},
     "bridges": {
-        "terra_aqua": {"k": info["k_terra_annual"]},
-        "modis_viirs": {"r2": float(val["r2_harmonized"]), "r2_raw": float(val["r2_raw_modis"]),
-                        "months": int(val["months"]), "overlap": info["overlap_years"]},
-        "n20_snpp": info["n20_to_snpp"], "snpp_last_day": info["snpp_last_day"],
+        "terra_aqua": {"k": round(float(cs["k_terra_all"]), 3)},
+        "modis_viirs": {"r2": round(float(ho["r2"]), 3), "r2_raw": round(float(ho["r2_raw_modis"]), 3),
+                        "months": int(ho["n_months"]), "overlap": list(hz.OVERLAP)},
+        "n20_snpp": {"k": round(n20["k"], 4), "r2": round(n20["r2"], 4), "n_months": n20["n_months"],
+                     "years": n20["years"], "bias_pct": round(n20["bias_pct"], 3)},
+        "snpp_last_day": str(app["info"]["snpp_end"].date()),
     },
 }
 js = "window.SYNTRA_ALERT=" + json.dumps(out, separators=(",", ":")) + ";\n"
